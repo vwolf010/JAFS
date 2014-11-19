@@ -15,6 +15,7 @@ There is no stable release yet, but I have a working happy flow now.
  * Smaller maximum filesize
 * It tries to keep the file system as small as possible (unused blocks bitmaps, inlined data)
 * It will offer an API that is similar to java.io.File
+* It is robust
 
 ####Design####
 I am using the EXT2 file system as a source for ideas.
@@ -40,3 +41,8 @@ The inode supports inlined data.
 ####How to use?####
 
 I will create a kind of manual in the future, for the moment just look at the Main class that I created.
+
+####To do####
+* Remove unnecessary checks in the code (for example checking if a dir/file name contains a slash in 2 places)
+* Check if all actions are performed in a robust order when doing writes to disk (for example, mark an inode as unused before adjusting the unused map)
+* Add journaling so JAFS has some kind of transaction block mechanism
