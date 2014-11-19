@@ -46,3 +46,4 @@ I will create a kind of manual in the future, for the moment just look at the Ma
 * Remove unnecessary checks in the code (for example checking if a dir/file name contains a slash in 2 places)
 * Check if all actions are performed in a robust order when doing writes to disk (for example, mark an inode as unused before adjusting the unused map)
 * Add journaling so JAFS has some kind of transaction block mechanism
+* Replace the current directory mechanism with another one that can hold lots of files and still perform fast
