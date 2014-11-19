@@ -4,7 +4,7 @@ JAFS
 ####Java Application File System####
 JAFS is a java library that will allow you to create a filesystem in a filesystem.
 
-I just started working on it, so there is no stable release yet.
+There is no stable release yet, but I have a working happy flow now.
 
 ####Why JAFS?####
 * It is my way to learn how filesystems work
