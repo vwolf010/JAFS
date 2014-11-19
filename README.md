@@ -13,7 +13,7 @@ There is no stable release yet, but I have a working happy flow now.
  * Smaller block size
  * Smaller inode size
  * Smaller maximum filesize
-* It tries to keep files as small as possible (unused blocks bitmaps, inlined data)
+* It tries to keep the file system as small as possible (unused blocks bitmaps, inlined data)
 * It will offer an API that is similar to java.io.File
 
 ####Design####
