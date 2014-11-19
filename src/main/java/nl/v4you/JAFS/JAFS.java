@@ -26,22 +26,26 @@ public class JAFS {
 	}
 	
 	public JAFS (String fname, int blockSize, int inodeSize, long maxFileSize) throws JAFSException, IOException {
-		if ((blockSize/64)==0) {
-			blockSize=64;
+		int n;
+		for (n=6; n<=16; n++) {
+			int pow=2;
+			for (int i=0;i<n;i++) pow *= 2;
+			if (blockSize<=pow) {
+				blockSize=pow;
+				break;
+			}				
 		}
-		while ((blockSize & 63)>0) {
-			blockSize++;			
+		if (n>16) {
+			throw new JAFSException("block size"+blockSize+" not supported");
 		}
-		if ((inodeSize/32)==0) {
-			inodeSize=32;
-		}
-		while ((inodeSize & 31)>0) {
-			inodeSize++;			
+		if (inodeSize>blockSize) {
+			throw new JAFSException("inode size"+inodeSize+" should be smaller or equal to block size");
 		}
 		if (maxFileSize<0) {
 			maxFileSize = 0;
 		}
 		if (maxFileSize>JAFSInodeContext.MAX_FILE_SIZE) {
+			//TODO: maxFileSize should not apply to files that are directories
 			maxFileSize = JAFSInodeContext.MAX_FILE_SIZE;
 		}
 		init(fname, blockSize, inodeSize, maxFileSize);

@@ -164,17 +164,24 @@ public class JAFSFile {
 	 * default 
 	 */	
 	JAFSFile(JAFS vfs, String path) throws JAFSException, IOException {
+		if (path==null) {
+			throw new NullPointerException("path cannot be null");
+		}
+		if (!path.startsWith("/")) {
+			// the working directory is always root
+			path = "/" + path;
+		}
 		this.vfs = vfs;
 		this.path = normalizePath(path);		
 	}
 	
-	JAFSFile(JAFS vfs, JAFSFile parent, String child) {
-		//TODO:
-	}
-	
-	JAFSFile(JAFS vfs, String parent, String child) {
-		//TODO:
-	}
+//	JAFSFile(JAFS vfs, JAFSFile parent, String child) {
+//		//TODO:
+//	}
+//	
+//	JAFSFile(JAFS vfs, String parent, String child) {
+//		//TODO:
+//	}
 	
 	JAFSDirEntry getEntry(String path) throws JAFSException, IOException {
 		JAFSDirEntry entry = new JAFSDirEntry();

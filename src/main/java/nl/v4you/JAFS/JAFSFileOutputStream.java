@@ -13,6 +13,11 @@ public class JAFSFileOutputStream extends OutputStream {
 	
 	JAFSFileOutputStream(JAFS vfs, JAFSFile f) throws JAFSException, IOException {
 		this.vfs = vfs;
+		if (!f.exists()) {
+			if (!f.createNewFile()) {
+				throw new JAFSException("Could not create "+f.getCanonicalPath());
+			}
+		}
 		this.path = f.getCanonicalPath();
 		JAFSDirEntry entry = f.getEntry(f.getCanonicalPath());
 		if (entry!=null) {
