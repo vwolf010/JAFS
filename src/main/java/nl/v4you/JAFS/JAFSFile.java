@@ -1,9 +1,9 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
 /*
 File f = new File("/");
@@ -24,9 +24,9 @@ File f = new File("/does_not_exist/..");
 System.out.println("exists: "+f.exists());  true (because it's CanonicalPath is /)
 */
 
-public class JVFSFile {
-	JVFS vfs;
-	JVFSDirEntry entry;	
+public class JAFSFile {
+	JAFS vfs;
+	JAFSDirEntry entry;	
 	String path;
 	
 	/* 
@@ -52,105 +52,105 @@ public class JVFSFile {
 		return getCanonicalPath(path);
 	}
 
-	public boolean exists() throws JVFSException, IOException {
+	public boolean exists() throws JAFSException, IOException {
 		return exists(path);		
 	}
 
-	public boolean isFile() throws JVFSException, IOException {
-		JVFSDirEntry entry = getEntry(path);
+	public boolean isFile() throws JAFSException, IOException {
+		JAFSDirEntry entry = getEntry(path);
 		return (entry != null) && (entry.isFile());
 	}
 	
-	public boolean isDirectory() throws JVFSException, IOException {
-		JVFSDirEntry entry = getEntry(path);
+	public boolean isDirectory() throws JAFSException, IOException {
+		JAFSDirEntry entry = getEntry(path);
 		return (entry != null) && (entry.isDirectory());
 	}
 
-	public boolean createNewFile() throws JVFSException, IOException {
+	public boolean createNewFile() throws JAFSException, IOException {
 		String parent = getParent();
-		JVFSDirEntry entry = getEntry(parent);
+		JAFSDirEntry entry = getEntry(parent);
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
-				JVFSDir dir = new JVFSDir(vfs, entry.parentBpos, entry.parentIdx);
-				entry = dir.mkinode(entry.name, JVFSInode.INODE_DIR);
+				JAFSDir dir = new JAFSDir(vfs, entry.parentBpos, entry.parentIdx);
+				entry = dir.mkinode(entry.name, JAFSInode.INODE_DIR);
 			}
-			JVFSDir dir = new JVFSDir(vfs, entry);
-			return dir.createNewEntry(getName(), JVFSDirEntry.TYPE_FILE);
+			JAFSDir dir = new JAFSDir(vfs, entry);
+			return dir.createNewEntry(getName(), JAFSDirEntry.TYPE_FILE);
 		}
 		return false;		
 	}
 
-	public boolean mkdir() throws JVFSException, IOException {
+	public boolean mkdir() throws JAFSException, IOException {
 		return mkdir(path);
 	}
 
-	public boolean mkdirs() throws JVFSException, IOException {
+	public boolean mkdirs() throws JAFSException, IOException {
 		mkParentDirs(getParent(path));
 		return mkdir(path);
 	}
 		
-	public String[] list() throws JVFSException, IOException {
-		JVFSDirEntry entry = getEntry(path);
+	public String[] list() throws JAFSException, IOException {
+		JAFSDirEntry entry = getEntry(path);
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				return new String[0];
 			}
 			else {
-				JVFSDir dir = new JVFSDir(vfs, entry);
+				JAFSDir dir = new JAFSDir(vfs, entry);
 				return dir.list();
 			}
 		}
 		return new String[0];
 	}
 	
-	public boolean delete() throws JVFSException, IOException {
-		JVFSDirEntry entry = getEntry(path);
+	public boolean delete() throws JAFSException, IOException {
+		JAFSDirEntry entry = getEntry(path);
 		if (entry!=null) {
 			if (entry.bpos>0) {
 				if (entry.isDirectory()) {
-					JVFSDir dir = new JVFSDir(vfs, entry);
+					JAFSDir dir = new JAFSDir(vfs, entry);
 					if (dir.countActiveEntries()>0) {
-						throw new JVFSException("directory "+getCanonicalPath()+" not empty");
+						throw new JAFSException("directory "+getCanonicalPath()+" not empty");
 					}
 				}
-				JVFSInode inode = new JVFSInode(vfs, entry.bpos, entry.idx);
+				JAFSInode inode = new JAFSInode(vfs, entry.bpos, entry.idx);
 				inode.free();				
 			}
-			JVFSDir dir = new JVFSDir(vfs, entry.parentBpos, entry.parentIdx);
+			JAFSDir dir = new JAFSDir(vfs, entry.parentBpos, entry.parentIdx);
 			dir.deleteEntry(entry);
 			return true;
 		}
 		return false;
 	}
 	
-	public JVFSFile[] listFiles() throws JVFSException, IOException {
+	public JAFSFile[] listFiles() throws JAFSException, IOException {
 		String parent = getCanonicalPath();
-		JVFSDirEntry entry = getEntry(path);
+		JAFSDirEntry entry = getEntry(path);
 		if (entry!=null) {
 			if (entry.bpos==0) {
-				return new JVFSFile[0];
+				return new JAFSFile[0];
 			}
 			else {
-				JVFSDir dir = new JVFSDir(vfs, entry);
+				JAFSDir dir = new JAFSDir(vfs, entry);
 				String l[] = dir.list();
-				JVFSFile fl[] = new JVFSFile[l.length];
+				JAFSFile fl[] = new JAFSFile[l.length];
 				for (int n=0; n<fl.length; n++) {
-					fl[n] = new JVFSFile(vfs, parent + "/" + l[n]);
+					fl[n] = new JAFSFile(vfs, parent + "/" + l[n]);
 				}
 				return fl;
 			}
 		}
-		return new JVFSFile[0];
+		return new JAFSFile[0];
 	}
 	
-	public void renameTo(JVFSFile target) throws JVFSException, IOException {
+	public void renameTo(JAFSFile target) throws JAFSException, IOException {
 		if (exists()) {
 			if (!target.exists()) {
 				if (exists(target.getParent())) {
-					JVFSDirEntry entry = getEntry(getCanonicalPath());
-					JVFSDir srcDir = new JVFSDir(vfs, entry.parentBpos, entry.parentIdx);
-					JVFSDir dstDir = new JVFSDir(vfs, getEntry(target.getParent()));
+					JAFSDirEntry entry = getEntry(getCanonicalPath());
+					JAFSDir srcDir = new JAFSDir(vfs, entry.parentBpos, entry.parentIdx);
+					JAFSDir dstDir = new JAFSDir(vfs, getEntry(target.getParent()));
 					srcDir.deleteEntry(entry);
 					entry.name = target.getName();
 					dstDir.createNewEntry(target.getName(), entry.type);					
@@ -163,28 +163,28 @@ public class JVFSFile {
 	/* 
 	 * default 
 	 */	
-	JVFSFile(JVFS vfs, String path) throws JVFSException, IOException {
+	JAFSFile(JAFS vfs, String path) throws JAFSException, IOException {
 		this.vfs = vfs;
 		this.path = normalizePath(path);		
 	}
 	
-	JVFSFile(JVFS vfs, JVFSFile parent, String child) {
+	JAFSFile(JAFS vfs, JAFSFile parent, String child) {
 		//TODO:
 	}
 	
-	JVFSFile(JVFS vfs, String parent, String child) {
+	JAFSFile(JAFS vfs, String parent, String child) {
 		//TODO:
 	}
 	
-	JVFSDirEntry getEntry(String path) throws JVFSException, IOException {
-		JVFSDirEntry entry = new JVFSDirEntry();
+	JAFSDirEntry getEntry(String path) throws JAFSException, IOException {
+		JAFSDirEntry entry = new JAFSDirEntry();
 		entry.parentBpos = vfs.getRootBpos();
 		entry.parentIdx = vfs.getRootIdx();
 		entry.bpos = vfs.getRootBpos();
 		entry.idx = vfs.getRootIdx();
-		entry.type = JVFSDirEntry.TYPE_DIR;
+		entry.type = JAFSDirEntry.TYPE_DIR;
 		entry.name = "/";
-		JVFSDir dir = new JVFSDir(vfs, entry);
+		JAFSDir dir = new JAFSDir(vfs, entry);
 		String parts[] = getCanonicalPath(path).split("/");
 		for (int n=0; n<parts.length; n++) {
 			String part = parts[n];
@@ -204,7 +204,7 @@ public class JVFSFile {
 					}
 					else {
 						if (entry.bpos>0) {
-							dir = new JVFSDir(vfs, entry);
+							dir = new JAFSDir(vfs, entry);
 						}
 						else {
 							return null;
@@ -302,26 +302,26 @@ public class JVFSFile {
 		return path.substring(0, path.length()-1);		
 	}
 		
-	private boolean exists(String path) throws JVFSException, IOException {
+	private boolean exists(String path) throws JAFSException, IOException {
 		return getEntry(path) != null;
 	}
 	
-	private boolean mkdir(String path) throws JVFSException, IOException {
+	private boolean mkdir(String path) throws JAFSException, IOException {
 		String parent = getParent(path);
-		JVFSDirEntry entry = getEntry(parent);
+		JAFSDirEntry entry = getEntry(parent);
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
-				JVFSDir dir = new JVFSDir(vfs, entry.parentBpos, entry.parentIdx);
-				entry = dir.mkinode(entry.name, JVFSInode.INODE_DIR);
+				JAFSDir dir = new JAFSDir(vfs, entry.parentBpos, entry.parentIdx);
+				entry = dir.mkinode(entry.name, JAFSInode.INODE_DIR);
 			}
-			JVFSDir dir = new JVFSDir(vfs, entry);
-			return dir.createNewEntry(getName(path), JVFSDirEntry.TYPE_DIR);
+			JAFSDir dir = new JAFSDir(vfs, entry);
+			return dir.createNewEntry(getName(path), JAFSDirEntry.TYPE_DIR);
 		}
 		return false;		
 	}
 		
-	private void mkParentDirs(String path) throws JVFSException, IOException {
+	private void mkParentDirs(String path) throws JAFSException, IOException {
 		if (path==null) {
 			return;
 		}

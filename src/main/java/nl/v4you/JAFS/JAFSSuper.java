@@ -1,16 +1,16 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
-class JVFSSuper {
+class JAFSSuper {
 	static final String magic = "JVFS";
 	static final String version = "1";
 	
-	private JVFS vfs;
-	private JVFSBlock rootBlock;
+	private JAFS vfs;
+	private JAFSBlock rootBlock;
 	private int blockSize = 256;
 	private int inodeSize = 64;
 	private long maxFileSize = 4L*1024L*1024L*1024L;
@@ -19,10 +19,10 @@ class JVFSSuper {
 	private long rootDirBPos = 1;
 	private int rootDirIdx = 0;
 	
-	JVFSSuper(JVFS vfs, int blockSize) throws JVFSException {
+	JAFSSuper(JAFS vfs, int blockSize) throws JAFSException {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
-		rootBlock = new JVFSBlock(vfs, -1, blockSize);
+		rootBlock = new JAFSBlock(vfs, -1, blockSize);
 	}
 	
 	long getRootDirBpos() {
@@ -49,7 +49,7 @@ class JVFSSuper {
 		blocksTotal++;
 	}
 	
-	void incBlocksTotalAndFlush() throws JVFSException, IOException {
+	void incBlocksTotalAndFlush() throws JAFSException, IOException {
 		blocksTotal++;
 		flush();
 	}
@@ -65,7 +65,7 @@ class JVFSSuper {
 		}
 	}
 
-	void incBlocksUsedAndFlush() throws JVFSException, IOException {
+	void incBlocksUsedAndFlush() throws JAFSException, IOException {
 		incBlocksUsed();
 		flush();
 	}
@@ -77,7 +77,7 @@ class JVFSSuper {
 		}		
 	}
 	
-	void decBlocksUsedAndFlush() throws JVFSException, IOException {
+	void decBlocksUsedAndFlush() throws JAFSException, IOException {
 		decBlocksUsed();
 		flush();
 	}
@@ -110,7 +110,7 @@ class JVFSSuper {
 		this.maxFileSize = maxFileSize;
 	}
 		
-	void read() throws JVFSException, IOException {
+	void read() throws JAFSException, IOException {
 		rootBlock.seek(0);
 		rootBlock.readFromDisk();
 		byte arr[] = new byte[64];
@@ -127,7 +127,7 @@ class JVFSSuper {
 		String str = new String(dum);
 		String fields[] = str.split("[|]");
 		if (fields.length!=9) {
-			throw new JVFSException("Expected 8 fields");
+			throw new JAFSException("Expected 8 fields");
 		}
 		blockSize = Integer.parseInt(fields[2]);
 		inodeSize = Integer.parseInt(fields[3]);
@@ -138,7 +138,7 @@ class JVFSSuper {
 		blocksUsed = Integer.parseInt(fields[8]);
 	}
 	
-	void flush() throws JVFSException, IOException {
+	void flush() throws JAFSException, IOException {
 		rootBlock.initZeros();
 		rootBlock.seek(0);
 		rootBlock.setBytes((magic+"|").getBytes());

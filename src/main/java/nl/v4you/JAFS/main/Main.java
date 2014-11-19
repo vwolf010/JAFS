@@ -1,20 +1,20 @@
-package nl.v4you.JVFS.main;
+package nl.v4you.JAFS.main;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
-import nl.v4you.JVFS.JVFSFile;
-import nl.v4you.JVFS.JVFSFileInputStream;
-import nl.v4you.JVFS.JVFSFileOutputStream;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
+import nl.v4you.JAFS.JAFSFile;
+import nl.v4you.JAFS.JAFSFileInputStream;
+import nl.v4you.JAFS.JAFSFileOutputStream;
 
 public class Main {
 
-	static void dumpTree(JVFSFile f) throws JVFSException, IOException {
-		for (JVFSFile s : f.listFiles()) {
+	static void dumpTree(JAFSFile f) throws JAFSException, IOException {
+		for (JAFSFile s : f.listFiles()) {
 			System.out.println(s.getCanonicalPath());
 			if (s.isDirectory()) {
 				dumpTree(s);
@@ -41,9 +41,9 @@ public class Main {
 //			File x = new File("c:/temp/test.vfs");
 //			x.delete();
 			
-			JVFS vfs = new JVFS("c:/temp/test.vfs", 128,64,4L*1024L*1024L*1024L);
+			JAFS vfs = new JAFS("c:/temp/test.vfs", 128,64,4L*1024L*1024L*1024L);
 			{
-				JVFSFile f = vfs.getFile("/sub1");
+				JAFSFile f = vfs.getFile("/sub1");
 				f.mkdir();
 				if (f.exists()) {
 					System.out.println("exists");
@@ -53,7 +53,7 @@ public class Main {
 				}
 			}
 			{
-				JVFSFile f = vfs.getFile("/sub1/sub2");
+				JAFSFile f = vfs.getFile("/sub1/sub2");
 				f.mkdir();
 				if (f.exists()) {
 					System.out.println("exists");
@@ -63,7 +63,7 @@ public class Main {
 				}
 			}
 			{
-				JVFSFile f = vfs.getFile("/sub1/sub2/sub3");
+				JAFSFile f = vfs.getFile("/sub1/sub2/sub3");
 				f.mkdir();
 				if (f.exists()) {
 					System.out.println("exists");
@@ -76,9 +76,9 @@ public class Main {
 			{
 				FileInputStream fis = new FileInputStream("c:/temp/xx.txt");
 
-				JVFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
+				JAFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
 				f.createNewFile();				
-				JVFSFileOutputStream fos = vfs.getFileOutputStream(f);
+				JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
 				
 				byte buf[] = new byte[5*1000];
 				int bread;
@@ -91,8 +91,8 @@ public class Main {
 			}
 			
 			{
-				JVFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
-				JVFSFileInputStream fis = vfs.getFileInputStream(f);
+				JAFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
+				JAFSFileInputStream fis = vfs.getFileInputStream(f);
 				File q = new File("c:/temp/yy.txt");
 				q.delete();
 				FileOutputStream fos = new FileOutputStream(q);
@@ -112,26 +112,26 @@ public class Main {
 			}
 			
 			{
-				JVFSFile f = vfs.getFile("/1/2/3/4");
+				JAFSFile f = vfs.getFile("/1/2/3/4");
 				System.out.println("mkdirs test = "+f.mkdirs());
 				f = vfs.getFile("/1/2/3/4");
 				f.delete();
 			}
 
 			{
-				JVFSFile f = vfs.getFile("/1/2/3/4");
+				JAFSFile f = vfs.getFile("/1/2/3/4");
 				System.out.println("mkdirs test = "+f.mkdirs());
 				f.delete();
 			}
 			
 			{
-				JVFSFile f = vfs.getFile("/1/2/3");
-				JVFSFile g = vfs.getFile("/sub1/sub2/3");
+				JAFSFile f = vfs.getFile("/1/2/3");
+				JAFSFile g = vfs.getFile("/sub1/sub2/3");
 				f.renameTo(g);
 			}
 			
 			{
-				JVFSFile f = vfs.getFile("/");
+				JAFSFile f = vfs.getFile("/");
 				dumpTree(f);
 			}
 

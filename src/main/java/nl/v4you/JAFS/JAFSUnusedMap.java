@@ -1,11 +1,11 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
-class JVFSUnusedMap {
+class JAFSUnusedMap {
 	/*
 	 * 1st bit (data block)  : 0 = used, 1 = not used
 	 * 2nd bit (inode block) : 0 = used, 1 = not used or partly used
@@ -16,12 +16,12 @@ class JVFSUnusedMap {
 	 * 11 : block is available for both inode as data
 	 */
 	
-	JVFS vfs;
-	JVFSSuper superBlock;
+	JAFS vfs;
+	JAFSSuper superBlock;
 	int blocksPerUnusedMap;
 	int blockSize;
 	
-	JVFSUnusedMap(JVFS vfs) throws JVFSException {
+	JAFSUnusedMap(JAFS vfs) throws JAFSException {
 		this.vfs = vfs;
 		blockSize = vfs.getSuper().getBlockSize();
 		superBlock = vfs.getSuper();
@@ -44,7 +44,7 @@ class JVFSUnusedMap {
 		return bpos == getUnusedMapBpos(bpos); 
 	}
 
-	private long getUnusedBpos(int p0mask, int p1mask, int p2mask, int p3mask) throws JVFSException, IOException {
+	private long getUnusedBpos(int p0mask, int p1mask, int p2mask, int p3mask) throws JAFSException, IOException {
 		int skipMapMask = p0mask;
 		int grpMask = p0mask | p1mask | p2mask | p3mask;		
 		long blocksTotal = superBlock.getBlocksTotal();
@@ -54,7 +54,7 @@ class JVFSUnusedMap {
 			if (bpos>=blocksTotal) {
 				return 0;
 			}
-			JVFSBlock block = vfs.getCacheBlock(n*blocksPerUnusedMap);
+			JAFSBlock block = vfs.getCacheBlock(n*blocksPerUnusedMap);
 			long newBpos = 0;
 			block.seek(0);
 			int b = block.getByte();
@@ -128,7 +128,7 @@ class JVFSUnusedMap {
 	 * @throws IOException 
 	 * @throws IOException
 	 */
-	long getUnusedDataBpos() throws JVFSException, IOException {
+	long getUnusedDataBpos() throws JAFSException, IOException {
 		return getUnusedBpos(0x80, 0x20, 0x08, 0x02);
 	}
 	
@@ -139,11 +139,11 @@ class JVFSUnusedMap {
 	 * @throws IOException 
 	 * @throws IOException
 	 */
-	long getUnusedINodeBpos() throws JVFSException, IOException {
+	long getUnusedINodeBpos() throws JAFSException, IOException {
 		return getUnusedBpos(0x40, 0x10, 0x04, 0x01);
 	}
 
-	int findUnusedByte(JVFSBlock block, long bpos) throws JVFSException, IOException {
+	int findUnusedByte(JAFSBlock block, long bpos) throws JAFSException, IOException {
 		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))/4);
 		block.seek(unusedIdx);
 		int b = block.getByte();
@@ -158,8 +158,8 @@ class JVFSUnusedMap {
 	 * @throws IOException 
 	 * @throws IOException
 	 */
-	void setUnusedBlock(long bpos) throws JVFSException, IOException {
-		JVFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
+	void setUnusedBlock(long bpos) throws JAFSException, IOException {
+		JAFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
 		// Set to 11b
 		int b = findUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1); 
@@ -186,8 +186,8 @@ class JVFSUnusedMap {
 	 * @throws IOException 
 	 * @throws IOException
 	 */
-	void setUsedDataBlock(long bpos) throws JVFSException, IOException {
-		JVFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
+	void setUsedDataBlock(long bpos) throws JAFSException, IOException {
+		JAFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
 		// Set to 00
 		int b = findUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
@@ -205,8 +205,8 @@ class JVFSUnusedMap {
 	 * @throws IOException 
 	 * @throws IOException
 	 */
-	void setPartlyUsedInode(long bpos) throws JVFSException, IOException {
-		JVFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
+	void setPartlyUsedInode(long bpos) throws JAFSException, IOException {
+		JAFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
 		// Set to 01
 		int b = findUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
@@ -232,8 +232,8 @@ class JVFSUnusedMap {
 	 * @throws IOException 
 	 * @throws IOException
 	 */
-	void setFullyUsedInode(long bpos) throws JVFSException, IOException {
-		JVFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
+	void setFullyUsedInode(long bpos) throws JAFSException, IOException {
+		JAFSBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
 		// Set to 00
 		int b = findUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
@@ -244,17 +244,17 @@ class JVFSUnusedMap {
 		block.flush();		
 	}
 	
-	void create(long bpos) throws JVFSException, IOException {
+	void create(long bpos) throws JAFSException, IOException {
 		if (bpos!=getUnusedMapBpos(bpos)) {
-			throw new JVFSException("supplied bpos is not an unused map bpos");
+			throw new JAFSException("supplied bpos is not an unused map bpos");
 		}
 		if (bpos<vfs.getSuper().getBlocksTotal()) {
-			throw new JVFSException("unused map should already exist");
+			throw new JAFSException("unused map should already exist");
 		}
 		superBlock.incBlocksTotal();
 		superBlock.incBlocksUsedAndFlush();
 		vfs.getRaf().setLength(superBlock.getBlockSize()*(superBlock.getBlocksTotal()+1));
-		JVFSBlock block = new JVFSBlock(vfs, bpos);
+		JAFSBlock block = new JAFSBlock(vfs, bpos);
 		vfs.setCacheBlock(bpos, block);
 		block.initOnes();
 		block.seek(0);

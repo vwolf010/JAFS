@@ -1,12 +1,12 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
-class JVFSBlock {
+class JAFSBlock {
 	private static final int MAX_BLOCKS = 10000;
 	
 	private int blockSize = -1;
@@ -15,7 +15,7 @@ class JVFSBlock {
 	private RandomAccessFile raf;
 	public int byteIdx = 0;
 
-	private void init(JVFS vfs) {
+	private void init(JAFS vfs) {
 		raf = vfs.getRaf();
 		if (blockSize<0) {
 			blockSize = vfs.getSuper().getBlockSize();
@@ -27,18 +27,18 @@ class JVFSBlock {
 //		init(vfs);
 //	}
 	
-	JVFSBlock(JVFS vfs, long bpos) throws JVFSException {
+	JAFSBlock(JAFS vfs, long bpos) throws JAFSException {
 		if (bpos>MAX_BLOCKS) {
-			throw new JVFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
 		}
 		init(vfs);
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
-	JVFSBlock(JVFS vfs, long bpos, int blockSize) throws JVFSException {
+	JAFSBlock(JAFS vfs, long bpos, int blockSize) throws JAFSException {
 		if (bpos>MAX_BLOCKS) {
-			throw new JVFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
 		}
 		this.blockSize = blockSize;
 		init(vfs);
@@ -58,17 +58,17 @@ class JVFSBlock {
 		}		
 	}
 	
-	void setBlock(long bpos) throws JVFSException {
+	void setBlock(long bpos) throws JAFSException {
 		if (bpos>MAX_BLOCKS) {
-			throw new JVFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
 		}
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
-	void seek(int b) throws JVFSException {
+	void seek(int b) throws JAFSException {
 		if (bpos>MAX_BLOCKS) {
-			throw new JVFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
 		}
 		byteIdx = b;
 	}
@@ -80,19 +80,19 @@ class JVFSBlock {
 		byteIdx = 0;
 	}
 	
-	void flush() throws IOException, JVFSException {
+	void flush() throws IOException, JAFSException {
 		long start = blockSize + bpos*blockSize;
 		long end = start+blockSize;
 		if (end>raf.length()) {
-			throw new JVFSException("Trying to write beyond filesize");
+			throw new JAFSException("Trying to write beyond filesize");
 		}
 		raf.seek(start);
 		raf.write(buf);
 	}
 
-	int getByte() throws JVFSException {
+	int getByte() throws JAFSException {
 		if (byteIdx>=blockSize) {
-			throw new JVFSException("Trying to read beyond buffer");
+			throw new JAFSException("Trying to read beyond buffer");
 		}
 		return buf[byteIdx++] & 0xff; 
 	}
@@ -112,9 +112,9 @@ class JVFSBlock {
 		return todo;
 	}
 	
-	void setByte(int i) throws JVFSException {
+	void setByte(int i) throws JAFSException {
 		if (byteIdx>=blockSize) {
-			throw new JVFSException("Trying to write beyond buffer");
+			throw new JAFSException("Trying to write beyond buffer");
 		}
 		buf[byteIdx++] = (byte)(i & 0xff);
 	}
@@ -134,7 +134,7 @@ class JVFSBlock {
 		return todo;
 	}
 		
-	long getInt() throws JVFSException {
+	long getInt() throws JAFSException {
 		int i = 0;
 		i |= (long)(getByte() & 0xff)<<24;
 		i |= (long)(getByte() & 0xff)<<16;
@@ -143,14 +143,14 @@ class JVFSBlock {
 		return i;
 	}
 
-	void setInt(long l) throws JVFSException {
+	void setInt(long l) throws JAFSException {
 		setByte((int)((l >> 24) & 0xff));
 		setByte((int)((l >> 16) & 0xff));
 		setByte((int)((l >>  8) & 0xff));
 		setByte((int) (l & 0xff));
 	}
 
-	long getLong() throws JVFSException {
+	long getLong() throws JAFSException {
 		long l = 0;
 		l |= ((long)(getByte() & 0xffL))<<56;
 		l |= ((long)(getByte() & 0xffL))<<48;
@@ -163,7 +163,7 @@ class JVFSBlock {
 		return l;
 	}
 	
-	void setLong(long l) throws JVFSException {
+	void setLong(long l) throws JAFSException {
 		setByte((int)((l >> 56) & 0xffL));
 		setByte((int)((l >> 48) & 0xffL));
 		setByte((int)((l >> 40) & 0xffL));
@@ -174,7 +174,7 @@ class JVFSBlock {
 		setByte((int) (l & 0xffL));
 	}
 
-	byte[] getBytes(int i) throws JVFSException {
+	byte[] getBytes(int i) throws JAFSException {
 		byte[] b = new byte[i];
 		for (int n=0; n<i; n++) {
 			b[n] = (byte)(getByte() & 0xff);
@@ -182,25 +182,25 @@ class JVFSBlock {
 		return b;
 	}
 	
-	void setBytes(byte[] b) throws JVFSException {
+	void setBytes(byte[] b) throws JAFSException {
 		for (int n=0; n<b.length; n++) {
 			setByte(b[n] & 0xff);
 		}
 	}
 	
-	void setShort(short s) throws JVFSException {
+	void setShort(short s) throws JAFSException {
 		setByte(((s >>  8) & 0xff));
 		setByte((s & 0xff));		
 	}
 
-	short getShort() throws JVFSException {
+	short getShort() throws JAFSException {
 		short s = 0;
 		s |= (short)(getByte() & 0xff)<<8;
 		s |= (short)(getByte() & 0xff);
 		return s;
 	}
 	
-	void setLongVar(long l) throws JVFSException {
+	void setLongVar(long l) throws JAFSException {
 		while (l != (l & 0x7f)) {
 			setByte((int)(0x80 | (l & 0x7f)));
 			l >>= 7;
@@ -208,7 +208,7 @@ class JVFSBlock {
 		setByte((int)l);
 	}
 	
-	long getLongVar() throws JVFSException {
+	long getLongVar() throws JAFSException {
 		int shift = 0;
 		long l = 0;
 		int b = getByte();

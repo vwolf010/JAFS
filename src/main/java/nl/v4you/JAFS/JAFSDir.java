@@ -1,10 +1,10 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 import java.util.TreeSet;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
 /*
  * <ushort: next entry>
@@ -14,54 +14,54 @@ import nl.v4you.JVFS.JVFSException;
  * <byte: filename length>
  * <string: filename>
  */
-class JVFSDir {
-	JVFS vfs;
-	JVFSInode inode;
+class JAFSDir {
+	JAFS vfs;
+	JAFSInode inode;
 	
-	static void createRootDir(JVFS vfs) throws JVFSException, IOException {
-		JVFSInode inode = new JVFSInode(vfs);
-		inode.createInode(JVFSInode.INODE_DIR);
+	static void createRootDir(JAFS vfs) throws JAFSException, IOException {
+		JAFSInode inode = new JAFSInode(vfs);
+		inode.createInode(JAFSInode.INODE_DIR);
 		inode.flush();
-		JVFSDir dir = new JVFSDir(vfs, inode);
+		JAFSDir dir = new JAFSDir(vfs, inode);
 		dir.initDir(inode.getBpos(), inode.getIdx());
 		vfs.getSuper().setRootDirBpos(inode.getBpos());
 		vfs.getSuper().setRootDirIdx(inode.getIdx());
 		vfs.getSuper().flush();
 	}
 	
-	JVFSDir(JVFS vfs, JVFSInode inode) throws JVFSException, IOException {
+	JAFSDir(JAFS vfs, JAFSInode inode) throws JAFSException, IOException {
 		this.vfs = vfs;
 		this.inode = inode;
 		if (inode!=null) {
-			if ((inode.type & JVFSInode.INODE_DIR)==0) {
-				throw new JVFSException("supplied inode is not of type directory");				
+			if ((inode.type & JAFSInode.INODE_DIR)==0) {
+				throw new JAFSException("supplied inode is not of type directory");				
 			}
 		}
 	}
 	
-	JVFSDir(JVFS vfs, long bpos, int idx) throws JVFSException, IOException {
+	JAFSDir(JAFS vfs, long bpos, int idx) throws JAFSException, IOException {
 		this.vfs = vfs;
-		this.inode = new JVFSInode(vfs, bpos, idx);
+		this.inode = new JAFSInode(vfs, bpos, idx);
 	}
 		
-	JVFSDir(JVFS vfs, JVFSDirEntry entry) throws JVFSException, IOException {
+	JAFSDir(JAFS vfs, JAFSDirEntry entry) throws JAFSException, IOException {
 		this.vfs = vfs;
-		this.inode = new JVFSInode(vfs, entry.bpos, entry.idx);
+		this.inode = new JAFSInode(vfs, entry.bpos, entry.idx);
 	}
 		
-	long getEntryPos(String name) throws JVFSException, IOException {
+	long getEntryPos(String name) throws JAFSException, IOException {
 		inode.reload();
 		int strLen = name.length();
 		byte buf[] = name.getBytes("UTF-8");
-		inode.seek(0, JVFSInode.SEEK_SET);
+		inode.seek(0, JAFSInode.SEEK_SET);
 		int nextEntry = inode.readShort();
 		while (nextEntry>0) {
 			long startPos = inode.getFpos();
-			inode.seek(7, JVFSInode.SEEK_CUR); // skip bpos, idx and type
+			inode.seek(7, JAFSInode.SEEK_CUR); // skip bpos, idx and type
 			int nameLength = inode.readByte();
 			if (nameLength!=strLen) {
-				inode.seek(startPos, JVFSInode.SEEK_SET);
-				inode.seek(nextEntry, JVFSInode.SEEK_CUR);
+				inode.seek(startPos, JAFSInode.SEEK_SET);
+				inode.seek(nextEntry, JAFSInode.SEEK_CUR);
 			}
 			else {
 				int n=0;
@@ -72,8 +72,8 @@ class JVFSDir {
 					return startPos;
 				}
 				else {
-					inode.seek(startPos, JVFSInode.SEEK_SET);
-					inode.seek(nextEntry, JVFSInode.SEEK_CUR);
+					inode.seek(startPos, JAFSInode.SEEK_SET);
+					inode.seek(nextEntry, JAFSInode.SEEK_CUR);
 				}
 			}
 			nextEntry = inode.readShort();
@@ -81,7 +81,7 @@ class JVFSDir {
 		return -1;
 	}
 	
-	JVFSDirEntry getEntry(String name) throws JVFSException, IOException {
+	JAFSDirEntry getEntry(String name) throws JAFSException, IOException {
 		if (inode==null) {
 			return null;
 		}
@@ -90,8 +90,8 @@ class JVFSDir {
 			if (startPos<0) {
 				return null;
 			}
-			JVFSDirEntry entry = new JVFSDirEntry();		
-			inode.seek(startPos, JVFSInode.SEEK_SET);
+			JAFSDirEntry entry = new JAFSDirEntry();		
+			inode.seek(startPos, JAFSInode.SEEK_SET);
 			entry.startPos = startPos;
 			entry.parentBpos = inode.getBpos();
 			entry.parentIdx = inode.getIdx();
@@ -103,10 +103,10 @@ class JVFSDir {
 		}
 	}
 		
-	void updateEntry(JVFSDirEntry entry) throws JVFSException, IOException {
+	void updateEntry(JAFSDirEntry entry) throws JAFSException, IOException {
 //		byte nameBuf[] = entry.name.getBytes("UTF-8");
 		inode.reload();
-		inode.seek(entry.startPos, JVFSInode.SEEK_SET);
+		inode.seek(entry.startPos, JAFSInode.SEEK_SET);
 		inode.writeInt(entry.bpos); // block position
 		inode.writeShort(entry.idx); // inode index
 		inode.writeByte(entry.type); // file type
@@ -114,32 +114,32 @@ class JVFSDir {
 //		inode.writeBytes(nameBuf); // file name
 	}
 	
-	void deleteEntry(JVFSDirEntry entry) throws JVFSException, IOException {
+	void deleteEntry(JAFSDirEntry entry) throws JAFSException, IOException {
 		inode.reload();
-		inode.seek(entry.startPos, JVFSInode.SEEK_SET);
+		inode.seek(entry.startPos, JAFSInode.SEEK_SET);
 		inode.writeInt(0); // block position
 		inode.writeShort(0); // inode index
 		inode.writeByte(0); // file type
 		inode.writeByte(0); // name length
 	}
 	
-	JVFSInode getInode(String name) throws JVFSException, IOException {
-		JVFSDirEntry f = getEntry(name);
+	JAFSInode getInode(String name) throws JAFSException, IOException {
+		JAFSDirEntry f = getEntry(name);
 		if (f==null || f.bpos==0) {
 			return null;
 		}
 		else {
-			return new JVFSInode(vfs, f.bpos, f.idx);
+			return new JAFSInode(vfs, f.bpos, f.idx);
 		}
 	}
 
-	int countActiveEntries() throws JVFSException, IOException {
+	int countActiveEntries() throws JAFSException, IOException {
 		int cnt = 0;
-		inode.seek(0, JVFSInode.SEEK_SET);
+		inode.seek(0, JAFSInode.SEEK_SET);
 		int nextEntry = inode.readShort();
 		while (nextEntry>0) {
 			long startPos = inode.getFpos();
-			inode.seek(4+2+1, JVFSInode.SEEK_CUR);
+			inode.seek(4+2+1, JAFSInode.SEEK_CUR);
 			cnt++;
 			int len = inode.readByte();
 			if (len==0) {
@@ -151,23 +151,23 @@ class JVFSDir {
 			else if ((len==2) && (inode.readByte()=='.') && (inode.readByte()=='.')) {
 				cnt--;
 			}
-			inode.seek(startPos+nextEntry, JVFSInode.SEEK_SET);
+			inode.seek(startPos+nextEntry, JAFSInode.SEEK_SET);
 			nextEntry = inode.readShort();
 		}
 		return cnt;
 	}
 	
-	void createEntry(JVFSDirEntry entry) throws JVFSException, IOException {
+	void createEntry(JAFSDirEntry entry) throws JAFSException, IOException {
 		if (entry.name.contains("/")) {
 			if (entry.isDirectory()) {
-				throw new JVFSException("Directory name ["+entry.name+"] should not contain a slash (/)");
+				throw new JAFSException("Directory name ["+entry.name+"] should not contain a slash (/)");
 			}
 			else {
-				throw new JVFSException("File name ["+entry.name+"] should not contain a slash (/)");
+				throw new JAFSException("File name ["+entry.name+"] should not contain a slash (/)");
 			}
 		}
 		if (getEntry(entry.name)!=null) {
-			throw new JVFSException("Name ["+entry.name+"] already exists");
+			throw new JAFSException("Name ["+entry.name+"] already exists");
 		}
 		
 		byte nameBuf[] = entry.name.getBytes("UTF-8");
@@ -176,21 +176,21 @@ class JVFSDir {
 		/*
 		 * Find smallest space to store entry
 		 */
-		inode.seek(0, JVFSInode.SEEK_SET);
+		inode.seek(0, JAFSInode.SEEK_SET);
 		int nextEntry = inode.readShort();
 		long newEntryStartPos = 0;
 		int newEntrySpaceForName = 1000; // way above maximum dir entry name length of 255
 		while (nextEntry>0) {
 			long startPos = inode.getFpos();
 			int spaceForName = nextEntry-4-2-1;
-			inode.seek(4+2+1, JVFSInode.SEEK_CUR);
+			inode.seek(4+2+1, JAFSInode.SEEK_CUR);
 			int len = inode.readByte();
 			if (len==0 && nameLen<spaceForName && spaceForName<newEntrySpaceForName) {
 				newEntryStartPos = startPos;
 				newEntrySpaceForName = spaceForName;
 			}
-			inode.seek(startPos, JVFSInode.SEEK_SET);
-			inode.seek(nextEntry, JVFSInode.SEEK_CUR);
+			inode.seek(startPos, JAFSInode.SEEK_SET);
+			inode.seek(nextEntry, JAFSInode.SEEK_CUR);
 			nextEntry = inode.readShort();
 		}
 		
@@ -199,11 +199,11 @@ class JVFSDir {
 		 */
 		if (newEntryStartPos>0) {
 			// Re-use an existing entry
-			inode.seek(newEntryStartPos, JVFSInode.SEEK_SET);
+			inode.seek(newEntryStartPos, JAFSInode.SEEK_SET);
 		}
 		else {
 			// Append to the end
-			inode.seek(-2, JVFSInode.SEEK_CUR);
+			inode.seek(-2, JAFSInode.SEEK_CUR);
 			inode.writeShort(4 + 2 + 1 + 1 + nameBuf.length); // total size of entry			
 		}
 		inode.writeInt(entry.bpos); // block position
@@ -224,35 +224,35 @@ class JVFSDir {
 	 * @throws IOException 
 	 * @throws IOException 
 	 */
-	void initDir(long parentBpos, int parentIdx) throws JVFSException, IOException {
+	void initDir(long parentBpos, int parentIdx) throws JAFSException, IOException {
 		inode.writeShort(0);
-		JVFSDirEntry entry = new JVFSDirEntry();
+		JAFSDirEntry entry = new JAFSDirEntry();
 		entry.bpos = inode.getBpos();
 		entry.idx = inode.getIdx();
-		entry.type = JVFSDirEntry.TYPE_DIR;
+		entry.type = JAFSDirEntry.TYPE_DIR;
 		entry.name = ".";
 		createEntry(entry);
 		entry.bpos = parentBpos;
 		entry.idx = parentIdx;
-		entry.type = JVFSDirEntry.TYPE_DIR;
+		entry.type = JAFSDirEntry.TYPE_DIR;
 		entry.name = "..";
 		createEntry(entry);
 	}
 	
-	boolean createNewEntry(String name, byte type) throws JVFSException, IOException {
+	boolean createNewEntry(String name, byte type) throws JAFSException, IOException {
 		if (name.contains("/")) {
-			if ((type & JVFSDirEntry.TYPE_FILE)>0) {
-				throw new JVFSException("File name ["+name+"] should not contain a slash (/)");
+			if ((type & JAFSDirEntry.TYPE_FILE)>0) {
+				throw new JAFSException("File name ["+name+"] should not contain a slash (/)");
 			}
 			else {
-				throw new JVFSException("Dir name ["+name+"] should not contain a slash (/)");
+				throw new JAFSException("Dir name ["+name+"] should not contain a slash (/)");
 			}
 		}
 		if (getEntry(name)!=null) {
 			// name already exists
 			return false;
 		}
-		JVFSDirEntry entry = new JVFSDirEntry();
+		JAFSDirEntry entry = new JAFSDirEntry();
 		entry.bpos = 0;
 		entry.idx = 0;
 		entry.type = type;
@@ -261,13 +261,13 @@ class JVFSDir {
 		return true;
 	}
 	
-	JVFSDirEntry mkinode(String name, int type) throws JVFSException, IOException {
-		JVFSDirEntry entry = getEntry(name);
+	JAFSDirEntry mkinode(String name, int type) throws JAFSException, IOException {
+		JAFSDirEntry entry = getEntry(name);
 		if (entry!=null) {
-			JVFSInode childInode = new JVFSInode(vfs);
+			JAFSInode childInode = new JAFSInode(vfs);
 			childInode.createInode(type);
-			if ((type & JVFSInode.INODE_DIR)>0) {
-				JVFSDir dir = new JVFSDir(vfs, childInode);
+			if ((type & JAFSInode.INODE_DIR)>0) {
+				JAFSDir dir = new JAFSDir(vfs, childInode);
 				dir.initDir(inode.getBpos(), inode.getIdx());
 			}
 			entry.bpos = childInode.getBpos();
@@ -278,13 +278,13 @@ class JVFSDir {
 		return null;
 	}
 
-	String[] list() throws JVFSException, IOException {
+	String[] list() throws JAFSException, IOException {
 		TreeSet<String> l = new TreeSet<String>();
-		inode.seek(0, JVFSInode.SEEK_SET);
+		inode.seek(0, JAFSInode.SEEK_SET);
 		int nextEntry = inode.readShort();
 		while (nextEntry>0) {
 			long startPos = inode.getFpos();
-			inode.seek(4+2+1, JVFSInode.SEEK_CUR);
+			inode.seek(4+2+1, JAFSInode.SEEK_CUR);
 			int len = inode.readByte();
 			if (len>0) {
 				byte name[] = new byte[len];
@@ -301,7 +301,7 @@ class JVFSDir {
 					l.add(new String(name, "UTF-8"));
 				}
 			}
-			inode.seek(startPos+nextEntry, JVFSInode.SEEK_SET);
+			inode.seek(startPos+nextEntry, JAFSInode.SEEK_SET);
 			nextEntry = inode.readShort();
 		}
 		

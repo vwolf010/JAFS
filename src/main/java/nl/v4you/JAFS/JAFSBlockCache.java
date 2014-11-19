@@ -1,45 +1,45 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
 class CacheEntry {
 	long bpos;
-	JVFSBlock block;
+	JAFSBlock block;
 	CacheEntry l;
 	CacheEntry r;
 }
 
-class JVFSBlockCache {
+class JAFSBlockCache {
 	private static int CACHE_MAX_SIZE = 1000;
 
-	private JVFS vfs;
+	private JAFS vfs;
 	private Map<Long, CacheEntry> cache = new HashMap<Long, CacheEntry>();
 	private CacheEntry mostLeft = null;
 	private CacheEntry mostRight = null;
 	
-	JVFSBlockCache(JVFS vfs) {
+	JAFSBlockCache(JAFS vfs) {
 		this.vfs = vfs;
 		mostLeft = null;
 		mostRight = null;
 		cache.clear();
 	}
 	
-	JVFSBlock get(long bpos, JVFSBlock block) throws JVFSException, IOException {
+	JAFSBlock get(long bpos, JAFSBlock block) throws JAFSException, IOException {
 		CacheEntry ce = null;
 		boolean cacheHit = false;
 		
 		if (bpos<0) {
 			// SuperBlock bpos = -1 and is not cached
-			throw new JVFSException("bpos should be 0 or greater");
+			throw new JAFSException("bpos should be 0 or greater");
 		}
 		
 		if (bpos>=vfs.getSuper().getBlocksTotal()) {
-			throw new JVFSException("bpos >= blocks total");
+			throw new JAFSException("bpos >= blocks total");
 		}
 		
 		/*
@@ -49,7 +49,7 @@ class JVFSBlockCache {
 			cacheHit = true;
 			ce = cache.get(bpos);
 			if (block!=null) {
-				throw new JVFSException("Cache hit unexpected, block supplied to cache get method");
+				throw new JAFSException("Cache hit unexpected, block supplied to cache get method");
 			}
 		}
 		
@@ -92,7 +92,7 @@ class JVFSBlockCache {
 				ce.block = block;
 			}
 			else {
-				ce.block = new JVFSBlock(vfs, bpos);
+				ce.block = new JAFSBlock(vfs, bpos);
 				ce.block.readFromDisk();
 			}
 			
@@ -107,7 +107,7 @@ class JVFSBlockCache {
 			cache.put(bpos, ce);
 		}
 		if (ce.bpos!=bpos) {
-			throw new JVFSException("Cached block bpos is not equal to requested bpos");
+			throw new JAFSException("Cached block bpos is not equal to requested bpos");
 		}
 		return ce.block;
 	}

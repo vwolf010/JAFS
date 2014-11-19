@@ -1,23 +1,23 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
-public class JVFSFileOutputStream extends OutputStream {
-	JVFS vfs;
-	JVFSInode inode;
+public class JAFSFileOutputStream extends OutputStream {
+	JAFS vfs;
+	JAFSInode inode;
 	String path;
 	
-	JVFSFileOutputStream(JVFS vfs, JVFSFile f) throws JVFSException, IOException {
+	JAFSFileOutputStream(JAFS vfs, JAFSFile f) throws JAFSException, IOException {
 		this.vfs = vfs;
 		this.path = f.getCanonicalPath();
-		JVFSDirEntry entry = f.getEntry(f.getCanonicalPath());
+		JAFSDirEntry entry = f.getEntry(f.getCanonicalPath());
 		if (entry!=null) {
 			if (entry.bpos>0) {
-				inode = new JVFSInode(vfs, entry); 
+				inode = new JAFSInode(vfs, entry); 
 			}
 		}			
 	}
@@ -36,13 +36,13 @@ public class JVFSFileOutputStream extends OutputStream {
 	public void write(byte buf[], int start, int len) throws IOException {
 		try {
 			if (inode==null) {
-				JVFSFile f = new JVFSFile(vfs, path);
-				JVFSDir dir = new JVFSDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName(), JVFSInode.INODE_FILE);
-				inode = new JVFSInode(vfs, f.getEntry(path));
+				JAFSFile f = new JAFSFile(vfs, path);
+				JAFSDir dir = new JAFSDir(vfs, f.getEntry(f.getParent()));
+				dir.mkinode(f.getName(), JAFSInode.INODE_FILE);
+				inode = new JAFSInode(vfs, f.getEntry(path));
 			}
 			inode.writeBytes(buf, start, len);
-		} catch (JVFSException e) {
+		} catch (JAFSException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 		}		
@@ -57,13 +57,13 @@ public class JVFSFileOutputStream extends OutputStream {
 	public void write(int arg0) throws IOException {
 		try {
 			if (inode==null) {
-				JVFSFile f = new JVFSFile(vfs, path);
-				JVFSDir dir = new JVFSDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName(), JVFSInode.INODE_FILE);
-				inode = new JVFSInode(vfs, f.getEntry(path));
+				JAFSFile f = new JAFSFile(vfs, path);
+				JAFSDir dir = new JAFSDir(vfs, f.getEntry(f.getParent()));
+				dir.mkinode(f.getName(), JAFSInode.INODE_FILE);
+				inode = new JAFSInode(vfs, f.getEntry(path));
 			}
 			inode.writeByte(arg0);
-		} catch (JVFSException e) {
+		} catch (JAFSException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 		}

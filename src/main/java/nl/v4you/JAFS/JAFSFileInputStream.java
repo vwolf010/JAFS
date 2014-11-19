@@ -1,22 +1,22 @@
-package nl.v4you.JVFS;
+package nl.v4you.JAFS;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import nl.v4you.JVFS.JVFS;
-import nl.v4you.JVFS.JVFSException;
+import nl.v4you.JAFS.JAFS;
+import nl.v4you.JAFS.JAFSException;
 
-public class JVFSFileInputStream extends InputStream {
-	JVFS vfs;
+public class JAFSFileInputStream extends InputStream {
+	JAFS vfs;
 	String path;
-	JVFSInode inode;
+	JAFSInode inode;
 	
-	JVFSFileInputStream(JVFS vfs, JVFSFile f) throws JVFSException, IOException {
+	JAFSFileInputStream(JAFS vfs, JAFSFile f) throws JAFSException, IOException {
 		this.vfs = vfs;
 		path = f.path;
-		JVFSDirEntry entry = f.getEntry(path);
+		JAFSDirEntry entry = f.getEntry(path);
 		if (entry.bpos>0) {
-			inode = new JVFSInode(vfs, entry);
+			inode = new JAFSInode(vfs, entry);
 		}
 	}
 
@@ -25,16 +25,16 @@ public class JVFSFileInputStream extends InputStream {
 		int bread = 0;
 		try {
 			if (inode==null) {
-				JVFSFile f = new JVFSFile(vfs, path);
-				JVFSDirEntry entry = f.getEntry(f.path);
+				JAFSFile f = new JAFSFile(vfs, path);
+				JAFSDirEntry entry = f.getEntry(f.path);
 				if (entry.bpos>0) {
-					inode = new JVFSInode(vfs, entry);
+					inode = new JAFSInode(vfs, entry);
 				}			
 			}
 			if (inode!=null) {
 				bread = inode.readBytes(b, off, len);
 			}
-		} catch (JVFSException e) {
+		} catch (JAFSException e) {
 			throw new IOException("VFSException wrapper: "+e.getMessage());
 		}
 		return bread;
@@ -45,16 +45,16 @@ public class JVFSFileInputStream extends InputStream {
 		int b = -1;
 		try {
 			if (inode==null) {
-				JVFSFile f = new JVFSFile(vfs, path);
-				JVFSDirEntry entry = f.getEntry(f.path);
+				JAFSFile f = new JAFSFile(vfs, path);
+				JAFSDirEntry entry = f.getEntry(f.path);
 				if (entry.bpos>0) {
-					inode = new JVFSInode(vfs, entry);
+					inode = new JAFSInode(vfs, entry);
 				}			
 			}
 			if (inode!=null) {
 				return inode.readByte();
 			}
-		} catch (JVFSException e) {
+		} catch (JAFSException e) {
 			throw new IOException("VFSException wrapper: "+e.getMessage());
 		}
 		return b;
