@@ -51,8 +51,8 @@ class JAFSDir {
 		
 	long getEntryPos(String name) throws JAFSException, IOException {
 		inode.reload();
-		int strLen = name.length();
 		byte buf[] = name.getBytes("UTF-8");
+		int strLen = buf.length;
 		inode.seek(0, JAFSInode.SEEK_SET);
 		int nextEntry = inode.readShort();
 		while (nextEntry>0) {
@@ -65,7 +65,7 @@ class JAFSDir {
 			}
 			else {
 				int n=0;
-				while ((n<nameLength) && (inode.readByte()==buf[n])) {
+				while ((n<nameLength) && (inode.readByte()==(buf[n] & 0xff))) {
 					n++;
 				}
 				if (n==nameLength) {
@@ -90,7 +90,7 @@ class JAFSDir {
 			if (startPos<0) {
 				return null;
 			}
-			JAFSDirEntry entry = new JAFSDirEntry();		
+			JAFSDirEntry entry = new JAFSDirEntry();
 			inode.seek(startPos, JAFSInode.SEEK_SET);
 			entry.startPos = startPos;
 			entry.parentBpos = inode.getBpos();
@@ -104,14 +104,14 @@ class JAFSDir {
 	}
 		
 	void updateEntry(JAFSDirEntry entry) throws JAFSException, IOException {
-//		byte nameBuf[] = entry.name.getBytes("UTF-8");
+		byte nameBuf[] = entry.name.getBytes("UTF-8");
 		inode.reload();
 		inode.seek(entry.startPos, JAFSInode.SEEK_SET);
 		inode.writeInt(entry.bpos); // block position
 		inode.writeShort(entry.idx); // inode index
 		inode.writeByte(entry.type); // file type
-		inode.writeByte(entry.name.length());
-//		inode.writeBytes(nameBuf); // file name
+		inode.writeByte(nameBuf.length);
+		inode.writeBytes(nameBuf, 0, nameBuf.length); // file name
 	}
 	
 	void deleteEntry(JAFSDirEntry entry) throws JAFSException, IOException {
@@ -209,7 +209,7 @@ class JAFSDir {
 		inode.writeInt(entry.bpos); // block position
 		inode.writeShort(entry.idx); // inode index
 		inode.writeByte(entry.type); // file type
-		inode.writeByte(entry.name.length());
+		inode.writeByte(nameBuf.length);
 		inode.writeBytes(nameBuf, 0, nameBuf.length); // file name
 		if (newEntryStartPos==0) {
 			inode.writeShort(0);

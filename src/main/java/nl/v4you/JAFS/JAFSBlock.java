@@ -7,7 +7,7 @@ import nl.v4you.JAFS.JAFS;
 import nl.v4you.JAFS.JAFSException;
 
 class JAFSBlock {
-	private static final int MAX_BLOCKS = 10000;
+//	private static final int MAX_BLOCKS = 10000;
 	
 	private int blockSize = -1;
 	private byte[] buf;
@@ -28,18 +28,18 @@ class JAFSBlock {
 //	}
 	
 	JAFSBlock(JAFS vfs, long bpos) throws JAFSException {
-		if (bpos>MAX_BLOCKS) {
-			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-		}
+//		if (bpos>MAX_BLOCKS) {
+//			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+//		}
 		init(vfs);
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
 	JAFSBlock(JAFS vfs, long bpos, int blockSize) throws JAFSException {
-		if (bpos>MAX_BLOCKS) {
-			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-		}
+//		if (bpos>MAX_BLOCKS) {
+//			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+//		}
 		this.blockSize = blockSize;
 		init(vfs);
 		this.bpos = bpos;
@@ -59,17 +59,17 @@ class JAFSBlock {
 	}
 	
 	void setBlock(long bpos) throws JAFSException {
-		if (bpos>MAX_BLOCKS) {
-			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-		}
+//		if (bpos>MAX_BLOCKS) {
+//			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+//		}
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
 	void seek(int b) throws JAFSException {
-		if (bpos>MAX_BLOCKS) {
-			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-		}
+//		if (bpos>MAX_BLOCKS) {
+//			throw new JAFSException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
+//		}
 		byteIdx = b;
 	}
 		

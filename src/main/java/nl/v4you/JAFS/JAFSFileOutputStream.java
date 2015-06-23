@@ -11,7 +11,7 @@ public class JAFSFileOutputStream extends OutputStream {
 	JAFSInode inode;
 	String path;
 	
-	JAFSFileOutputStream(JAFS vfs, JAFSFile f) throws JAFSException, IOException {
+	JAFSFileOutputStream(JAFS vfs, JAFSFile f, boolean append) throws JAFSException, IOException {
 		this.vfs = vfs;
 		if (!f.exists()) {
 			if (!f.createNewFile()) {
@@ -22,7 +22,10 @@ public class JAFSFileOutputStream extends OutputStream {
 		JAFSDirEntry entry = f.getEntry(f.getCanonicalPath());
 		if (entry!=null) {
 			if (entry.bpos>0) {
-				inode = new JAFSInode(vfs, entry); 
+				inode = new JAFSInode(vfs, entry);
+				if (append) {
+					inode.seek(0, JAFSInode.SEEK_END);
+				}
 			}
 		}			
 	}

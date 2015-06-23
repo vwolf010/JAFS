@@ -192,7 +192,7 @@ class JAFSInodeContext {
 			maxFileSizeNow += levels[ptrs[n].level]; 
 			ptrs[n].fPosEnd = maxFileSizeNow;
 		}
-		System.out.print(toString());
+		//System.out.print(toString());
 	}
 	
 	@Override

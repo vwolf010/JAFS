@@ -29,6 +29,8 @@ public class JAFSFile {
 	JAFSDirEntry entry;	
 	String path;
 	
+	public static final String seperator = "/";
+	
 	/* 
 	 * public 
 	 */
@@ -159,11 +161,7 @@ public class JAFSFile {
 		}
 	}
 
-	
-	/* 
-	 * default 
-	 */	
-	JAFSFile(JAFS vfs, String path) throws JAFSException, IOException {
+	private void construct(JAFS vfs, String path) {
 		if (path==null) {
 			throw new NullPointerException("path cannot be null");
 		}
@@ -172,16 +170,24 @@ public class JAFSFile {
 			path = "/" + path;
 		}
 		this.vfs = vfs;
-		this.path = normalizePath(path);		
+		this.path = normalizePath(path);				
 	}
 	
-//	JAFSFile(JAFS vfs, JAFSFile parent, String child) {
-//		//TODO:
-//	}
-//	
-//	JAFSFile(JAFS vfs, String parent, String child) {
-//		//TODO:
-//	}
+	
+	/* 
+	 * default 
+	 */	
+	JAFSFile(JAFS vfs, String path) throws JAFSException, IOException {
+		construct(vfs, path);
+	}
+	
+	JAFSFile(JAFS vfs, JAFSFile parent, String child) {
+		construct(vfs, parent.getCanonicalPath()+JAFSFile.seperator+child);
+	}
+	
+	JAFSFile(JAFS vfs, String parent, String child) {
+		construct(vfs, parent+JAFSFile.seperator+child);
+	}
 	
 	JAFSDirEntry getEntry(String path) throws JAFSException, IOException {
 		JAFSDirEntry entry = new JAFSDirEntry();

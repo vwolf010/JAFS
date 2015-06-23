@@ -64,12 +64,24 @@ public class JAFS {
 		return new JAFSFile(this, name);
 	}
 	
+	public JAFSFile getFile(String parent, String name) throws JAFSException, IOException {
+		return new JAFSFile(this, parent, name);
+	}
+
+	public JAFSFile getFile(JAFSFile parent, String name) throws JAFSException, IOException {
+		return new JAFSFile(this, parent, name);
+	}
+
 	public JAFSFileInputStream getFileInputStream(JAFSFile f) throws JAFSException, IOException {
 		return new JAFSFileInputStream(this, f);
 	}
 	
 	public JAFSFileOutputStream getFileOutputStream(JAFSFile f) throws JAFSException, IOException {
-		return new JAFSFileOutputStream(this, f);
+		return new JAFSFileOutputStream(this, f, false);
+	}
+
+	public JAFSFileOutputStream getFileOutputStream(JAFSFile f, boolean append) throws JAFSException, IOException {
+		return new JAFSFileOutputStream(this, f, append);
 	}
 
 	public void close() throws IOException {

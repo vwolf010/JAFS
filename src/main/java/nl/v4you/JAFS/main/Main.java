@@ -108,7 +108,7 @@ public class Main {
 				System.out.println("copy from vfs done");
 				
 				f.delete();
-				System.out.println("Delete gedaan");
+				System.out.println("Delete done");
 			}
 			
 			{
