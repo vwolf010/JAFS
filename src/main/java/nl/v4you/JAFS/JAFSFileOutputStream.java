@@ -27,7 +27,7 @@ public class JAFSFileOutputStream extends OutputStream {
 					inode.seek(0, JAFSInode.SEEK_END);
 				}
 			}
-		}			
+		}
 	}
 	
 	@Override
@@ -53,7 +53,7 @@ public class JAFSFileOutputStream extends OutputStream {
 		} catch (JAFSException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
-		}		
+		}
 	}
 
 	@Override

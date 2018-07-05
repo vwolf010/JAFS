@@ -2,9 +2,6 @@ package nl.v4you.JAFS;
 
 import java.io.IOException;
 
-import nl.v4you.JAFS.JAFS;
-import nl.v4you.JAFS.JAFSException;
-
 class VFSINodePtr {
 	int level;
 	long size;
@@ -38,7 +35,7 @@ class JAFSInodeContext {
 			long nextSize = size/ptrsPerPtrBlock;
 			int idx = (int)((fpos-start) / nextSize);
 			block.seek(idx*4);
-			long ptr = block.getInt();
+			long ptr = block.readInt();
 			if (ptr<0) {
 				throw new JAFSException("Negative block ptr!!!");
 			}
@@ -57,7 +54,7 @@ class JAFSInodeContext {
 				dum.initZeros();
 				dum.flush();
 				block.seek(idx*4);
-				block.setInt(ptr);
+				block.writeInt(ptr);
 				block.flush();
 				vfs.getUnusedMap().setUsedDataBlock(ptr);
 			}
@@ -126,7 +123,7 @@ class JAFSInodeContext {
 			JAFSBlock dum = vfs.setCacheBlock(bpos, null);
 			dum.seek(0);
 			for (int n=0; n<ptrsPerPtrBlock; n++) {
-				long ptr = dum.getInt();
+				long ptr = dum.readInt();
 				if (ptr>0) {
 					free(ptr, level-1);
 				}
@@ -134,6 +131,7 @@ class JAFSInodeContext {
 		}
 		vfs.getUnusedMap().setUnusedBlock(bpos);
 		vfs.getSuper().decBlocksUsed();
+		vfs.getUnusedMap().startAt=0;
 	}
 	
 	void freeDataAndPtrBlocks(JAFSInode inode) throws JAFSException, IOException {
@@ -149,7 +147,7 @@ class JAFSInodeContext {
 	 * Create the inode pointers structure.
 	 * 
 	 * @param blockSize
-	 * @param inodeSize
+	 * @param iNodeSize
 	 * @param maxFileSize
 	 */	
 	JAFSInodeContext(JAFS vfs, int blockSize, int iNodeSize, long maxFileSize) {

@@ -53,10 +53,10 @@ public class JAFS {
 			throw new JAFSException("Supplied block size ["+blockSize+"] does not match header block size ["+superBlock.getBlockSize()+"]");
 		}
 		if (inodeSize!=superBlock.getInodeSize()) {
-			throw new JAFSException("Supplied inode size ["+blockSize+"] does not match header inode size ["+superBlock.getBlockSize()+"]");
+			throw new JAFSException("Supplied inode size ["+inodeSize+"] does not match header inode size ["+superBlock.getInodeSize()+"]");
 		}
 		if (maxFileSize!=superBlock.getMaxFileSize()) {
-			throw new JAFSException("Supplied max file size ["+blockSize+"] does not match header max file size ["+superBlock.getBlockSize()+"]");
+			throw new JAFSException("Supplied max file size ["+maxFileSize+"] does not match header max file size ["+superBlock.getMaxFileSize()+"]");
 		}
 	}
 	

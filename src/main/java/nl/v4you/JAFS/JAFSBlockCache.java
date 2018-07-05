@@ -37,7 +37,7 @@ class JAFSBlockCache {
 			// SuperBlock bpos = -1 and is not cached
 			throw new JAFSException("bpos should be 0 or greater");
 		}
-		
+
 		if (bpos>=vfs.getSuper().getBlocksTotal()) {
 			throw new JAFSException("bpos >= blocks total");
 		}

@@ -2,9 +2,6 @@ package nl.v4you.JAFS;
 
 import java.io.IOException;
 
-import nl.v4you.JAFS.JAFS;
-import nl.v4you.JAFS.JAFSException;
-
 class JAFSSuper {
 	static final String magic = "JVFS";
 	static final String version = "1";
@@ -115,10 +112,10 @@ class JAFSSuper {
 		rootBlock.readFromDisk();
 		byte arr[] = new byte[64];
 		int i = 0;
-		int b = rootBlock.getByte();
+		int b = rootBlock.readByte();
 		while (b!=0) {
 			arr[i++] = (byte)(b & 0xff);
-			b = rootBlock.getByte();
+			b = rootBlock.readByte();
 		}
 		byte dum[] = new byte[i];
 		for (b=0; b<i; b++) {
@@ -141,16 +138,16 @@ class JAFSSuper {
 	void flush() throws JAFSException, IOException {
 		rootBlock.initZeros();
 		rootBlock.seek(0);
-		rootBlock.setBytes((magic+"|").getBytes());
-		rootBlock.setBytes((version+"|").getBytes());
+		rootBlock.writeBytes((magic+"|").getBytes());
+		rootBlock.writeBytes((version+"|").getBytes());
 		// TODO: should write the following integers as hexadecimal
-		rootBlock.setBytes((String.format("%d|", blockSize)).getBytes());
-		rootBlock.setBytes((String.format("%d|", inodeSize)).getBytes());
-		rootBlock.setBytes((String.format("%d|", maxFileSize)).getBytes());
-		rootBlock.setBytes((String.format("%d|", rootDirBPos)).getBytes());
-		rootBlock.setBytes((String.format("%d|", rootDirIdx)).getBytes());
-		rootBlock.setBytes((String.format("%d|", blocksTotal)).getBytes());
-		rootBlock.setBytes((String.format("%d|", blocksUsed)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", blockSize)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", inodeSize)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", maxFileSize)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", rootDirBPos)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", rootDirIdx)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", blocksTotal)).getBytes());
+		rootBlock.writeBytes((String.format("%d|", blocksUsed)).getBytes());
 		rootBlock.flush();
 	}
 }

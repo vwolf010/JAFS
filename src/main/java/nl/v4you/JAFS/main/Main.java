@@ -29,7 +29,7 @@ public class Main {
 				for (int n=0; n<251; n++) {
 					buf[n] = (byte)(n & 0xff);
 				}				
-				File q = new File("c:/temp/xx.txt");
+				File q = new File("c:/data/temp/xx.txt");
 				q.delete();
 				FileOutputStream fos = new FileOutputStream(q);
 				for (int n=0; n<((1024*1024)/251); n++) {
@@ -41,7 +41,7 @@ public class Main {
 //			File x = new File("c:/temp/test.vfs");
 //			x.delete();
 			
-			JAFS vfs = new JAFS("c:/temp/test.vfs", 128,64,4L*1024L*1024L*1024L);
+			JAFS vfs = new JAFS("c:/data/temp/test.vfs", 128,64,4L*1024L*1024L*1024L);
 			{
 				JAFSFile f = vfs.getFile("/sub1");
 				f.mkdir();
@@ -74,7 +74,7 @@ public class Main {
 			}
 			
 			{
-				FileInputStream fis = new FileInputStream("c:/temp/xx.txt");
+				FileInputStream fis = new FileInputStream("c:/data/temp/xx.txt");
 
 				JAFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
 				f.createNewFile();				
@@ -93,7 +93,7 @@ public class Main {
 			{
 				JAFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
 				JAFSFileInputStream fis = vfs.getFileInputStream(f);
-				File q = new File("c:/temp/yy.txt");
+				File q = new File("c:/data/temp/yy.txt");
 				q.delete();
 				FileOutputStream fos = new FileOutputStream(q);
 				

@@ -2,9 +2,6 @@ package nl.v4you.JAFS;
 
 import java.io.IOException;
 
-import nl.v4you.JAFS.JAFS;
-import nl.v4you.JAFS.JAFSException;
-
 class JAFSUnusedMap {
 	/*
 	 * 1st bit (data block)  : 0 = used, 1 = not used
@@ -20,6 +17,7 @@ class JAFSUnusedMap {
 	JAFSSuper superBlock;
 	int blocksPerUnusedMap;
 	int blockSize;
+	int startAt = 0;
 	
 	JAFSUnusedMap(JAFS vfs) throws JAFSException {
 		this.vfs = vfs;
@@ -49,22 +47,22 @@ class JAFSUnusedMap {
 		int grpMask = p0mask | p1mask | p2mask | p3mask;		
 		long blocksTotal = superBlock.getBlocksTotal();
 		int unusedBlocksCount = 1+(int)(blocksTotal/blocksPerUnusedMap);
-		long bpos = 0;
-		for (int n=0; n<unusedBlocksCount; n++) {
+		long bpos = startAt * blocksPerUnusedMap;
+		for (int n=startAt; n<unusedBlocksCount; n++) {
 			if (bpos>=blocksTotal) {
 				return 0;
 			}
 			JAFSBlock block = vfs.getCacheBlock(n*blocksPerUnusedMap);
 			long newBpos = 0;
 			block.seek(0);
-			int b = block.getByte();
+			int b = block.readByte();
 			if ((b & skipMapMask) > 0) {
 				bpos += blocksPerUnusedMap;
 			}
 			else {
 				block.seek(0);
 				for (int m=0; m<blockSize; m++) {
-					b = block.getByte();
+					b = block.readByte();
 					if ((b & grpMask) > 0) {
 						if (bpos<blocksTotal) {
 							if ((b & p0mask) > 0) {
@@ -107,13 +105,16 @@ class JAFSUnusedMap {
 				}
 				if (newBpos==0 && bpos<blocksTotal) {
 					block.seek(0);
-					b = block.getByte();
+					b = block.readByte();
 					block.seek(0);
-					block.setByte(b | skipMapMask);
+					block.writeByte(b | skipMapMask);
 					block.flush();
 				}
 			}
 			if (newBpos>0) {
+				if (startAt!=n) {
+					startAt = n;
+				}
 				return newBpos;
 			}
 		}
@@ -146,7 +147,7 @@ class JAFSUnusedMap {
 	int findUnusedByte(JAFSBlock block, long bpos) throws JAFSException, IOException {
 		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))/4);
 		block.seek(unusedIdx);
-		int b = block.getByte();
+		int b = block.readByte();
 		block.seek(unusedIdx);
 		return b;
 	}
@@ -166,17 +167,16 @@ class JAFSUnusedMap {
 		b |= bitPos; // set block data bit to unused (1)
 		bitPos >>= 1;
 		b |= bitPos; // set inode bit to unused (1)
-		block.setByte(b);
+		block.writeByte(b);
 		
 		// don't skip this map next time we look for a free block
 		block.seek(0);
-		b = block.getByte();
+		b = block.readByte();
 		block.seek(0);
-		block.setByte(b & 0x3f);
+		block.writeByte(b & 0x3f);
 		
 		// and flush
-		block.flush();				
-		
+		block.flush();
 	}
 	
 	/**
@@ -194,7 +194,7 @@ class JAFSUnusedMap {
 		b &= bitPos ^ 0xff; // set block data bit to used (0)
 		bitPos >>= 1;
 		b &= bitPos ^ 0xff; // set inode bit to used (0)
-		block.setByte(b);
+		block.writeByte(b);
 		block.flush();		
 	}
 	
@@ -213,13 +213,13 @@ class JAFSUnusedMap {
 		b &= bitPos ^ 0xff; // set block data to used (0)
 		bitPos >>= 1;
 		b |= bitPos; // set inode bit to unused (1)
-		block.setByte(b);
+		block.writeByte(b);
 
 		// don't skip this map next time we look for a free inode block
 		block.seek(0);
-		b = block.getByte();
+		b = block.readByte();
 		block.seek(0);
-		block.setByte(b & 0xbf);
+		block.writeByte(b & 0xbf);
 		
 		// and flush
 		block.flush();		
@@ -240,7 +240,7 @@ class JAFSUnusedMap {
 		b &= bitPos ^ 0xff; // set block data to used (0)
 		bitPos >>= 1;
 		b &= bitPos ^ 0xff; // set inode to used (0)
-		block.setByte(b);
+		block.writeByte(b);
 		block.flush();		
 	}
 	
@@ -258,7 +258,7 @@ class JAFSUnusedMap {
 		vfs.setCacheBlock(bpos, block);
 		block.initOnes();
 		block.seek(0);
-		block.setByte(0x3f); // don't skip this new map
+		block.writeByte(0x3f); // don't skip this new map
 		block.flush();
 	}
 }

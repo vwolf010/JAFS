@@ -219,8 +219,8 @@ class JAFSDir {
 	/**
 	 * Creates the . and .. entry
 	 * 
-	 * @param bpos Block position of the parent directory inode
-	 * @param idx  Index within inode block of the parent directory inode
+	 * @param parentBpos Block position of the parent directory inode
+	 * @param parentIdx  Index within inode block of the parent directory inode
 	 * @throws IOException 
 	 * @throws IOException 
 	 */
