@@ -68,6 +68,15 @@ public class JAFSFile {
 		return (entry != null) && (entry.isDirectory());
 	}
 
+	public long length() throws IOException, JAFSException {
+		JAFSDirEntry entry = getEntry(path);
+		if (entry==null) {
+			return -1;
+		}
+		JAFSInode inode = new JAFSInode(vfs, entry);
+		return inode.size;
+	}
+
 	public boolean createNewFile() throws JAFSException, IOException {
 		String parent = getParent();
 		JAFSDirEntry entry = getEntry(parent);
@@ -78,7 +87,7 @@ public class JAFSFile {
 				entry = dir.mkinode(entry.name, JAFSInode.INODE_DIR);
 			}
 			JAFSDir dir = new JAFSDir(vfs, entry);
-			return dir.createNewEntry(getName(), JAFSDirEntry.TYPE_FILE);
+			return dir.createNewEntry(getName(), JAFSDirEntry.TYPE_FILE, 0, 0);
 		}
 		return false;		
 	}
@@ -155,7 +164,7 @@ public class JAFSFile {
 					JAFSDir dstDir = new JAFSDir(vfs, getEntry(target.getParent()));
 					srcDir.deleteEntry(entry);
 					entry.name = target.getName();
-					dstDir.createNewEntry(target.getName(), entry.type);					
+					dstDir.createNewEntry(target.getName(), entry.type, entry.bpos, entry.idx);
 				}				
 			}
 		}
@@ -329,7 +338,7 @@ public class JAFSFile {
 				entry = dir.mkinode(entry.name, JAFSInode.INODE_DIR);
 			}
 			JAFSDir dir = new JAFSDir(vfs, entry);
-			return dir.createNewEntry(getName(path), JAFSDirEntry.TYPE_DIR);
+			return dir.createNewEntry(getName(path), JAFSDirEntry.TYPE_DIR, 0, 0);
 		}
 		return false;		
 	}

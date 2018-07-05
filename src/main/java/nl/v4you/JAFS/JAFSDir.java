@@ -239,7 +239,7 @@ class JAFSDir {
 		createEntry(entry);
 	}
 	
-	boolean createNewEntry(String name, byte type) throws JAFSException, IOException {
+	boolean createNewEntry(String name, byte type, long bpos, int idx) throws JAFSException, IOException {
 		if (name.contains("/")) {
 			if ((type & JAFSDirEntry.TYPE_FILE)>0) {
 				throw new JAFSException("File name ["+name+"] should not contain a slash (/)");
@@ -253,8 +253,8 @@ class JAFSDir {
 			return false;
 		}
 		JAFSDirEntry entry = new JAFSDirEntry();
-		entry.bpos = 0;
-		entry.idx = 0;
+		entry.bpos = bpos;
+		entry.idx = idx;
 		entry.type = type;
 		entry.name = name;
 		createEntry(entry);		

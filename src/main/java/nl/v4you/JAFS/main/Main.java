@@ -13,6 +13,9 @@ import nl.v4you.JAFS.JAFSFileOutputStream;
 
 public class Main {
 
+	static final String TEST_PATH = "c:/data/temp";
+	static final String TEST_ARCHIVE = TEST_PATH + "/test.jafs";
+
 	static void dumpTree(JAFSFile f) throws JAFSException, IOException {
 		for (JAFSFile s : f.listFiles()) {
 			System.out.println(s.getCanonicalPath());
@@ -29,7 +32,7 @@ public class Main {
 				for (int n=0; n<251; n++) {
 					buf[n] = (byte)(n & 0xff);
 				}				
-				File q = new File("c:/data/temp/xx.txt");
+				File q = new File(TEST_PATH + "/xx.txt");
 				q.delete();
 				FileOutputStream fos = new FileOutputStream(q);
 				for (int n=0; n<((1024*1024)/251); n++) {
@@ -38,10 +41,53 @@ public class Main {
 				fos.close();
 			}
 			
-//			File x = new File("c:/temp/test.vfs");
-//			x.delete();
+			File x = new File(TEST_ARCHIVE);
+			x.delete();
 			
-			JAFS vfs = new JAFS("c:/data/temp/test.vfs", 128,64,4L*1024L*1024L*1024L);
+			JAFS vfs = new JAFS(TEST_ARCHIVE, 128,64,4L*1024L*1024L*1024L);
+			{
+				JAFSFile f = vfs.getFile("/content.txt");
+				JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
+				fos.write("1234567890".getBytes());
+				fos.close();
+				if (f.length()==10) {
+					System.out.println(" ok: file length is correct");
+				}
+				else {
+					System.out.println("nok: file length is incorrect");
+				}
+				byte buf[] = new byte[(int)f.length()];
+				JAFSFileInputStream fis = vfs.getFileInputStream(f);
+				fis.read(buf);
+				String str = new String(buf);
+				if (str.equals("1234567890")) {
+					System.out.println(" ok: file content matches");
+				}
+				else {
+					System.out.println("nok: file content does not match");
+				}
+				fis.close();
+
+				JAFSFile g = vfs.getFile("/renamed.txt");
+				f.renameTo(g);
+				if (g.length()==10) {
+					System.out.println(" ok: file length is correct");
+				}
+				else {
+					System.out.println("nok: file length is incorrect");
+				}
+				buf = new byte[(int)g.length()];
+				fis = vfs.getFileInputStream(g);
+				fis.read(buf);
+				str = new String(buf);
+				if (str.equals("1234567890")) {
+					System.out.println(" ok: file content matches");
+				}
+				else {
+					System.out.println("nok: file content does not match");
+				}
+				fis.close();
+			}
 			{
 				JAFSFile f = vfs.getFile("/sub1");
 				f.mkdir();
@@ -74,7 +120,7 @@ public class Main {
 			}
 			
 			{
-				FileInputStream fis = new FileInputStream("c:/data/temp/xx.txt");
+				FileInputStream fis = new FileInputStream(TEST_PATH+"/xx.txt");
 
 				JAFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
 				f.createNewFile();				
@@ -93,7 +139,7 @@ public class Main {
 			{
 				JAFSFile f = vfs.getFile("/sub1/sub2/sub3/xx.txt");
 				JAFSFileInputStream fis = vfs.getFileInputStream(f);
-				File q = new File("c:/data/temp/yy.txt");
+				File q = new File(TEST_PATH+"/yy.txt");
 				q.delete();
 				FileOutputStream fos = new FileOutputStream(q);
 				
