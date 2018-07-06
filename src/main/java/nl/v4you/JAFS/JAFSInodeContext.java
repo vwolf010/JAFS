@@ -1,25 +1,25 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 
-class VFSINodePtr {
+class JafsINodePtr {
 	int level;
 	long size;
 	long fPosStart;
 	long fPosEnd;
 }
 
-class JAFSInodeContext {
+class JafsInodeContext {
 	static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
 	
-	private JAFS vfs;
+	private Jafs vfs;
 
 	private int iNodesPerBlock = 1;
 	private int ptrsPerInode = 1;
 	private int ptrsPerPtrBlock = 1;
 	
 	private long levels[] = new long[50];
-	private VFSINodePtr ptrs[];
+	private JafsINodePtr ptrs[];
 	
 	int getPtrsPerInode() {
 		return ptrsPerInode;
@@ -29,23 +29,23 @@ class JAFSInodeContext {
 		return iNodesPerBlock;
 	}
 		
-	long getBlkPos(long bpos, long start, long size, long fpos) throws JAFSException, IOException {
-		JAFSBlock block = vfs.setCacheBlock(bpos, null);
+	long getBlkPos(long bpos, long start, long size, long fpos) throws JafsException, IOException {
+		JafsBlock block = vfs.setCacheBlock(bpos, null);
 		if (size>vfs.getSuper().getBlockSize()) {
 			long nextSize = size/ptrsPerPtrBlock;
 			int idx = (int)((fpos-start) / nextSize);
 			block.seek(idx*4);
 			long ptr = block.readInt();
 			if (ptr<0) {
-				throw new JAFSException("Negative block ptr!!!");
+				throw new JafsException("Negative block ptr!!!");
 			}
 			if (ptr==0) {
 				// Create a new block. Could be a ptr block or a data block. Don't care.
-				JAFSBlock dum;
+				JafsBlock dum;
 				ptr = vfs.getUnusedMap().getUnusedDataBpos();
 				if (ptr==0) {
 					ptr = vfs.getNewUnusedBpos();
-					dum = vfs.setCacheBlock(ptr, new JAFSBlock(vfs, ptr));
+					dum = vfs.setCacheBlock(ptr, new JafsBlock(vfs, ptr));
 				}
 				else {
 					dum = vfs.setCacheBlock(ptr, null);
@@ -65,7 +65,7 @@ class JAFSInodeContext {
 		}
 	}
 	
-	long getBlkPos(JAFSInode inode, long fpos) throws JAFSException, IOException {
+	long getBlkPos(JafsInode inode, long fpos) throws JafsException, IOException {
 		if (fpos>=vfs.getSuper().getMaxFileSize()) {
 			return -1; //TODO: handle this in calling methods
 		}
@@ -74,11 +74,11 @@ class JAFSInodeContext {
 				if (ptrs[n].level==0) {
 					if (inode.ptrs[n]==0) {
 						// Create new data block
-						JAFSBlock block;
+						JafsBlock block;
 						long ptr = vfs.getUnusedMap().getUnusedDataBpos();
 						if (ptr==0) {
 							ptr = vfs.getNewUnusedBpos();
-							block = vfs.setCacheBlock(ptr, new JAFSBlock(vfs, ptr));
+							block = vfs.setCacheBlock(ptr, new JafsBlock(vfs, ptr));
 						}
 						else {
 							block = vfs.setCacheBlock(ptr, null);
@@ -95,11 +95,11 @@ class JAFSInodeContext {
 				else {
 					if (inode.ptrs[n]==0) {
 						// Create new ptr block
-						JAFSBlock block;
+						JafsBlock block;
 						long ptr = vfs.getUnusedMap().getUnusedDataBpos();
 						if (ptr==0) {
 							ptr = vfs.getNewUnusedBpos();
-							block = vfs.setCacheBlock(ptr, new JAFSBlock(vfs, ptr));
+							block = vfs.setCacheBlock(ptr, new JafsBlock(vfs, ptr));
 						}
 						else {
 							block = vfs.setCacheBlock(ptr, null);
@@ -118,9 +118,9 @@ class JAFSInodeContext {
 		return 0;
 	}
 	
-	void free(long bpos, int level) throws JAFSException, IOException {
+	void free(long bpos, int level) throws JafsException, IOException {
 		if (level!=0) {
-			JAFSBlock dum = vfs.setCacheBlock(bpos, null);
+			JafsBlock dum = vfs.setCacheBlock(bpos, null);
 			dum.seek(0);
 			for (int n=0; n<ptrsPerPtrBlock; n++) {
 				long ptr = dum.readInt();
@@ -134,7 +134,7 @@ class JAFSInodeContext {
 		vfs.getUnusedMap().startAt=0;
 	}
 	
-	void freeDataAndPtrBlocks(JAFSInode inode) throws JAFSException, IOException {
+	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
 		for (int n=0; n<ptrsPerInode; n++) {
 			if (inode.ptrs[n]>0) {
 				free(inode.ptrs[n], ptrs[n].level);
@@ -150,15 +150,15 @@ class JAFSInodeContext {
 	 * @param iNodeSize
 	 * @param maxFileSize
 	 */	
-	JAFSInodeContext(JAFS vfs, int blockSize, int iNodeSize, long maxFileSize) {
+	JafsInodeContext(Jafs vfs, int blockSize, int iNodeSize, long maxFileSize) {
 		this.vfs = vfs;
 		iNodesPerBlock = blockSize/iNodeSize;
-		ptrsPerInode = (iNodeSize - JAFSInode.INODE_HEADER_SIZE) / 4;
+		ptrsPerInode = (iNodeSize - JafsInode.INODE_HEADER_SIZE) / 4;
 		ptrsPerPtrBlock = vfs.getSuper().getBlockSize() / 4;
 		int maxLevelDepth = -1;
-		ptrs = new VFSINodePtr[ptrsPerInode];
+		ptrs = new JafsINodePtr[ptrsPerInode];
 		for (int n=0; n<ptrsPerInode; n++) {
-			ptrs[n] = new VFSINodePtr();
+			ptrs[n] = new JafsINodePtr();
 		}
 		long maxFileSizeNow = 0;
 		while (maxFileSizeNow<maxFileSize) {

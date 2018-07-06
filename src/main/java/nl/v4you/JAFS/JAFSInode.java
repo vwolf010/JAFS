@@ -1,4 +1,4 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -10,7 +10,7 @@ import java.util.Arrays;
  * --
  * 9
  */	
-class JAFSInode {
+class JafsInode {
 	static final int INODE_HEADER_SIZE = 9;
 
 	static final int INODE_USED    = 0x80;
@@ -23,8 +23,8 @@ class JAFSInode {
 	static final int SEEK_CUR = 1;
 	static final int SEEK_END = 2;
 		
-	private JAFS vfs;
-	private JAFSInodeContext ctx;
+	private Jafs vfs;
+	private JafsInodeContext ctx;
 	
 	private long maxInlinedSize = 0;
 	private long bpos;
@@ -44,7 +44,7 @@ class JAFSInode {
 	int type;
 	long size;
 	
-	void init(JAFS vfs) {
+	void init(Jafs vfs) {
 		this.vfs = vfs;
 		ctx = vfs.getINodeContext();
 		ptrs = new long[ctx.getPtrsPerInode()];
@@ -52,16 +52,16 @@ class JAFSInode {
 		maxInlinedSize = vfs.getSuper().getInodeSize()-INODE_HEADER_SIZE;
 	}
 	
-	JAFSInode(JAFS vfs) {
+	JafsInode(Jafs vfs) {
 		init(vfs);
 	}
 	
-	JAFSInode(JAFS vfs, JAFSDirEntry entry) throws JAFSException, IOException {
+	JafsInode(Jafs vfs, JafsDirEntry entry) throws JafsException, IOException {
 		init(vfs);
 		openInode(entry.bpos, entry.idx);
 	}
 	
-	JAFSInode(JAFS vfs, long bpos, int idx) throws JAFSException, IOException {
+	JafsInode(Jafs vfs, long bpos, int idx) throws JafsException, IOException {
 		init(vfs);
 		openInode(bpos, idx);
 	}
@@ -78,8 +78,8 @@ class JAFSInode {
 		return (type & INODE_USED) > 0;
 	}
 
-	void flush() throws JAFSException, IOException {
-		JAFSBlock block = vfs.getCacheBlock(bpos);
+	void flush() throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		block.seek(idx*vfs.getSuper().getInodeSize());
 		block.writeByte(type);
 		block.writeLong(size);
@@ -94,8 +94,8 @@ class JAFSInode {
 		block.flush();		
 	}
 	
-	void openInode(long bpos, int idx) throws JAFSException, IOException {
-		JAFSBlock block = vfs.getCacheBlock(bpos);
+	void openInode(long bpos, int idx) throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		this.bpos = bpos;
 		this.idx = idx;
 		block.seek(idx*vfs.getSuper().getInodeSize());
@@ -109,17 +109,17 @@ class JAFSInode {
 		fpos = 0;
 	}
 	
-	void reload() throws JAFSException, IOException {
+	void reload() throws JafsException, IOException {
 		openInode(bpos, idx);
 	}
 	
-	void createInode(int type) throws JAFSException, IOException {
-		JAFSBlock block;
+	void createInode(int type) throws JafsException, IOException {
+		JafsBlock block;
 		bpos = vfs.getUnusedMap().getUnusedINodeBpos();
 		if (bpos==0) {
 			// No new block could be found, we need to create a new one
 			bpos = vfs.getNewUnusedBpos();
-			block = vfs.setCacheBlock(bpos, new JAFSBlock(vfs, bpos));
+			block = vfs.setCacheBlock(bpos, new JafsBlock(vfs, bpos));
 		}
 		else {
 			block = vfs.getCacheBlock(bpos);
@@ -143,7 +143,7 @@ class JAFSInode {
 			}
 		}
 		if (idx<0) {
-			throw new JAFSException("No free inode found in inode block");
+			throw new JafsException("No free inode found in inode block");
 		}
 		this.type = INODE_USED | type | INODE_INLINED;
 		this.size = 0;
@@ -178,9 +178,9 @@ class JAFSInode {
 		}
 	}
 
-	private void undoInlined() throws IOException, JAFSException {
+	private void undoInlined() throws IOException, JafsException {
 		// The inlined data needs to be copied to a real data block.
-		JAFSBlock block = vfs.getCacheBlock(bpos);
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		block.seek((int)(idx*vfs.getSuper().getInodeSize()+INODE_HEADER_SIZE));
 
 		byte buf[] = null;
@@ -195,14 +195,14 @@ class JAFSInode {
 		writeBytes(buf, 0, (int)size);
 	}
 	
-	private void checkInlinedOverflow() throws JAFSException, IOException {
+	private void checkInlinedOverflow() throws JafsException, IOException {
 		if (isInlined(type) && (fpos>=maxInlinedSize)) {
 			undoInlined();
 		}
 	}
 	
-	void writeByte(int b) throws JAFSException, IOException {
-		JAFSBlock block = vfs.getCacheBlock(bpos);
+	void writeByte(int b) throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		checkInlinedOverflow();
 		if (isInlined(type)) {
 			block.seek((int)(idx*vfs.getSuper().getInodeSize()+INODE_HEADER_SIZE+fpos));
@@ -212,7 +212,7 @@ class JAFSInode {
 		}
 		else {
 			long bpos = ctx.getBlkPos(this, fpos);
-			JAFSBlock dum = vfs.getCacheBlock(bpos);
+			JafsBlock dum = vfs.getCacheBlock(bpos);
 			dum.seek((int)(fpos % vfs.getSuper().getBlockSize()));
 			dum.writeByte(b);
 			dum.flush();
@@ -224,7 +224,7 @@ class JAFSInode {
 		}
 	}
 
-	void writeBytes(byte[] buf, int start, int len) throws JAFSException, IOException {
+	void writeBytes(byte[] buf, int start, int len) throws JafsException, IOException {
 		if (isInlined(type) && (fpos+len)>=maxInlinedSize) {
 			undoInlined();
 		}
@@ -232,7 +232,7 @@ class JAFSInode {
 			int done = 1;
 			while (done>0 & len>0) {
 				long bpos = ctx.getBlkPos(this, fpos);
-				JAFSBlock dum = vfs.getCacheBlock(bpos);
+				JafsBlock dum = vfs.getCacheBlock(bpos);
 				dum.seek((int)(fpos % vfs.getSuper().getBlockSize()));
 				done = dum.writeBytes(buf, start, len);
 				len -= done;
@@ -252,19 +252,19 @@ class JAFSInode {
 		}
 	}
 	
-	int readByte() throws JAFSException, IOException {
+	int readByte() throws JafsException, IOException {
 		if (fpos>=size) {
 			return -1;
 		}
 		if (isInlined(type)) {
-			JAFSBlock block = vfs.getCacheBlock(bpos);
+			JafsBlock block = vfs.getCacheBlock(bpos);
 			block.seek((int)(idx*vfs.getSuper().getInodeSize()+INODE_HEADER_SIZE+fpos));
 			fpos++;
 			return block.readByte();
 		}
 		else {
 			long bpos = ctx.getBlkPos(this, fpos);
-			JAFSBlock block = vfs.getCacheBlock(bpos);
+			JafsBlock block = vfs.getCacheBlock(bpos);
 			block.seek((int)(fpos % vfs.getSuper().getBlockSize()));
 			fpos++;
 			return block.readByte();
@@ -277,7 +277,7 @@ class JAFSInode {
 //		}
 //	}
 	
-	int readBytes(byte[] b, int off, int len) throws JAFSException, IOException {
+	int readBytes(byte[] b, int off, int len) throws JafsException, IOException {
 		if (b == null) {
 			throw new NullPointerException();
 		} else if (off < 0 || len < 0 || len > b.length - off) {
@@ -302,7 +302,7 @@ class JAFSInode {
 			int done = 1;
 			while (done>0 & len>0) {
 				long bpos = ctx.getBlkPos(this, fpos);
-				JAFSBlock dum = vfs.getCacheBlock(bpos);
+				JafsBlock dum = vfs.getCacheBlock(bpos);
 				dum.seek((int)(fpos % vfs.getSuper().getBlockSize()));
 				done = dum.readBytes(b, off, len);
 				len -= done;
@@ -325,19 +325,19 @@ class JAFSInode {
 		return -1;
 	}
 
-	void writeShort(int s) throws JAFSException, IOException {
+	void writeShort(int s) throws JafsException, IOException {
 		writeByte((s >> 8) & 0xff);
 		writeByte(s & 0xff);		
 	}
 	
-	int readShort() throws JAFSException, IOException {
+	int readShort() throws JafsException, IOException {
 		int s = 0;
 		s |= readByte()<<8;
 		s |= readByte();
 		return s;
 	}
 	
-	long readInt() throws JAFSException, IOException {
+	long readInt() throws JafsException, IOException {
 		long s = 0;
 		s |= readByte()<<24;
 		s |= readByte()<<16;
@@ -346,15 +346,15 @@ class JAFSInode {
 		return s;
 	}
 
-	void writeInt(long i) throws JAFSException, IOException {
+	void writeInt(long i) throws JafsException, IOException {
 		writeByte((int)((i >> 24) & 0xff));
 		writeByte((int)((i >> 16) & 0xff));
 		writeByte((int)((i >> 8) & 0xff));
 		writeByte((int)(i & 0xff));		
 	}	
 	
-	int getUsedIdxCount() throws JAFSException, IOException {
-		JAFSBlock block = vfs.getCacheBlock(bpos);
+	int getUsedIdxCount() throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		int cnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
 			block.seek(n*vfs.getSuper().getInodeSize());
@@ -365,7 +365,7 @@ class JAFSInode {
 		return cnt;
 	}
 	
-	void free() throws JAFSException, IOException {
+	void free() throws JafsException, IOException {
 		ctx.freeDataAndPtrBlocks(this);
 		if (getUsedIdxCount()>1) {
 			vfs.getUnusedMap().setPartlyUsedInode(bpos);

@@ -1,30 +1,27 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import nl.v4you.JAFS.JAFS;
-import nl.v4you.JAFS.JAFSException;
-
-public class JAFSFileOutputStream extends OutputStream {
-	JAFS vfs;
-	JAFSInode inode;
+public class JafsOutputStream extends OutputStream {
+	Jafs vfs;
+	JafsInode inode;
 	String path;
 	
-	JAFSFileOutputStream(JAFS vfs, JAFSFile f, boolean append) throws JAFSException, IOException {
+	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
 		if (!f.exists()) {
 			if (!f.createNewFile()) {
-				throw new JAFSException("Could not create "+f.getCanonicalPath());
+				throw new JafsException("Could not create "+f.getCanonicalPath());
 			}
 		}
 		this.path = f.getCanonicalPath();
-		JAFSDirEntry entry = f.getEntry(f.getCanonicalPath());
+		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
 		if (entry!=null) {
 			if (entry.bpos>0) {
-				inode = new JAFSInode(vfs, entry);
+				inode = new JafsInode(vfs, entry);
 				if (append) {
-					inode.seek(0, JAFSInode.SEEK_END);
+					inode.seek(0, JafsInode.SEEK_END);
 				}
 			}
 		}
@@ -44,13 +41,13 @@ public class JAFSFileOutputStream extends OutputStream {
 	public void write(byte buf[], int start, int len) throws IOException {
 		try {
 			if (inode==null) {
-				JAFSFile f = new JAFSFile(vfs, path);
-				JAFSDir dir = new JAFSDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName(), JAFSInode.INODE_FILE);
-				inode = new JAFSInode(vfs, f.getEntry(path));
+				JafsFile f = new JafsFile(vfs, path);
+				JafsDir dir = new JafsDir(vfs, f.getEntry(f.getParent()));
+				dir.mkinode(f.getName(), JafsInode.INODE_FILE);
+				inode = new JafsInode(vfs, f.getEntry(path));
 			}
 			inode.writeBytes(buf, start, len);
-		} catch (JAFSException e) {
+		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 		}
@@ -65,13 +62,13 @@ public class JAFSFileOutputStream extends OutputStream {
 	public void write(int arg0) throws IOException {
 		try {
 			if (inode==null) {
-				JAFSFile f = new JAFSFile(vfs, path);
-				JAFSDir dir = new JAFSDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName(), JAFSInode.INODE_FILE);
-				inode = new JAFSInode(vfs, f.getEntry(path));
+				JafsFile f = new JafsFile(vfs, path);
+				JafsDir dir = new JafsDir(vfs, f.getEntry(f.getParent()));
+				dir.mkinode(f.getName(), JafsInode.INODE_FILE);
+				inode = new JafsInode(vfs, f.getEntry(path));
 			}
 			inode.writeByte(arg0);
-		} catch (JAFSException e) {
+		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 		}

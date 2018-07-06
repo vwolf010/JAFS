@@ -1,9 +1,9 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
-public class JAFSException extends Exception {
+public class JafsException extends Exception {
 	private static final long serialVersionUID = -7081737999400135351L;
 	
-	JAFSException(String msg) {
+	JafsException(String msg) {
 		super(msg);
 	}	
 }

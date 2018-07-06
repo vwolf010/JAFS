@@ -1,22 +1,19 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import nl.v4you.JAFS.JAFS;
-import nl.v4you.JAFS.JAFSException;
-
-public class JAFSFileInputStream extends InputStream {
-	JAFS vfs;
+public class JafsInputStream extends InputStream {
+	Jafs vfs;
 	String path;
-	JAFSInode inode;
+	JafsInode inode;
 	
-	JAFSFileInputStream(JAFS vfs, JAFSFile f) throws JAFSException, IOException {
+	JafsInputStream(Jafs vfs, JafsFile f) throws JafsException, IOException {
 		this.vfs = vfs;
 		path = f.path;
-		JAFSDirEntry entry = f.getEntry(path);
+		JafsDirEntry entry = f.getEntry(path);
 		if (entry.bpos>0) {
-			inode = new JAFSInode(vfs, entry);
+			inode = new JafsInode(vfs, entry);
 		}
 	}
 
@@ -25,16 +22,16 @@ public class JAFSFileInputStream extends InputStream {
 		int bread = 0;
 		try {
 			if (inode==null) {
-				JAFSFile f = new JAFSFile(vfs, path);
-				JAFSDirEntry entry = f.getEntry(f.path);
+				JafsFile f = new JafsFile(vfs, path);
+				JafsDirEntry entry = f.getEntry(f.path);
 				if (entry.bpos>0) {
-					inode = new JAFSInode(vfs, entry);
+					inode = new JafsInode(vfs, entry);
 				}			
 			}
 			if (inode!=null) {
 				bread = inode.readBytes(b, off, len);
 			}
-		} catch (JAFSException e) {
+		} catch (JafsException e) {
 			throw new IOException("VFSException wrapper: "+e.getMessage());
 		}
 		return bread;
@@ -45,16 +42,16 @@ public class JAFSFileInputStream extends InputStream {
 		int b = -1;
 		try {
 			if (inode==null) {
-				JAFSFile f = new JAFSFile(vfs, path);
-				JAFSDirEntry entry = f.getEntry(f.path);
+				JafsFile f = new JafsFile(vfs, path);
+				JafsDirEntry entry = f.getEntry(f.path);
 				if (entry.bpos>0) {
-					inode = new JAFSInode(vfs, entry);
+					inode = new JafsInode(vfs, entry);
 				}			
 			}
 			if (inode!=null) {
 				return inode.readByte();
 			}
-		} catch (JAFSException e) {
+		} catch (JafsException e) {
 			throw new IOException("VFSException wrapper: "+e.getMessage());
 		}
 		return b;

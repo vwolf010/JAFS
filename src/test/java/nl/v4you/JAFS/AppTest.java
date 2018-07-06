@@ -1,4 +1,4 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
 import org.junit.After;
 import org.junit.Before;
@@ -90,16 +90,16 @@ public class AppTest {
 
     @Test
     public void fileInputStreamReturnsMinusOneWhenNoMoreToRead() throws Exception {
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/content.txt");
+        JafsFile f = vfs.getFile("/content.txt");
 
-        JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
+        JafsOutputStream fos = vfs.getOutputStream(f);
         fos.write("1234567890".getBytes());
         fos.close();
 
         byte buf[] = new byte[(int)f.length()];
-        JAFSFileInputStream fis = vfs.getFileInputStream(f);
+        JafsInputStream fis = vfs.getInputStream(f);
         int bread = fis.read(buf);
         assertEquals(f.length(), bread);
         bread = fis.read(buf);
@@ -111,15 +111,15 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterRename() throws Exception {
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/content.txt");
+        JafsFile f = vfs.getFile("/content.txt");
 
-        JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
+        JafsOutputStream fos = vfs.getOutputStream(f);
         fos.write("1234567890".getBytes());
         fos.close();
 
-        JAFSFile g = vfs.getFile("/content.new");
+        JafsFile g = vfs.getFile("/content.new");
         f.renameTo(g);
 
         assertEquals(10, g.length());
@@ -130,30 +130,30 @@ public class AppTest {
     public void fileInputStream() throws Exception {
         byte content[] = "12345678901234567890123456789012345678901234567890".getBytes();
 
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/content.txt");
+        JafsFile f = vfs.getFile("/content.txt");
 
-        JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
+        JafsOutputStream fos = vfs.getOutputStream(f);
         fos.write(content);
         fos.close();
 
         byte buf[] = new byte[(int)f.length()];
-        JAFSFileInputStream fis = vfs.getFileInputStream(f);
+        JafsInputStream fis = vfs.getInputStream(f);
         fis.read(buf);
         fis.close();
 
         assertTrue(Arrays.equals(content, buf));
 
         buf = new byte[1000];
-        fis = vfs.getFileInputStream(f);
+        fis = vfs.getInputStream(f);
         int bread = fis.read(buf);
         fis.close();
 
         assertTrue(Arrays.equals(content, Arrays.copyOf(buf, bread)));
 
         buf = new byte[1000];
-        fis = vfs.getFileInputStream(f);
+        fis = vfs.getInputStream(f);
         bread = fis.read(buf, 0, (int)f.length());
         fis.close();
 
@@ -164,9 +164,9 @@ public class AppTest {
 
     @Test
     public void createDirectories() throws Exception {
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/sub1");
+        JafsFile f = vfs.getFile("/sub1");
         assertEquals(false, f.exists());
         f.mkdir();
         assertEquals(true, f.exists());
@@ -186,9 +186,9 @@ public class AppTest {
 
     @Test
     public void createFileInsideDirectories() throws Exception {
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/sub1");
+        JafsFile f = vfs.getFile("/sub1");
         f.mkdir();
 
         f = vfs.getFile("/sub1/sub2");
@@ -200,13 +200,13 @@ public class AppTest {
         byte content[] = "1234567890".getBytes();
 
         f = vfs.getFile("/sub1/sub2/sub3/test123");
-        JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
+        JafsOutputStream fos = vfs.getOutputStream(f);
         fos.write(content);
 
         assertTrue(f.exists());
 
         byte buf[] = new byte[(int)f.length()];
-        JAFSFileInputStream fis = vfs.getFileInputStream(f);
+        JafsInputStream fis = vfs.getInputStream(f);
         fis.read(buf, 0, (int)f.length());
 
         assertTrue(Arrays.equals(content, buf));
@@ -218,9 +218,9 @@ public class AppTest {
 
     @Test
     public void deleteDirectory() throws Exception {
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/sub1");
+        JafsFile f = vfs.getFile("/sub1");
         f.mkdir();
         f = vfs.getFile("/sub2");
         f.mkdir();
@@ -240,23 +240,23 @@ public class AppTest {
         vfs.close();
     }
 
-    private void createAndCheckFileLengthAndContent(int i) throws IOException, JAFSException {
+    private void createAndCheckFileLengthAndContent(int i) throws IOException, JafsException {
         byte content[] = new byte[i];
 
         rnd.nextBytes(content);
 
-        JAFS vfs = new JAFS(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
 
-        JAFSFile f = vfs.getFile("/content.txt");
+        JafsFile f = vfs.getFile("/content.txt");
 
-        JAFSFileOutputStream fos = vfs.getFileOutputStream(f);
+        JafsOutputStream fos = vfs.getOutputStream(f);
         fos.write(content);
         fos.close();
 
         assertEquals(content.length, f.length());
 
         byte buf[] = new byte[(int)f.length()];
-        JAFSFileInputStream fis = vfs.getFileInputStream(f);
+        JafsInputStream fis = vfs.getInputStream(f);
         fis.read(buf);
         fis.close();
 

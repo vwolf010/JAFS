@@ -1,6 +1,6 @@
-package nl.v4you.JAFS;
+package nl.v4you.jafs;
 
-class JAFSDirEntry {
+class JafsDirEntry {
 	static final byte TYPE_FILE = 0x01;
 	static final byte TYPE_DIR = 0x02;
 	
