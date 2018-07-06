@@ -107,9 +107,8 @@ class JafsBlock {
 		if (todo>len) {
 			todo=len;
 		}
-		for (int n=0; n<todo; n++) {
-			a[start+n] = buf[byteIdx++];
-		}
+		System.arraycopy(buf, byteIdx, a, start, todo);
+		byteIdx += todo;
 		return todo;
 	}
 
@@ -122,64 +121,89 @@ class JafsBlock {
 		if (todo>len) {
 			todo=len;
 		}
-		for (int n=0; n<todo; n++) {
-			buf[byteIdx++] = a[start+n];
-		}
+		System.arraycopy(a, start, buf, byteIdx, todo);
+		byteIdx+=todo;
 		return todo;
 	}
 		
 	long readInt() throws JafsException {
+		if (byteIdx+3>=blockSize) {
+			throw new JafsException("Trying to read beyond buffer");
+		}
 		int i = 0;
-		i |= (long)(readByte() & 0xff)<<24;
-		i |= (long)(readByte() & 0xff)<<16;
-		i |= (long)(readByte() & 0xff)<< 8;
-		i |= (long)(readByte() & 0xff);
+		i |= (buf[byteIdx++] & 0xff)<<24;
+		i |= (buf[byteIdx++] & 0xff)<<16;
+		i |= (buf[byteIdx++] & 0xff)<< 8;
+		i |= (buf[byteIdx++] & 0xff);
 		return i;
 	}
 
 	void writeInt(long l) throws JafsException {
-		writeByte((int)((l >> 24) & 0xff));
-		writeByte((int)((l >> 16) & 0xff));
-		writeByte((int)((l >>  8) & 0xff));
-		writeByte((int) (l & 0xff));
+		if (byteIdx+3>=blockSize) {
+			throw new JafsException("Trying to write beyond buffer");
+		}
+		buf[byteIdx++] = (byte)((l >> 24) & 0xff);
+		buf[byteIdx++] = (byte)((l >> 16) & 0xff);
+		buf[byteIdx++] = (byte)((l >>  8) & 0xff);
+		buf[byteIdx++] = (byte)(l & 0xff);
+
+//		writeByte((int)((l >> 24) & 0xff));
+//		writeByte((int)((l >> 16) & 0xff));
+//		writeByte((int)((l >>  8) & 0xff));
+//		writeByte((int) (l & 0xff));
 	}
 
 	long readLong() throws JafsException {
+		if (byteIdx+7>=blockSize) {
+			throw new JafsException("Trying to read beyond buffer");
+		}
 		long l = 0;
-		l |= ((long)(readByte() & 0xffL))<<56;
-		l |= ((long)(readByte() & 0xffL))<<48;
-		l |= ((long)(readByte() & 0xffL))<<40;
-		l |= ((long)(readByte() & 0xffL))<<32;
-		l |= ((long)(readByte() & 0xffL))<<24;
-		l |= ((long)(readByte() & 0xffL))<<16;
-		l |= ((long)(readByte() & 0xffL))<<8;
-		l |= ((long)(readByte() & 0xffL));
+		l |= (long)(buf[byteIdx++] & 0xffL)<<56;
+		l |= (long)(buf[byteIdx++] & 0xffL)<<48;
+		l |= (long)(buf[byteIdx++] & 0xffL)<<40;
+		l |= (long)(buf[byteIdx++] & 0xffL)<<32;
+		l |= (long)(buf[byteIdx++] & 0xffL)<<24;
+		l |= (long)(buf[byteIdx++] & 0xffL)<<16;
+		l |= (long)(buf[byteIdx++] & 0xffL)<< 8;
+		l |= (long)(buf[byteIdx++] & 0xffL);
+
 		return l;
 	}
 	
 	void writeLong(long l) throws JafsException {
-		writeByte((int)((l >> 56) & 0xffL));
-		writeByte((int)((l >> 48) & 0xffL));
-		writeByte((int)((l >> 40) & 0xffL));
-		writeByte((int)((l >> 32) & 0xffL));
-		writeByte((int)((l >> 24) & 0xffL));
-		writeByte((int)((l >> 16) & 0xffL));
-		writeByte((int)((l >>  8)& 0xffL));
-		writeByte((int) (l & 0xffL));
+		if (byteIdx+7>=blockSize) {
+			throw new JafsException("Trying to write beyond buffer");
+		}
+		buf[byteIdx++] = (byte)((l >> 56) & 0xffL);
+		buf[byteIdx++] = (byte)((l >> 48) & 0xffL);
+		buf[byteIdx++] = (byte)((l >> 40) & 0xffL);
+		buf[byteIdx++] = (byte)((l >> 32) & 0xffL);
+		buf[byteIdx++] = (byte)((l >> 24) & 0xffL);
+		buf[byteIdx++] = (byte)((l >> 16) & 0xffL);
+		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
+		buf[byteIdx++] = (byte)(l & 0xff);
+
+//		writeByte((int)((l >> 56) & 0xffL));
+//		writeByte((int)((l >> 48) & 0xffL));
+//		writeByte((int)((l >> 40) & 0xffL));
+//		writeByte((int)((l >> 32) & 0xffL));
+//		writeByte((int)((l >> 24) & 0xffL));
+//		writeByte((int)((l >> 16) & 0xffL));
+//		writeByte((int)((l >>  8)& 0xffL));
+//		writeByte((int) (l & 0xffL));
 	}
 
 	byte[] readBytes(int i) throws JafsException {
 		byte[] b = new byte[i];
-		for (int n=0; n<i; n++) {
-			b[n] = (byte)(readByte() & 0xff);
-		}
+		readBytes(b, 0, i);
+//		for (int n=0; n<i; n++) {
+//			b[n] = (byte)(readByte() & 0xff);
+//		}
 		return b;
 	}
 	
 	void writeBytes(byte[] b) throws JafsException {
-		for (int n=0; n<b.length; n++) {
-			writeByte(b[n] & 0xff);
-		}
+		writeBytes(b, 0, b.length);
 	}
 
 	short readShort() throws JafsException {
