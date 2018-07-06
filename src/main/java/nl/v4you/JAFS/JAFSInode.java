@@ -277,17 +277,25 @@ class JAFSInode {
 //		}
 //	}
 	
-	int readBytes(byte[] buf, int start, int len) throws JAFSException, IOException {
+	int readBytes(byte[] b, int off, int len) throws JAFSException, IOException {
+		if (b == null) {
+			throw new NullPointerException();
+		} else if (off < 0 || len < 0 || len > b.length - off) {
+			throw new IndexOutOfBoundsException();
+		} else if (len == 0) {
+			return 0;
+		}
+
 		if (fpos>=size) {
 			// Need this check to prevent long and int clash
 			// with the check below
-			return 0;
+			return -1;
 		}
 		if ((fpos+len) > size) {
 			len = (int)(size-fpos);
 		}
 		if (len<0) {
-			return 0;
+			return -1;
 		}		
 		long fposMem = fpos;
 		if (!isInlined(type)) {
@@ -296,20 +304,25 @@ class JAFSInode {
 				long bpos = ctx.getBlkPos(this, fpos);
 				JAFSBlock dum = vfs.getCacheBlock(bpos);
 				dum.seek((int)(fpos % vfs.getSuper().getBlockSize()));
-				done = dum.readBytes(buf, start, len);
+				done = dum.readBytes(b, off, len);
 				len -= done;
-				start += done;
+				off += done;
 				fpos+=done;
 				//dum.flush();
 			}
 		}
 		else {
-			int end = start + len;
-			for (int n=start; n<end; n++) {
-				buf[n]=(byte)readByte();
+			int end = off + len;
+			for (int n=off; n<end; n++) {
+				b[n]=(byte)readByte();
 			}
 		}
-		return (int)(fpos-fposMem);
+		int bread = (int)(fpos-fposMem);
+
+		if (bread>0)
+			return bread;
+
+		return -1;
 	}
 
 	void writeShort(int s) throws JAFSException, IOException {
