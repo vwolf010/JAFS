@@ -13,6 +13,10 @@ class JafsBlock {
 	private RandomAccessFile raf;
 	public int byteIdx = 0;
 
+	int bytesLeft() {
+		return blockSize-byteIdx;
+	}
+
 	private void init(Jafs vfs) {
 		raf = vfs.getRaf();
 		if (blockSize<0) {
@@ -85,49 +89,49 @@ class JafsBlock {
 	}
 
 	int readByte() throws JafsException {
-		if (byteIdx>=blockSize) {
+		if (byteIdx+1>blockSize) {
 			throw new JafsException("Trying to read beyond buffer");
 		}
 		return buf[byteIdx++] & 0xff;
 	}
 
-	void writeByte(int i) throws JafsException {
-		if (byteIdx>=blockSize) {
+	void writeByte(int b) throws JafsException {
+		if (byteIdx+1>blockSize) {
 			throw new JafsException("Trying to write beyond buffer");
 		}
-		buf[byteIdx++] = (byte)(i & 0xff);
+		buf[byteIdx++] = (byte)(b & 0xff);
 	}
 
-	int readBytes(byte a[], int start, int len) {
-		int blockSpace = blockSize-byteIdx;
-		int todo = a.length-start;
-		if (todo>blockSpace) {
-			todo=blockSpace;
+	void readBytes(byte b[], int off, int len) {
+		if (b == null) {
+			throw new NullPointerException();
+		} else if (off < 0 || len < 0 || len > b.length - off) {
+			throw new IndexOutOfBoundsException();
+		} else if (byteIdx+len>blockSize) {
+			throw new IllegalStateException("Trying to read beyond block");
+		} else if (len == 0) {
+			return;
 		}
-		if (todo>len) {
-			todo=len;
-		}
-		System.arraycopy(buf, byteIdx, a, start, todo);
-		byteIdx += todo;
-		return todo;
+		System.arraycopy(buf, byteIdx, b, off, len);
+		byteIdx += len;
 	}
 
-	int writeBytes(byte a[], int start, int len) {
-		int blockSpace = blockSize-byteIdx;
-		int todo = a.length-start;
-		if (todo>blockSpace) {
-			todo=blockSpace;
+	void writeBytes(byte b[], int off, int len) {
+		if (b == null) {
+			throw new NullPointerException();
+		} else if (off < 0 || len < 0 || len > b.length - off) {
+			throw new IndexOutOfBoundsException();
+		} else if (byteIdx+len>blockSize) {
+			throw new IllegalStateException("Trying to write beyond block");
+		} else if (len == 0) {
+			return;
 		}
-		if (todo>len) {
-			todo=len;
-		}
-		System.arraycopy(a, start, buf, byteIdx, todo);
-		byteIdx+=todo;
-		return todo;
+		System.arraycopy(b, off, buf, byteIdx, len);
+		byteIdx+=len;
 	}
 		
 	long readInt() throws JafsException {
-		if (byteIdx+3>=blockSize) {
+		if (byteIdx+4>blockSize) {
 			throw new JafsException("Trying to read beyond buffer");
 		}
 		int i = 0;
@@ -139,22 +143,17 @@ class JafsBlock {
 	}
 
 	void writeInt(long l) throws JafsException {
-		if (byteIdx+3>=blockSize) {
+		if (byteIdx+4>blockSize) {
 			throw new JafsException("Trying to write beyond buffer");
 		}
 		buf[byteIdx++] = (byte)((l >> 24) & 0xff);
 		buf[byteIdx++] = (byte)((l >> 16) & 0xff);
 		buf[byteIdx++] = (byte)((l >>  8) & 0xff);
 		buf[byteIdx++] = (byte)(l & 0xff);
-
-//		writeByte((int)((l >> 24) & 0xff));
-//		writeByte((int)((l >> 16) & 0xff));
-//		writeByte((int)((l >>  8) & 0xff));
-//		writeByte((int) (l & 0xff));
 	}
 
 	long readLong() throws JafsException {
-		if (byteIdx+7>=blockSize) {
+		if (byteIdx+8>blockSize) {
 			throw new JafsException("Trying to read beyond buffer");
 		}
 		long l = 0;
@@ -171,7 +170,7 @@ class JafsBlock {
 	}
 	
 	void writeLong(long l) throws JafsException {
-		if (byteIdx+7>=blockSize) {
+		if (byteIdx+8>blockSize) {
 			throw new JafsException("Trying to write beyond buffer");
 		}
 		buf[byteIdx++] = (byte)((l >> 56) & 0xffL);
@@ -182,23 +181,11 @@ class JafsBlock {
 		buf[byteIdx++] = (byte)((l >> 16) & 0xffL);
 		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
 		buf[byteIdx++] = (byte)(l & 0xff);
-
-//		writeByte((int)((l >> 56) & 0xffL));
-//		writeByte((int)((l >> 48) & 0xffL));
-//		writeByte((int)((l >> 40) & 0xffL));
-//		writeByte((int)((l >> 32) & 0xffL));
-//		writeByte((int)((l >> 24) & 0xffL));
-//		writeByte((int)((l >> 16) & 0xffL));
-//		writeByte((int)((l >>  8)& 0xffL));
-//		writeByte((int) (l & 0xffL));
 	}
 
 	byte[] readBytes(int i) throws JafsException {
 		byte[] b = new byte[i];
 		readBytes(b, 0, i);
-//		for (int n=0; n<i; n++) {
-//			b[n] = (byte)(readByte() & 0xff);
-//		}
 		return b;
 	}
 	

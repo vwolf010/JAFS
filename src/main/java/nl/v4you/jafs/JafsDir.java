@@ -47,7 +47,6 @@ class JafsDir {
 	}
 		
 	long getEntryPos(String name) throws JafsException, IOException {
-		inode.reload();
 		byte buf[] = name.getBytes("UTF-8");
 		int strLen = buf.length;
 		inode.seek(0, JafsInode.SEEK_SET);
@@ -102,7 +101,6 @@ class JafsDir {
 		
 	void updateEntry(JafsDirEntry entry) throws JafsException, IOException {
 		byte nameBuf[] = entry.name.getBytes("UTF-8");
-		inode.reload();
 		inode.seek(entry.startPos, JafsInode.SEEK_SET);
 		inode.writeInt(entry.bpos); // block position
 		inode.writeShort(entry.idx); // inode index
@@ -112,7 +110,6 @@ class JafsDir {
 	}
 	
 	void deleteEntry(JafsDirEntry entry) throws JafsException, IOException {
-		inode.reload();
 		inode.seek(entry.startPos, JafsInode.SEEK_SET);
 		inode.writeInt(0); // block position
 		inode.writeShort(0); // inode index

@@ -67,8 +67,8 @@ public class JafsFile {
 
 	public long length() throws IOException, JafsException {
 		JafsDirEntry entry = getEntry(path);
-		if (entry==null) {
-			return -1;
+		if (entry==null || entry.bpos==0) {
+			return 0;
 		}
 		JafsInode inode = new JafsInode(vfs, entry);
 		return inode.size;
