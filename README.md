@@ -1,23 +1,18 @@
-JAFS
-====
-
-####Java Application File System####
-JAFS is a java library that will allow you to create a filesystem in a filesystem.
+#### JAFS (Java Application File System)
+JAFS is a java library that will allow you to create a filesystem in a filesystem. The main purpose it to store loads of small files inside it but using a smaller blocksize. So it works like an archive (without compression) and it is optimized for speed.
 
 There is no stable release yet, but I have a working happy flow now.
 
-####Why JAFS?####
-* It is my way to learn how filesystems work
+#### Why JAFS?
 * It hides the files your application uses
 * It is optimizable for lot's of small files by offering:
- * Smaller block size
- * Smaller inode size
- * Smaller maximum filesize
+  * Smaller block size
+  * Smaller inode size
+  * Smaller maximum filesize
 * It tries to keep the file system as small as possible (unused blocks bitmaps, inlined data)
 * It will offer an API that is similar to java.io.File
-* It is robust
 
-####Design####
+#### Design
 I am using the EXT2 file system as a source for ideas.
 
 When creating a JAFS file system you will need to:
@@ -36,13 +31,13 @@ The inode will hold the following information:
 
 It does not contain timestamps, file permissions, etc.
 
-The inode supports inlined data.
+The inode supports inlined data. This means that inode area that contains the pointers will be used for data until the file gets to big. Then the data will be moved to a data block and the pointer area will be used for pointers.
 
-####How to use?####
+#### How to use?
 
 I will create a kind of manual in the future, for the moment just look at the Main class that I created.
 
-####To do####
+#### To do
 * Remove unnecessary checks in the code (for example checking if a dir or file name contains a slash is now in 2 places)
 * Check if all actions are performed in a robust order when doing writes to disk (for example, mark an inode as unused before adjusting the unused map)
 * Add journaling so JAFS has some kind of transaction block mechanism
