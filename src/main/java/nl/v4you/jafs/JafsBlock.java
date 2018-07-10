@@ -78,7 +78,7 @@ class JafsBlock {
 		byteIdx = 0;
 	}
 	
-	void flush() throws IOException, JafsException {
+	void flushBlock() throws IOException, JafsException {
 		long start = blockSize + bpos*blockSize;
 		long end = start + blockSize;
 		if (end>raf.length()) {

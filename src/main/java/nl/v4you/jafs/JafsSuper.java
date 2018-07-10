@@ -148,6 +148,6 @@ class JafsSuper {
 		rootBlock.writeBytes((String.format("%d|", rootDirIdx)).getBytes());
 		rootBlock.writeBytes((String.format("%d|", blocksTotal)).getBytes());
 		rootBlock.writeBytes((String.format("%d|", blocksUsed)).getBytes());
-		rootBlock.flush();
+		rootBlock.flushBlock();
 	}
 }

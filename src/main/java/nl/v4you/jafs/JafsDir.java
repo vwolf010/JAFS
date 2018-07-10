@@ -18,7 +18,7 @@ class JafsDir {
 	static void createRootDir(Jafs vfs) throws JafsException, IOException {
 		JafsInode inode = new JafsInode(vfs);
 		inode.createInode(JafsInode.INODE_DIR);
-		inode.flush();
+		inode.flushInode();
 		JafsDir dir = new JafsDir(vfs, inode);
 		dir.initDir(inode.getBpos(), inode.getIdx());
 		vfs.getSuper().setRootDirBpos(inode.getBpos());
@@ -102,7 +102,7 @@ class JafsDir {
 	void updateEntry(JafsDirEntry entry) throws JafsException, IOException {
 		byte nameBuf[] = entry.name.getBytes("UTF-8");
 		inode.seek(entry.startPos, JafsInode.SEEK_SET);
-		inode.writeInt(entry.bpos); // block position
+		inode.writeInt((int)entry.bpos); // block position
 		inode.writeShort(entry.idx); // inode index
 		inode.writeByte(entry.type); // file type
 		inode.writeByte(nameBuf.length);
@@ -200,7 +200,7 @@ class JafsDir {
 			inode.seek(-2, JafsInode.SEEK_CUR);
 			inode.writeShort(4 + 2 + 1 + 1 + nameBuf.length); // total size of entry			
 		}
-		inode.writeInt(entry.bpos); // block position
+		inode.writeInt((int)entry.bpos); // block position
 		inode.writeShort(entry.idx); // inode index
 		inode.writeByte(entry.type); // file type
 		inode.writeByte(nameBuf.length);

@@ -1,7 +1,6 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Arrays;
 
 /*
@@ -86,7 +85,7 @@ class JafsInode {
 		return (type & INODE_USED) > 0;
 	}
 
-	void flush() throws JafsException, IOException {
+	void flushInode() throws JafsException, IOException {
 		JafsBlock block = vfs.getCacheBlock(bpos);
 		block.seek(idx*superInodeSize);
 		block.writeByte(type);
@@ -99,7 +98,7 @@ class JafsInode {
 			block.writeByte(0); // filler
 			block.writeByte(0); // filler
 		}
-		block.flush();		
+		block.flushBlock();
 	}
 	
 	void openInode(long bpos, int idx) throws JafsException, IOException {
@@ -151,7 +150,7 @@ class JafsInode {
 		}
 		this.type = INODE_USED | type | INODE_INLINED;
 		this.size = 0;
-		flush();
+		flushInode();
 		
 		if (idxCnt==0) {
 			vfs.getSuper().incBlocksUsedAndFlush();
@@ -191,7 +190,7 @@ class JafsInode {
 		}
 		Arrays.fill(ptrs, 0);
 		type &= INODE_INLINED ^ 0xff; // Turn inlined mode off
-		flush();
+		flushInode();
 		if (size>0) {
 			seek(0, SEEK_SET);
 			writeBytes(buf, 0, (int) size);
@@ -211,27 +210,26 @@ class JafsInode {
 			block.seek((int)(idx*superInodeSize+INODE_HEADER_SIZE+fpos));
 			block.writeByte(b);
 			fpos++;
-			block.flush();
+			block.flushBlock();
 		}
 		else {
 			long bpos = ctx.getBlkPos(this, fpos);
 			JafsBlock dum = vfs.getCacheBlock(bpos);
 			dum.seek((int)(fpos % superBlockSize));
 			dum.writeByte(b);
-			dum.flush();
+			dum.flushBlock();
 			fpos++;
 		}
 		if (fpos>size) {
 			size = fpos;
-			flush();
+			flushInode();
 		}
 	}
 
 	void writeBytes(byte[] b, int off, int len) throws JafsException, IOException {
 		if (b == null) {
 			throw new NullPointerException();
-		} else if ((off < 0) || (off > b.length) || (len < 0) ||
-				((off + len) > b.length) || ((off + len) < 0)) {
+		} else if ((off < 0) || (off > b.length) || (len < 0) || ((off + len) > b.length) || ((off + len) < 0)) {
 			throw new IndexOutOfBoundsException();
 		} else if (len == 0) {
 			return;
@@ -248,19 +246,19 @@ class JafsInode {
 				done = dum.bytesLeft();
 				if (len<done) done=len;
 				dum.writeBytes(b, off, done);
-				len -= done;
+				dum.flushBlock();
+				fpos += done;
 				off += done;
-				fpos+=done;
-				dum.flush();
+				len -= done;
 				if (fpos>size) {
 					size = fpos;
-					flush();
+					flushInode();
 				}
 			}
 		}
 		else {
-			for (int n=0; n<b.length; n++) {
-				writeByte(b[n]);
+			for (int n=0; n<len; n++) {
+				writeByte(b[off+n]);
 			}
 		}
 	}
@@ -283,12 +281,6 @@ class JafsInode {
 			return block.readByte();
 		}
 	}
-	
-//	void readBytes(byte[] buf) throws VFSException, IOException {
-//		for (int n=0; n<buf.length; n++) {
-//			buf[n] = (byte)readByte();
-//		}
-//	}
 	
 	int readBytes(byte[] b, int off, int len) throws JafsException, IOException {
 		if (b == null) {
@@ -326,9 +318,8 @@ class JafsInode {
 			}
 		}
 		else {
-			int end = off + len;
-			for (int n=off; n<end; n++) {
-				b[n]=(byte)readByte();
+			for (int n=0; n<len; n++) {
+				b[off+n]=(byte)readByte();
 			}
 		}
 		int bread = (int)(fpos-fposMem);
@@ -340,30 +331,22 @@ class JafsInode {
 	}
 
 	int readShort() throws JafsException, IOException {
-//		readBytes(bb, 0, 2);
-//		return ((bb[0] & 0xff)<<8) | (bb[1] & 0xff);
-		return (readByte()<<8) | (readByte());
+		readBytes(bb, 0, 2);
+		return Util.arrayToShort(bb);
 	}
 
 	void writeShort(int s) throws JafsException, IOException {
-//		bb[0] = (byte)((s >> 8) & 0xff);
-//		bb[1] = (byte)(s & 0xff);
-//		writeBytes(bb, 0, 2);
-
-		writeByte((s >> 8) & 0xff);
-		writeByte(s & 0xff);
+		Util.shortToArray(bb, s);
+		writeBytes(bb, 0, 2);
 	}
 
 	long readInt() throws JafsException, IOException {
 		readBytes(bb, 0, 4);
-		return bb[0]<<24 | bb[1]<<16 | bb[2]<<8 | (bb[3] & 0xff);
+		return Util.arrayToInt(bb);
 	}
 
-	void writeInt(long i) throws JafsException, IOException {
-		bb[0] = (byte)((i >> 24) & 0xff);
-		bb[1] = (byte)((i >> 16) & 0xff);
-		bb[2] = (byte)((i >> 8) & 0xff);
-		bb[3] = (byte)(i & 0xff);
+	void writeInt(int i) throws JafsException, IOException {
+		Util.intToArray(bb, i);
 		writeBytes(bb, 0, 4);
 	}
 	
@@ -390,6 +373,6 @@ class JafsInode {
 			vfs.getSuper().flush();
 		}
 		type=0;
-		flush();
+		flushInode();
 	}
 }

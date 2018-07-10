@@ -108,7 +108,7 @@ class JafsUnusedMap {
 					b = block.readByte();
 					block.seek(0);
 					block.writeByte(b | skipMapMask);
-					block.flush();
+					block.flushBlock();
 				}
 			}
 			if (newBpos>0) {
@@ -175,8 +175,8 @@ class JafsUnusedMap {
 		block.seek(0);
 		block.writeByte(b & 0x3f);
 		
-		// and flush
-		block.flush();
+		// and flushBlock
+		block.flushBlock();
 	}
 	
 	/**
@@ -195,7 +195,7 @@ class JafsUnusedMap {
 		bitPos >>= 1;
 		b &= bitPos ^ 0xff; // set inode bit to used (0)
 		block.writeByte(b);
-		block.flush();		
+		block.flushBlock();
 	}
 	
 	/**
@@ -221,8 +221,8 @@ class JafsUnusedMap {
 		block.seek(0);
 		block.writeByte(b & 0xbf);
 		
-		// and flush
-		block.flush();		
+		// and flushBlock
+		block.flushBlock();
 	}
 	
 	/**
@@ -241,7 +241,7 @@ class JafsUnusedMap {
 		bitPos >>= 1;
 		b &= bitPos ^ 0xff; // set inode to used (0)
 		block.writeByte(b);
-		block.flush();		
+		block.flushBlock();
 	}
 	
 	void create(long bpos) throws JafsException, IOException {
@@ -259,6 +259,6 @@ class JafsUnusedMap {
 		block.initOnes();
 		block.seek(0);
 		block.writeByte(0x3f); // don't skip this new map
-		block.flush();
+		block.flushBlock();
 	}
 }

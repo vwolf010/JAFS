@@ -52,10 +52,10 @@ class JafsInodeContext {
 				}
 				vfs.getSuper().incBlocksUsedAndFlush();
 				dum.initZeros();
-				dum.flush();
+				dum.flushBlock();
 				block.seek(idx*4);
 				block.writeInt(ptr);
-				block.flush();
+				block.flushBlock();
 				vfs.getUnusedMap().setUsedDataBlock(ptr);
 			}
 			return getBlkPos(ptr, start+idx*nextSize, nextSize, fpos);
@@ -85,9 +85,9 @@ class JafsInodeContext {
 						}						
 						vfs.getSuper().incBlocksUsedAndFlush();
 						block.initZeros();
-						block.flush();							
+						block.flushBlock();
 						inode.ptrs[n] = ptr;
-						inode.flush();
+						inode.flushInode();
 						vfs.getUnusedMap().setUsedDataBlock(ptr);												
 					}
 					return inode.ptrs[n];
@@ -106,9 +106,9 @@ class JafsInodeContext {
 						}
 						vfs.getSuper().incBlocksUsedAndFlush();
 						block.initZeros();
-						block.flush();							
+						block.flushBlock();
 						inode.ptrs[n] = ptr;
-						inode.flush();
+						inode.flushInode();
 						vfs.getUnusedMap().setUsedDataBlock(ptr);
 					}
 					return getBlkPos(inode.ptrs[n], ptrs[n].fPosStart, ptrs[n].fPosEnd-ptrs[n].fPosStart, fpos);
