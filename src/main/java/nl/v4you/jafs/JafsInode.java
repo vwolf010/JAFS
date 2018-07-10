@@ -301,7 +301,7 @@ class JafsInode {
 		}
 		if (len<0) {
 			return -1;
-		}		
+		}
 		long fposMem = fpos;
 		if (!isInlined(type)) {
 			int done = 1;
@@ -332,21 +332,21 @@ class JafsInode {
 
 	int readShort() throws JafsException, IOException {
 		readBytes(bb, 0, 2);
-		return Util.arrayToShort(bb);
+		return Util.arrayToShort(bb, 0);
 	}
 
 	void writeShort(int s) throws JafsException, IOException {
-		Util.shortToArray(bb, s);
+		Util.shortToArray(bb, 0, s);
 		writeBytes(bb, 0, 2);
 	}
 
 	long readInt() throws JafsException, IOException {
 		readBytes(bb, 0, 4);
-		return Util.arrayToInt(bb);
+		return Util.arrayToInt(bb, 0);
 	}
 
 	void writeInt(int i) throws JafsException, IOException {
-		Util.intToArray(bb, i);
+		Util.intToArray(bb, 0, i);
 		writeBytes(bb, 0, 4);
 	}
 	

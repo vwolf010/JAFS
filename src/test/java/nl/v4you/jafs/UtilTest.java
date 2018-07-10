@@ -11,12 +11,12 @@ public class UtilTest {
         byte b[] = new byte[4];
 
         int i = 0x01020304;
-        Util.intToArray(b, i);
-        assertEquals(i, Util.arrayToInt(b));
+        Util.intToArray(b, 0, i);
+        assertEquals(i, Util.arrayToInt(b, 0));
 
         i = 0xfffefdfc;
-        Util.intToArray(b, i);
-        assertEquals(i, Util.arrayToInt(b));
+        Util.intToArray(b, 0, i);
+        assertEquals(i, (int)Util.arrayToInt(b, 0));
     }
 
     @Test
@@ -24,11 +24,11 @@ public class UtilTest {
         byte b[] = new byte[4];
 
         int i = 0x0102;
-        Util.shortToArray(b, i);
-        assertEquals(i, Util.arrayToShort(b));
+        Util.shortToArray(b, 0, i);
+        assertEquals(i, Util.arrayToShort(b, 0));
 
         i = 0xfffe;
-        Util.shortToArray(b, i);
-        assertEquals(i, Util.arrayToShort(b));
+        Util.shortToArray(b, 0, i);
+        assertEquals(i, Util.arrayToShort(b, 0));
     }
 }

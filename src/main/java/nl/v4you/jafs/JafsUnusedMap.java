@@ -145,7 +145,7 @@ class JafsUnusedMap {
 	}
 
 	int findUnusedByte(JafsBlock block, long bpos) throws JafsException, IOException {
-		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))/4);
+		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>2);
 		block.seek(unusedIdx);
 		int b = block.readByte();
 		block.seek(unusedIdx);

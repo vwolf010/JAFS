@@ -2,31 +2,31 @@ package nl.v4you.jafs;
 
 public class Util {
 
-    static void shortToArray(byte b[], int i) {
-        b[0] = (byte)((i>>8) & 0xff);
-        b[1] = (byte)(i & 0xff);
+    static void shortToArray(byte b[], int off, int i) {
+        b[off] = (byte)((i>>8) & 0xff);
+        b[off+1] = (byte)(i & 0xff);
     }
 
-    static int arrayToShort(byte b[]) {
+    static int arrayToShort(byte b[], int off) {
         int i=0;
-        i |= (b[0] & 0xff) <<8;
-        i |= (b[1] & 0xff);
+        i |= (b[off] & 0xff) <<8;
+        i |= (b[off+1] & 0xff);
         return i;
     }
 
-    static void intToArray(byte b[], int i) {
-        b[0] = (byte)((i>>24) & 0xff);
-        b[1] = (byte)((i>>16) & 0xff);
-        b[2] = (byte)((i>>8) & 0xff);
-        b[3] = (byte)(i & 0xff);
+    static void intToArray(byte b[], int off, long i) {
+        b[off] = (byte)((i>>24) & 0xffL);
+        b[off+1] = (byte)((i>>16) & 0xffL);
+        b[off+2] = (byte)((i>>8) & 0xffL);
+        b[off+3] = (byte)(i & 0xffL);
     }
 
-    static int arrayToInt(byte b[]) {
-        int i=0;
-        i |= (b[0] & 0xff) <<24;
-        i |= (b[1] & 0xff) <<16;
-        i |= (b[2] & 0xff) <<8;
-        i |= (b[3] & 0xff);
+    static long arrayToInt(byte b[], int off) {
+        long i=0;
+        i |= (b[off] & 0xffL) <<24;
+        i |= (b[off+1] & 0xffL) <<16;
+        i |= (b[off+2] & 0xffL) <<8;
+        i |= (b[off+3] & 0xffL);
         return i;
     }
 }

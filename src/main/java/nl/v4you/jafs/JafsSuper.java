@@ -3,9 +3,8 @@ package nl.v4you.jafs;
 import java.io.IOException;
 
 class JafsSuper {
-	static final String magic = "JVFS";
-	static final String version = "1";
-	
+	private static final int VERSION = 1;
+
 	private Jafs vfs;
 	private JafsBlock rootBlock;
 	private int blockSize = 256;
@@ -15,7 +14,9 @@ class JafsSuper {
 	private long blocksUsed = 0;
 	private long rootDirBPos = 1;
 	private int rootDirIdx = 0;
-	
+
+	byte buf[] = new byte[64];
+
 	JafsSuper(Jafs vfs, int blockSize) throws JafsException {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
@@ -110,44 +111,32 @@ class JafsSuper {
 	void read() throws JafsException, IOException {
 		rootBlock.seek(0);
 		rootBlock.readFromDisk();
-		byte arr[] = new byte[64];
-		int i = 0;
-		int b = rootBlock.readByte();
-		while (b!=0) {
-			arr[i++] = (byte)(b & 0xff);
-			b = rootBlock.readByte();
-		}
-		byte dum[] = new byte[i];
-		for (b=0; b<i; b++) {
-			dum[b] = arr[b];
-		}
-		String str = new String(dum);
-		String fields[] = str.split("[|]");
-		if (fields.length!=9) {
-			throw new JafsException("Expected 8 fields");
-		}
-		blockSize = Integer.parseInt(fields[2]);
-		inodeSize = Integer.parseInt(fields[3]);
-		maxFileSize = Long.parseLong(fields[4]);
-		rootDirBPos = Long.parseLong(fields[5]);
-		rootDirIdx = Integer.parseInt(fields[6]);
-		blocksTotal = Integer.parseInt(fields[7]);
-		blocksUsed = Integer.parseInt(fields[8]);
+		rootBlock.readBytes(buf, 0, 34);
+		blockSize = (int)Util.arrayToInt(buf, 6);
+		inodeSize = (int)Util.arrayToInt(buf, 10);
+		maxFileSize = Util.arrayToInt(buf, 14);
+		rootDirBPos = Util.arrayToInt(buf, 18);
+		rootDirIdx = (int)Util.arrayToInt(buf, 22);
+		blocksTotal = Util.arrayToInt(buf, 26);
+		blocksUsed =  Util.arrayToInt(buf, 30);
 	}
 	
 	void flush() throws JafsException, IOException {
 		rootBlock.initZeros();
 		rootBlock.seek(0);
-		rootBlock.writeBytes((magic+"|").getBytes());
-		rootBlock.writeBytes((version+"|").getBytes());
-		// TODO: should write the following integers as hexadecimal
-		rootBlock.writeBytes((String.format("%d|", blockSize)).getBytes());
-		rootBlock.writeBytes((String.format("%d|", inodeSize)).getBytes());
-		rootBlock.writeBytes((String.format("%d|", maxFileSize)).getBytes());
-		rootBlock.writeBytes((String.format("%d|", rootDirBPos)).getBytes());
-		rootBlock.writeBytes((String.format("%d|", rootDirIdx)).getBytes());
-		rootBlock.writeBytes((String.format("%d|", blocksTotal)).getBytes());
-		rootBlock.writeBytes((String.format("%d|", blocksUsed)).getBytes());
+		buf[0]='J';
+		buf[1]='V';
+		buf[2]='F';
+		buf[3]='S';
+		Util.shortToArray(buf, 4, VERSION);
+		Util.intToArray(buf,  6, blockSize);
+		Util.intToArray(buf, 10, inodeSize);
+		Util.intToArray(buf, 14, maxFileSize);
+		Util.intToArray(buf, 18, rootDirBPos);
+		Util.intToArray(buf, 22, rootDirIdx);
+		Util.intToArray(buf, 26, blocksTotal);
+		Util.intToArray(buf, 30, blocksUsed);
+		rootBlock.writeBytes(buf, 0, 34);
 		rootBlock.flushBlock();
 	}
 }
