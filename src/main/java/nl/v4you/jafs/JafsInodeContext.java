@@ -34,7 +34,7 @@ class JafsInodeContext {
 		if (size>vfs.getSuper().getBlockSize()) {
 			long nextSize = size/ptrsPerPtrBlock;
 			int idx = (int)((fpos-start) / nextSize);
-			block.seek(idx*4);
+			block.seek(idx<<2);
 			long ptr = block.readInt();
 			if (ptr<0) {
 				throw new JafsException("Negative block ptr!!!");

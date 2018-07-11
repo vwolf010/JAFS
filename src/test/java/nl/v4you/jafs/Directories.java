@@ -59,6 +59,7 @@ public class Directories {
         JafsFile f = vfs.getFile("/abc");
         f.createNewFile();
         assertEquals(0, f.length());
+        vfs.close();
     }
 
 //    @Test

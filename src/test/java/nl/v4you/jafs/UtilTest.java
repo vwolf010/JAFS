@@ -2,6 +2,7 @@ package nl.v4you.jafs;
 
 import org.junit.Test;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
 public class UtilTest {
@@ -30,5 +31,15 @@ public class UtilTest {
         i = 0xfffe;
         Util.shortToArray(b, 0, i);
         assertEquals(i, Util.arrayToShort(b, 0));
+    }
+
+    @Test
+    public void byteArrayContains() {
+        assertTrue(Util.contains("abcdefg".getBytes(), "abc".getBytes()));
+        assertTrue(Util.contains("abcdefg".getBytes(), new byte[0]));
+        assertTrue(Util.contains(new byte[0], new byte[0]));
+        assertTrue(!Util.contains("abcdefg".getBytes(), "abx".getBytes()));
+        assertTrue(!Util.contains("abcdefg".getBytes(), "xyz".getBytes()));
+        assertTrue(!Util.contains("ab".getBytes(), "abcd".getBytes()));
     }
 }

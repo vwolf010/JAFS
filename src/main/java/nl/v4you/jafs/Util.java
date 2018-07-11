@@ -29,4 +29,30 @@ public class Util {
         i |= (b[off+3] & 0xffL);
         return i;
     }
+
+    static boolean contains(byte str1[], byte str2[]) {
+        int len1 = str1.length;
+        int len2 = str2.length;
+        if (len2==0) {
+            return true;
+        }
+        else if (len2>len1) {
+            return false;
+        }
+        boolean found = false;
+        int b=0;
+        for (int a=0; a<len1; a++) {
+            if (str1[a]==str2[b]) {
+                b++;
+                if (b==len2) {
+                    found=true;
+                    break;
+                }
+            }
+            else {
+                b=0;
+            }
+        }
+        return found;
+    }
 }

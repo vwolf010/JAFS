@@ -85,8 +85,7 @@ class JafsInode {
 		return (type & INODE_USED) > 0;
 	}
 
-	void flushInode() throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlock(bpos);
+	void flushInode(JafsBlock block) throws JafsException, IOException {
 		block.seek(idx*superInodeSize);
 		block.writeByte(type);
 		block.writeLong(size);
@@ -99,6 +98,11 @@ class JafsInode {
 			block.writeByte(0); // filler
 		}
 		block.flushBlock();
+	}
+
+	void flushInode() throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(bpos);
+		flushInode(block);
 	}
 	
 	void openInode(long bpos, int idx) throws JafsException, IOException {
@@ -185,15 +189,17 @@ class JafsInode {
 
 		byte buf[] = null;
 		if (size>0) {
-			buf = new byte[(int) size];
+			buf = new byte[(int)size];
 			block.readBytes(buf, 0, (int)size);
 		}
 		Arrays.fill(ptrs, 0);
 		type &= INODE_INLINED ^ 0xff; // Turn inlined mode off
-		flushInode();
+		flushInode(block);
 		if (size>0) {
+			long memFilePos = fpos;
 			seek(0, SEEK_SET);
-			writeBytes(buf, 0, (int) size);
+			writeBytes(buf, 0, (int)size);
+			fpos = memFilePos;
 		}
 	}
 	
@@ -204,9 +210,9 @@ class JafsInode {
 	}
 	
 	void writeByte(int b) throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlock(bpos);
 		checkInlinedOverflow();
 		if (isInlined(type)) {
+			JafsBlock block = vfs.getCacheBlock(bpos);
 			block.seek((int)(idx*superInodeSize+INODE_HEADER_SIZE+fpos));
 			block.writeByte(b);
 			fpos++;
@@ -217,8 +223,8 @@ class JafsInode {
 			JafsBlock dum = vfs.getCacheBlock(bpos);
 			dum.seek((int)(fpos % superBlockSize));
 			dum.writeByte(b);
-			dum.flushBlock();
 			fpos++;
+			dum.flushBlock();
 		}
 		if (fpos>size) {
 			size = fpos;
@@ -258,7 +264,7 @@ class JafsInode {
 		}
 		else {
 			for (int n=0; n<len; n++) {
-				writeByte(b[off+n]);
+				writeByte(b[off+n] & 0xff);
 			}
 		}
 	}

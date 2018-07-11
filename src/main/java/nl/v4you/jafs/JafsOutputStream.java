@@ -43,7 +43,7 @@ public class JafsOutputStream extends OutputStream {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
 				JafsDir dir = new JafsDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName(), JafsInode.INODE_FILE);
+				dir.mkinode(f.getName().getBytes("UTF-8"), JafsInode.INODE_FILE);
 				inode = new JafsInode(vfs, f.getEntry(path));
 			}
 			inode.writeBytes(buf, start, len);
@@ -64,7 +64,7 @@ public class JafsOutputStream extends OutputStream {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
 				JafsDir dir = new JafsDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName(), JafsInode.INODE_FILE);
+				dir.mkinode(f.getName().getBytes("UTF-8"), JafsInode.INODE_FILE);
 				inode = new JafsInode(vfs, f.getEntry(path));
 			}
 			inode.writeByte(arg0);

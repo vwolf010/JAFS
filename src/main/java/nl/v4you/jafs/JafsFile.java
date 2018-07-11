@@ -84,7 +84,7 @@ public class JafsFile {
 				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
-			return dir.createNewEntry(getName(), JafsDirEntry.TYPE_FILE, 0, 0);
+			return dir.createNewEntry(getName().getBytes("UTF-8"), JafsDirEntry.TYPE_FILE, 0, 0);
 		}
 		return false;		
 	}
@@ -160,8 +160,8 @@ public class JafsFile {
 					JafsDir srcDir = new JafsDir(vfs, entry.parentBpos, entry.parentIdx);
 					JafsDir dstDir = new JafsDir(vfs, getEntry(target.getParent()));
 					srcDir.deleteEntry(entry);
-					entry.name = target.getName();
-					dstDir.createNewEntry(target.getName(), entry.type, entry.bpos, entry.idx);
+					entry.name = target.getName().getBytes("UTF-8");
+					dstDir.createNewEntry(target.getName().getBytes("UTF-8"), entry.type, entry.bpos, entry.idx);
 				}				
 			}
 		}
@@ -202,13 +202,13 @@ public class JafsFile {
 		entry.bpos = vfs.getRootBpos();
 		entry.idx = vfs.getRootIdx();
 		entry.type = JafsDirEntry.TYPE_DIR;
-		entry.name = "/";
+		entry.name = "/".getBytes("UTF-8");
 		JafsDir dir = new JafsDir(vfs, entry);
 		String parts[] = getCanonicalPath(path).split("/");
 		for (int n=0; n<parts.length; n++) {
 			String part = parts[n];
 			if (part.length()>0 && 0!=part.compareTo(".")) {
-				entry = dir.getEntry(part);
+				entry = dir.getEntry(part.getBytes("UTF-8"));
 				if (entry==null) {
 					return null;
 				}
@@ -335,7 +335,7 @@ public class JafsFile {
 				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
-			return dir.createNewEntry(getName(path), JafsDirEntry.TYPE_DIR, 0, 0);
+			return dir.createNewEntry(getName(path).getBytes("UTF-8"), JafsDirEntry.TYPE_DIR, 0, 0);
 		}
 		return false;		
 	}
