@@ -30,6 +30,30 @@ public class Util {
         return i;
     }
 
+    static void longToArray(byte b[], int off, long i) {
+        b[off] = (byte)((i>>56) & 0xffL);
+        b[off+1] = (byte)((i>>48) & 0xffL);
+        b[off+2] = (byte)((i>>40) & 0xffL);
+        b[off+3] = (byte)((i>>32) & 0xffL);
+        b[off+4] = (byte)((i>>24) & 0xffL);
+        b[off+5] = (byte)((i>>16) & 0xffL);
+        b[off+6] = (byte)((i>>8) & 0xffL);
+        b[off+7] = (byte)(i & 0xffL);
+    }
+
+    static long arrayToLong(byte b[], int off) {
+        long i=0;
+        i |= (b[off] & 0xffL) <<56;
+        i |= (b[off+1] & 0xffL) <<48;
+        i |= (b[off+2] & 0xffL) <<40;
+        i |= (b[off+3] & 0xffL) <<32;
+        i |= (b[off+4] & 0xffL) <<24;
+        i |= (b[off+5] & 0xffL) <<16;
+        i |= (b[off+6] & 0xffL) <<8;
+        i |= (b[off+7] & 0xffL);
+        return i;
+    }
+
     static boolean contains(byte str1[], byte str2[]) {
         int len1 = str1.length;
         int len2 = str2.length;

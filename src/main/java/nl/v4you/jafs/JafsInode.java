@@ -11,7 +11,7 @@ import java.util.Arrays;
  * 9
  */	
 class JafsInode {
-	static final int INODE_HEADER_SIZE = 9;
+	static final int INODE_HEADER_SIZE = 9; // type + size
 
 	static final int INODE_USED    = 0x80;
 	static final int INODE_LINK    = 0x40;	
@@ -25,7 +25,7 @@ class JafsInode {
 		
 	private Jafs vfs;
 	private JafsInodeContext ctx;
-	private JafsBlock iblock;
+	private JafsBlock iblock = null;
 	
 	private long maxInlinedSize = 0;
 	private long bpos;
@@ -36,7 +36,7 @@ class JafsInode {
 	int superBlockSize;
 	int superInodeSize;
 
-	byte bb[] = new byte[4];
+	byte bb[];
 
 	/* INode header */
 	int type;
@@ -58,6 +58,7 @@ class JafsInode {
 		ptrs = new long[ctx.getPtrsPerInode()];
 		Arrays.fill(ptrs, 0);
 		maxInlinedSize = superInodeSize-INODE_HEADER_SIZE;
+		bb = new byte[superInodeSize];
 	}
 	
 	JafsInode(Jafs vfs) {
@@ -87,17 +88,21 @@ class JafsInode {
 	}
 
 	void flushInode(JafsBlock block) throws JafsException, IOException {
+		int len = 0;
 		block.seek(ipos *superInodeSize);
-		block.writeByte(type);
-		block.writeLong(size);
+		bb[len++] = (byte)type;
+		Util.longToArray(bb, len, size);
+		len += 8;
 		if (!isInlined(type)) {
 			for (int n=0; n<ctx.getPtrsPerInode(); n++) {
-				block.writeInt(ptrs[n]);
+				Util.intToArray(bb, len, ptrs[n]);
+				len += 4;
 			}
-			block.writeByte(0); // filler
-			block.writeByte(0); // filler
-			block.writeByte(0); // filler
+			bb[len++] = 0;
+			bb[len++] = 0;
+			bb[len++] = 0;
 		}
+		block.writeBytes(bb, 0, len);
 		block.flushBlock();
 	}
 
@@ -107,41 +112,52 @@ class JafsInode {
 	}
 
 	void openInode(long bpos, int ipos) throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlock(bpos);
+		iblock = vfs.getCacheBlock(bpos);
 		this.bpos = bpos;
 		this.ipos = ipos;
-		block.seek(ipos*superInodeSize);
-		type = block.readByte();
-		size = block.readLong();
-		if (!isInlined(type)) {		
+		iblock.seek(ipos*superInodeSize);
+		if (isInlined(type)) {
+			iblock.readBytes(bb, 0, INODE_HEADER_SIZE);
+		}
+		else {
+			iblock.readBytes(bb, 0, superInodeSize);
+		}
+		int off=0;
+		type = bb[off++] & 0xff;
+		size = Util.arrayToLong(bb, off);
+		off += 8;
+		if (!isInlined(type)) {
 			for (int n=0; n<ctx.getPtrsPerInode(); n++) {
-				ptrs[n] = block.readInt();
+				ptrs[n] = Util.arrayToInt(bb, off);
+				off+=4;
 			}
 		}
 		fpos = 0;
 	}
 
 	void createInode(int type) throws JafsException, IOException {
-		JafsBlock block;
+		if (bpos>0) {
+			throw new IllegalStateException("bpos already set");
+		}
 		bpos = vfs.getUnusedMap().getUnusedINodeBpos();
 		if (bpos==0) {
 			// No new block could be found, we need to create a new one
 			bpos = vfs.getNewUnusedBpos();
-			block = vfs.setCacheBlock(bpos, new JafsBlock(vfs, bpos));
+			iblock = vfs.setCacheBlock(bpos, new JafsBlock(vfs, bpos));
 		}
 		else {
-			block = vfs.getCacheBlock(bpos);
+			iblock = vfs.getCacheBlock(bpos);
 		}
 		if (vfs.getUnusedMap().getUnusedDataBpos()==bpos) {
-			block.initZeros();
+			iblock.initZeros();
 		}
 		// Find a free inode position in this block
 		// and count used inodes while we are here anyway
 		ipos = -1;
 		int idxCnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
-			block.seek(n*superInodeSize);
-			if (isUsed(block.readByte())) {
+			iblock.seek(n*superInodeSize);
+			if (isUsed(iblock.readByte())) {
 				idxCnt++;
 			}
 			else {
@@ -185,17 +201,16 @@ class JafsInode {
 
 	private void undoInlined() throws IOException, JafsException {
 		// The inlined data needs to be copied to a real data block.
-		JafsBlock block = vfs.getCacheBlock(bpos);
-		block.seek((int)(ipos *superInodeSize+INODE_HEADER_SIZE));
+		iblock.seek((int)(ipos *superInodeSize+INODE_HEADER_SIZE));
 
 		byte buf[] = null;
 		if (size>0) {
 			buf = new byte[(int)size];
-			block.readBytes(buf, 0, (int)size);
+			iblock.readBytes(buf, 0, (int)size);
 		}
 		Arrays.fill(ptrs, 0);
 		type &= INODE_INLINED ^ 0xff; // Turn inlined mode off
-		flushInode(block);
+		flushInode(iblock);
 		if (size>0) {
 			long memFilePos = fpos;
 			seek(0, SEEK_SET);
@@ -214,14 +229,13 @@ class JafsInode {
 		checkInlinedOverflow();
 		if (isInlined(type)) {
 			JafsBlock block = vfs.getCacheBlock(bpos);
-			block.seek((int)(ipos *superInodeSize+INODE_HEADER_SIZE+fpos));
+			block.seek((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
 			block.writeByte(b);
 			fpos++;
 			block.flushBlock();
 		}
 		else {
-			long bpos = ctx.getBlkPos(this, fpos);
-			JafsBlock dum = vfs.getCacheBlock(bpos);
+			JafsBlock dum = vfs.getCacheBlock(ctx.getBlkPos(this, fpos));
 			dum.seek((int)(fpos % superBlockSize));
 			dum.writeByte(b);
 			fpos++;
@@ -247,8 +261,7 @@ class JafsInode {
 		if (!isInlined(type)) {
 			int done = 1;
 			while (done>0 && len>0) {
-				long bpos = ctx.getBlkPos(this, fpos);
-				JafsBlock dum = vfs.getCacheBlock(bpos);
+				JafsBlock dum = vfs.getCacheBlock(ctx.getBlkPos(this, fpos));
 				dum.seek((int)(fpos % superBlockSize));
 				done = dum.bytesLeft();
 				if (len<done) done=len;
@@ -358,11 +371,10 @@ class JafsInode {
 	}
 	
 	int getUsedIdxCount() throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlock(bpos);
 		int cnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
-			block.seek(n*superInodeSize);
-			if ((block.readByte() & INODE_USED)>0) {
+			iblock.seek(n*superInodeSize);
+			if ((iblock.readByte() & INODE_USED)>0) {
 				cnt++;
 			}
 		}
