@@ -97,8 +97,8 @@ public class Jafs {
 		return superBlock.getRootDirBpos();
 	}
 	
-	int getRootIdx() {
-		return superBlock.getRootDirIdx();
+	int getRootIpos() {
+		return superBlock.getRootDirIpos();
 	}
 	
 	RandomAccessFile getRaf() {

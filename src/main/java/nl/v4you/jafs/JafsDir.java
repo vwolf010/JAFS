@@ -6,7 +6,7 @@ import java.util.TreeSet;
 /*
  * <ushort: next entry>
  * <uint: inode block> (must be 0 if not used)
- * <ushort: inode idx>
+ * <ushort: inode ipos>
  * <byte: type> (f=file, d=directory)
  * <byte: filename length>
  * <string: filename>
@@ -26,9 +26,9 @@ class JafsDir {
 		inode.createInode(JafsInode.INODE_DIR);
 		inode.flushInode();
 		JafsDir dir = new JafsDir(vfs, inode);
-		dir.initDir(inode.getBpos(), inode.getIdx());
+		dir.initDir(inode.getBpos(), inode.getIpos());
 		vfs.getSuper().setRootDirBpos(inode.getBpos());
-		vfs.getSuper().setRootDirIdx(inode.getIdx());
+		vfs.getSuper().setRootDirIpos(inode.getIpos());
 		vfs.getSuper().flush();
 	}
 	
@@ -42,14 +42,14 @@ class JafsDir {
 		}
 	}
 	
-	JafsDir(Jafs vfs, long bpos, int idx) throws JafsException, IOException {
+	JafsDir(Jafs vfs, long bpos, int ipos) throws JafsException, IOException {
 		this.vfs = vfs;
-		this.inode = new JafsInode(vfs, bpos, idx);
+		this.inode = new JafsInode(vfs, bpos, ipos);
 	}
 		
 	JafsDir(Jafs vfs, JafsDirEntry entry) throws JafsException, IOException {
 		this.vfs = vfs;
-		this.inode = new JafsInode(vfs, entry.bpos, entry.idx);
+		this.inode = new JafsInode(vfs, entry.bpos, entry.ipos);
 	}
 		
 	long getEntryPos(byte name[]) throws JafsException, IOException {
@@ -58,7 +58,7 @@ class JafsDir {
 		int nextEntry = inode.readShort();
 		while (nextEntry>0) {
 			long startPos = inode.getFpos();
-			inode.seek(7, JafsInode.SEEK_CUR); // skip bpos, idx and type
+			inode.seek(7, JafsInode.SEEK_CUR); // skip bpos, ipos and type
 			int nameLength = inode.readByte();
 			if (nameLength!=strLen) {
 				inode.seek(startPos, JafsInode.SEEK_SET);
@@ -98,9 +98,9 @@ class JafsDir {
 			inode.seek(startPos, JafsInode.SEEK_SET);
 			entry.startPos = startPos;
 			entry.parentBpos = inode.getBpos();
-			entry.parentIdx = inode.getIdx();
+			entry.parentIpos = inode.getIpos();
 			entry.bpos = inode.readInt();
-			entry.idx = inode.readShort();
+			entry.ipos = inode.readShort();
 			entry.type = (byte)inode.readByte();
 			entry.name = name;
 			return entry;
@@ -111,7 +111,7 @@ class JafsDir {
 		byte nameBuf[] = entry.name;
 		inode.seek(entry.startPos, JafsInode.SEEK_SET);
 		inode.writeInt((int)entry.bpos); // block position
-		inode.writeShort(entry.idx); // inode index
+		inode.writeShort(entry.ipos); // inode index
 		inode.writeByte(entry.type); // file type
 		inode.writeByte(nameBuf.length);
 		inode.writeBytes(nameBuf, 0, nameBuf.length); // file name
@@ -131,7 +131,7 @@ class JafsDir {
 			return null;
 		}
 		else {
-			return new JafsInode(vfs, f.bpos, f.idx);
+			return new JafsInode(vfs, f.bpos, f.ipos);
 		}
 	}
 
@@ -213,7 +213,7 @@ class JafsDir {
 		}
         Util.intToArray(tmp, tLen, (int)entry.bpos);
 		tLen+=4;
-        Util.shortToArray(tmp, tLen, entry.idx);
+        Util.shortToArray(tmp, tLen, entry.ipos);
         tLen+=2;
         tmp[tLen++] = entry.type;
         tmp[tLen++] = (byte)nameBuf.length;
@@ -230,26 +230,26 @@ class JafsDir {
 	 * Creates the . and .. entry
 	 * 
 	 * @param parentBpos Block position of the parent directory inode
-	 * @param parentIdx  Index within inode block of the parent directory inode
+	 * @param parentIpos  Index within inode block of the parent directory inode
 	 * @throws IOException 
 	 * @throws IOException 
 	 */
-	void initDir(long parentBpos, int parentIdx) throws JafsException, IOException {
+	void initDir(long parentBpos, int parentIpos) throws JafsException, IOException {
 		inode.writeShort(0);
 		JafsDirEntry entry = new JafsDirEntry();
 		entry.bpos = inode.getBpos();
-		entry.idx = inode.getIdx();
+		entry.ipos = inode.getIpos();
 		entry.type = JafsDirEntry.TYPE_DIR;
 		entry.name = BA_DOT;
 		createEntry(entry);
 		entry.bpos = parentBpos;
-		entry.idx = parentIdx;
+		entry.ipos = parentIpos;
 		entry.type = JafsDirEntry.TYPE_DIR;
 		entry.name = BA_DOTDOT;
 		createEntry(entry);
 	}
 	
-	boolean createNewEntry(byte name[], byte type, long bpos, int idx) throws JafsException, IOException {
+	boolean createNewEntry(byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
 		if (Util.contains(name, BA_SLASH)) {
 			if ((type & JafsDirEntry.TYPE_FILE)>0) {
 				throw new JafsException("File name ["+name+"] should not contain a slash (/)");
@@ -264,7 +264,7 @@ class JafsDir {
 		}
 		JafsDirEntry entry = new JafsDirEntry();
 		entry.bpos = bpos;
-		entry.idx = idx;
+		entry.ipos = ipos;
 		entry.type = type;
 		entry.name = name;
 		createEntry(entry);		
@@ -278,10 +278,10 @@ class JafsDir {
 			childInode.createInode(type);
 			if ((type & JafsInode.INODE_DIR)>0) {
 				JafsDir dir = new JafsDir(vfs, childInode);
-				dir.initDir(inode.getBpos(), inode.getIdx());
+				dir.initDir(inode.getBpos(), inode.getIpos());
 			}
 			entry.bpos = childInode.getBpos();
-			entry.idx = childInode.getIdx();
+			entry.ipos = childInode.getIpos();
 			updateEntry(entry);
 			return entry;
 		}

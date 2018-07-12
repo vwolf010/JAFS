@@ -31,11 +31,11 @@ class JafsSuper {
 		this.rootDirBPos = bpos;
 	}
 
-	int getRootDirIdx() {
+	int getRootDirIpos() {
 		return rootDirIdx;
 	}
 	
-	void setRootDirIdx(int idx) {
+	void setRootDirIpos(int idx) {
 		this.rootDirIdx = idx;
 	}
 	

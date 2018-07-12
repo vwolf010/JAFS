@@ -80,7 +80,7 @@ public class JafsFile {
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
-				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIdx);
+				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
 				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
@@ -122,10 +122,10 @@ public class JafsFile {
 						throw new JafsException("directory "+getCanonicalPath()+" not empty");
 					}
 				}
-				JafsInode inode = new JafsInode(vfs, entry.bpos, entry.idx);
+				JafsInode inode = new JafsInode(vfs, entry.bpos, entry.ipos);
 				inode.free();				
 			}
-			JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIdx);
+			JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
 			dir.deleteEntry(entry);
 			return true;
 		}
@@ -157,11 +157,11 @@ public class JafsFile {
 			if (!target.exists()) {
 				if (exists(target.getParent())) {
 					JafsDirEntry entry = getEntry(getCanonicalPath());
-					JafsDir srcDir = new JafsDir(vfs, entry.parentBpos, entry.parentIdx);
+					JafsDir srcDir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
 					JafsDir dstDir = new JafsDir(vfs, getEntry(target.getParent()));
 					srcDir.deleteEntry(entry);
 					entry.name = target.getName().getBytes("UTF-8");
-					dstDir.createNewEntry(target.getName().getBytes("UTF-8"), entry.type, entry.bpos, entry.idx);
+					dstDir.createNewEntry(target.getName().getBytes("UTF-8"), entry.type, entry.bpos, entry.ipos);
 				}				
 			}
 		}
@@ -198,9 +198,9 @@ public class JafsFile {
 	JafsDirEntry getEntry(String path) throws JafsException, IOException {
 		JafsDirEntry entry = new JafsDirEntry();
 		entry.parentBpos = vfs.getRootBpos();
-		entry.parentIdx = vfs.getRootIdx();
+		entry.parentIpos = vfs.getRootIpos();
 		entry.bpos = vfs.getRootBpos();
-		entry.idx = vfs.getRootIdx();
+		entry.ipos = vfs.getRootIpos();
 		entry.type = JafsDirEntry.TYPE_DIR;
 		entry.name = "/".getBytes("UTF-8");
 		JafsDir dir = new JafsDir(vfs, entry);
@@ -331,7 +331,7 @@ public class JafsFile {
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
-				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIdx);
+				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
 				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);

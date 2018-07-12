@@ -29,11 +29,11 @@ class JafsInodeContext {
 		return iNodesPerBlock;
 	}
 		
-	long getBlkPos(long bpos, long start, long size, long fpos) throws JafsException, IOException {
+	long getBlkPos(long bpos, long off, long len, long fpos) throws JafsException, IOException {
 		JafsBlock block = vfs.setCacheBlock(bpos, null);
-		if (size>vfs.getSuper().getBlockSize()) {
-			long nextSize = size/ptrsPerPtrBlock;
-			int idx = (int)((fpos-start) / nextSize);
+		if (len>vfs.getSuper().getBlockSize()) {
+			long nextSize = len/ptrsPerPtrBlock;
+			int idx = (int)((fpos-off) / nextSize);
 			block.seek(idx<<2);
 			long ptr = block.readInt();
 			if (ptr<0) {
@@ -58,7 +58,7 @@ class JafsInodeContext {
 				block.flushBlock();
 				vfs.getUnusedMap().setUsedDataBlock(ptr);
 			}
-			return getBlkPos(ptr, start+idx*nextSize, nextSize, fpos);
+			return getBlkPos(ptr, off+idx*nextSize, nextSize, fpos);
 		}
 		else {
 			return bpos;

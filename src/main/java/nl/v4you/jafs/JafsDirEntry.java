@@ -6,10 +6,10 @@ class JafsDirEntry {
 	
 	long startPos;
 	long parentBpos;
-	int parentIdx;
+	int parentIpos;
 	
 	long bpos;
-	int idx;
+	int ipos;
 	byte type;
 	byte name[];
 	
