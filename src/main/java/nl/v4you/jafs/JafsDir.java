@@ -12,9 +12,9 @@ import java.util.TreeSet;
  * <string: filename>
  */
 class JafsDir {
-    static final byte BA_SLASH[] = {'/'};
-    static final byte BA_DOT[] = {'.'};
-    static final byte BA_DOTDOT[] = {'.', '.'};
+    static final byte SLASH[] = {'/'};
+    static final byte DOT[] = {'.'};
+    static final byte DOTDOT[] = {'.', '.'};
 
 	Jafs vfs;
 	JafsInode inode;
@@ -160,7 +160,7 @@ class JafsDir {
 	}
 	
 	void createEntry(JafsDirEntry entry) throws JafsException, IOException {
-		if (Util.contains(entry.name, BA_SLASH)) {
+		if (Util.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
 				throw new JafsException("Directory name ["+entry.name+"] should not contain a slash (/)");
 			}
@@ -240,17 +240,17 @@ class JafsDir {
 		entry.bpos = inode.getBpos();
 		entry.ipos = inode.getIpos();
 		entry.type = JafsDirEntry.TYPE_DIR;
-		entry.name = BA_DOT;
+		entry.name = DOT;
 		createEntry(entry);
 		entry.bpos = parentBpos;
 		entry.ipos = parentIpos;
 		entry.type = JafsDirEntry.TYPE_DIR;
-		entry.name = BA_DOTDOT;
+		entry.name = DOTDOT;
 		createEntry(entry);
 	}
 	
 	boolean createNewEntry(byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
-		if (Util.contains(name, BA_SLASH)) {
+		if (Util.contains(name, SLASH)) {
 			if ((type & JafsDirEntry.TYPE_FILE)>0) {
 				throw new JafsException("File name ["+name+"] should not contain a slash (/)");
 			}

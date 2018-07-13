@@ -85,7 +85,7 @@ public class AppTest {
 
     @Test
     public void fileLengthAndContentIsCorrectBigFile() throws Exception {
-        createAndCheckFileLengthAndContent(777*blockSize+4);
+        createAndCheckFileLengthAndContent((JafsBlockCache.CACHE_MAX_SIZE+5)*blockSize+4);
     }
 
     @Test
