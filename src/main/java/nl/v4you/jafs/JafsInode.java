@@ -112,7 +112,7 @@ class JafsInode {
 	}
 
 	void openInode(long bpos, int ipos) throws JafsException, IOException {
-		iblock = vfs.setCacheBlock(bpos, iblock);
+		iblock = vfs.getCacheBlock(bpos);
 		this.bpos = bpos;
 		this.ipos = ipos;
 		iblock.seek(ipos*superInodeSize);
@@ -220,14 +220,14 @@ class JafsInode {
 		}
 	}
 	
-	private void checkInlinedOverflow() throws JafsException, IOException {
-		if (isInlined(type) && (fpos>=maxInlinedSize)) {
+	private void checkInlinedOverflow(int n) throws JafsException, IOException {
+		if (isInlined(type) && (fpos+n>maxInlinedSize)) {
 			undoInlined();
 		}
 	}
-	
+
 	void writeByte(int b) throws JafsException, IOException {
-		checkInlinedOverflow();
+		checkInlinedOverflow(1);
 		if (isInlined(type)) {
 			iblock.seek((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
 			iblock.writeByte(b);
@@ -255,36 +255,36 @@ class JafsInode {
 		} else if (len == 0) {
 			return;
 		}
-		if (isInlined(type) && (fpos+len)>=maxInlinedSize) {
-			undoInlined();
-		}
+		checkInlinedOverflow(len);
 		if (!isInlined(type)) {
-			int done = 1;
-			while (done>0 && len>0) {
+			int todo = len;
+			int done = 0;
+			while (todo>0) {
 				JafsBlock dum = vfs.getCacheBlock(ctx.getBlkPos(this, fpos));
 				dum.seek((int)(fpos % superBlockSize));
 				done = dum.bytesLeft();
-				if (len<done) done=len;
+				if (todo<done) done=todo;
 				dum.writeBytes(b, off, done);
 				dum.flushBlock();
 				fpos += done;
 				off += done;
-				len -= done;
-				if (fpos>size) {
-					size = fpos;
-					flushInode();
-				}
+				todo -= done;
 			}
 		}
 		else {
-			for (int n=0; n<len; n++) {
-				writeByte(b[off+n] & 0xff);
-			}
+			iblock.seek((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
+			iblock.writeBytes(b, off, len);
+			fpos+=len;
+			iblock.flushBlock();
+		}
+		if (fpos>size) {
+			size = fpos;
+			flushInode();
 		}
 	}
-	
+
 	int readByte() throws JafsException, IOException {
-		if (fpos>=size) {
+		if (fpos+1>size) {
 			return -1;
 		}
 		if (isInlined(type)) {
@@ -309,43 +309,33 @@ class JafsInode {
 			return 0;
 		}
 
-		if (fpos>=size) {
-			// Need this check to prevent long and int clash
-			// with the check below
+		if (fpos==size) {
 			return -1;
 		}
 		if ((fpos+len) > size) {
 			len = (int)(size-fpos);
 		}
-		if (len<0) {
-			return -1;
-		}
-		long fposMem = fpos;
 		if (!isInlined(type)) {
-			int done = 1;
-			while (done>0 && len>0) {
+			int todo = len;
+			int done = 0;
+			while (todo>0) {
 				long bpos = ctx.getBlkPos(this, fpos);
 				JafsBlock dum = vfs.getCacheBlock(bpos);
 				dum.seek((int)(fpos % superBlockSize));
 				done = dum.bytesLeft();
-				if (len<done) done=len;
+				if (todo<done) done=todo;
 				dum.readBytes(b, off, done);
-				len -= done;
+				todo -= done;
 				off += done;
 				fpos+=done;
 			}
 		}
 		else {
-			for (int n=0; n<len; n++) {
-				b[off+n]=(byte)readByte();
-			}
+			iblock.seek((int)(ipos *superInodeSize+INODE_HEADER_SIZE+fpos));
+			iblock.readBytes(b, off, len);
+			fpos+=len;
 		}
-		int bread = (int)(fpos-fposMem);
-
-		if (bread>0)
-			return bread;
-
-		return -1;
+		return len;
 	}
 
 	int readShort() throws JafsException, IOException {
