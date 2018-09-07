@@ -71,10 +71,13 @@ public class Jafs {
 	}
 	
 	public JafsOutputStream getOutputStream(JafsFile f) throws JafsException, IOException {
-		return new JafsOutputStream(this, f, false);
+		return getOutputStream(f, false);
 	}
 
 	public JafsOutputStream getOutputStream(JafsFile f, boolean append) throws JafsException, IOException {
+		if (!append && f.exists() && !f.delete()) {
+			throw new JafsException("getOutputStream(): deleting ["+f.getAbsolutePath()+"] failed");
+		}
 		return new JafsOutputStream(this, f, append);
 	}
 
@@ -125,7 +128,7 @@ public class Jafs {
 		}		
 		superBlock.incBlocksTotalAndFlush();
 		raf.setLength(superBlock.getBlockSize()*(superBlock.getBlocksTotal()+1));
-		um.setUnusedBlock(bpos);
+		um.setBlockAsAvailable(bpos);
 		return bpos;
 	}
 

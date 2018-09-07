@@ -34,7 +34,7 @@ class JafsInodeContext {
 		if (len>vfs.getSuper().getBlockSize()) {
 			long nextSize = len/ptrsPerPtrBlock;
 			int idx = (int)((fpos-off) / nextSize);
-			block.seek(idx<<2);
+			block.seekSet(idx<<2);
 			long ptr = block.readInt();
 			if (ptr<0) {
 				throw new JafsException("Negative block ptr!!!");
@@ -53,10 +53,10 @@ class JafsInodeContext {
 				vfs.getSuper().incBlocksUsedAndFlush();
 				dum.initZeros();
 				dum.flushBlock();
-				block.seek(idx*4);
+				block.seekSet(idx*4);
 				block.writeInt(ptr);
 				block.flushBlock();
-				vfs.getUnusedMap().setUsedDataBlock(ptr);
+				vfs.getUnusedMap().setBlockAsUsed(ptr);
 			}
 			return getBlkPos(ptr, off+idx*nextSize, nextSize, fpos);
 		}
@@ -66,9 +66,14 @@ class JafsInodeContext {
 	}
 	
 	long getBlkPos(JafsInode inode, long fpos) throws JafsException, IOException {
-		if (fpos>=vfs.getSuper().getMaxFileSize()) {
-			return -1; //TODO: handle this in calling methods
+		if (fpos<0) {
+			throw new JafsException("file position cannot be negative, got: "+fpos);
 		}
+
+		if (fpos>=vfs.getSuper().getMaxFileSize()) {
+			throw new JafsException("file position ("+fpos+") exceeds maximum filesize ("+vfs.getSuper().getMaxFileSize()+")");
+		}
+
 		for (int n=0; n<ptrsPerInode; n++) {
 			if (fpos>=ptrs[n].fPosStart && fpos<ptrs[n].fPosEnd) {
 				if (ptrs[n].level==0) {
@@ -88,7 +93,7 @@ class JafsInodeContext {
 						block.flushBlock();
 						inode.ptrs[n] = ptr;
 						inode.flushInode();
-						vfs.getUnusedMap().setUsedDataBlock(ptr);												
+						vfs.getUnusedMap().setBlockAsUsed(ptr);
 					}
 					return inode.ptrs[n];
 				}
@@ -109,7 +114,7 @@ class JafsInodeContext {
 						block.flushBlock();
 						inode.ptrs[n] = ptr;
 						inode.flushInode();
-						vfs.getUnusedMap().setUsedDataBlock(ptr);
+						vfs.getUnusedMap().setBlockAsUsed(ptr);
 					}
 					return getBlkPos(inode.ptrs[n], ptrs[n].fPosStart, ptrs[n].fPosEnd-ptrs[n].fPosStart, fpos);
 				}
@@ -121,7 +126,7 @@ class JafsInodeContext {
 	void free(long bpos, int level) throws JafsException, IOException {
 		if (level!=0) {
 			JafsBlock dum = vfs.setCacheBlock(bpos, null);
-			dum.seek(0);
+			dum.seekSet(0);
 			for (int n=0; n<ptrsPerPtrBlock; n++) {
 				long ptr = dum.readInt();
 				if (ptr>0) {
@@ -129,9 +134,9 @@ class JafsInodeContext {
 				}
 			}
 		}
-		vfs.getUnusedMap().setUnusedBlock(bpos);
+		vfs.getUnusedMap().setBlockAsAvailable(bpos);
 		vfs.getSuper().decBlocksUsed();
-		vfs.getUnusedMap().startAt=0;
+		vfs.getUnusedMap().startAtUnusedMap =0;
 	}
 	
 	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {

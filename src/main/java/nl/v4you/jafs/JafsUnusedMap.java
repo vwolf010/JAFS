@@ -3,247 +3,189 @@ package nl.v4you.jafs;
 import java.io.IOException;
 
 class JafsUnusedMap {
+
+	static final int SKIP_MAP_POSITION = 0;
+	static final int BLOCKS_PER_BYTE = 4;
 	/*
-	 * 1st bit (data block)  : 0 = used, 1 = not used
-	 * 2nd bit (inode block) : 0 = used, 1 = not used or partly used
-	 * 
-	 * 00 : block is a data or inode block and it is fully used
-	 * 01 : block is an inode block, but there is room for more inodes
-	 * 10 : should not exist
-	 * 11 : block is available for both inode as data
+	 * 0 = available, 1 = used
+	 * |-------|-------|
+	 * | inode | data  |
+	 * |-------|-------|
+     * |   0   |   0   | block is available for both inode as data
+     * |   0   |   1   | block is partially used, only available for inode
+	 * |   1   |   1   | block is used, neither inode or data can use it
+	 * |   1   |   0   | should not exist
+	 * |-------|-------|
 	 */
 	
 	Jafs vfs;
 	JafsSuper superBlock;
 	int blocksPerUnusedMap;
 	int blockSize;
-	int startAt = 0;
+	int startAtUnusedMap = 0;
 	
 	JafsUnusedMap(Jafs vfs) throws JafsException {
 		this.vfs = vfs;
-		blockSize = vfs.getSuper().getBlockSize();
 		superBlock = vfs.getSuper();
-		blocksPerUnusedMap = blockSize*4;
+		blockSize = superBlock.getBlockSize();
+
+		// blocksPerUnusedMap includes the unusedMap itself
+		// the first position however is used to indicate
+		// if an unusedMap should be skipped or not (see SKIP_MAP_POSITION)
+		blocksPerUnusedMap = blockSize * BLOCKS_PER_BYTE;
 	}
 
 	private long getUnusedMapBpos(long bpos) {
 		int n = (int)(bpos/blocksPerUnusedMap);
-		return n*blocksPerUnusedMap;
+		return n*(blocksPerUnusedMap);
 	}
-	
 
 	/**
 	 * Test if the supplied block position is an "unused map"
-	 * 
+	 *
 	 * @param bpos
 	 * @return
 	 */
 	boolean isUnusedMapBlock(long bpos) {
-		return bpos == getUnusedMapBpos(bpos); 
+		return bpos == getUnusedMapBpos(bpos);
 	}
 
 	private long getUnusedBpos(int p0mask, int p1mask, int p2mask, int p3mask) throws JafsException, IOException {
 		int skipMapMask = p0mask;
-		int grpMask = p0mask | p1mask | p2mask | p3mask;		
+		int grpMask = p0mask | p1mask | p2mask | p3mask;
 		long blocksTotal = superBlock.getBlocksTotal();
-		int unusedBlocksCount = 1+(int)(blocksTotal/blocksPerUnusedMap);
-		long bpos = startAt * blocksPerUnusedMap;
-		for (int n=startAt; n<unusedBlocksCount; n++) {
-			if (bpos>=blocksTotal) {
+		int unusedMapsCount = 1+(int)(blocksTotal / blocksPerUnusedMap);
+		long curBpos = startAtUnusedMap * blocksPerUnusedMap;
+		long newBpos = 0;
+		for (int unusedMap = startAtUnusedMap; unusedMap<unusedMapsCount; unusedMap++) {
+			if (curBpos>=blocksTotal) {
 				return 0;
 			}
-			JafsBlock block = vfs.getCacheBlock(n*blocksPerUnusedMap);
-			long newBpos = 0;
-			block.seek(0);
+			JafsBlock block = vfs.getCacheBlock(unusedMap * blocksPerUnusedMap);
+			block.seekSet(0);
 			int b = block.readByte();
-			if ((b & skipMapMask) > 0) {
-				bpos += blocksPerUnusedMap;
+			if ((b & skipMapMask) != 0) {
+				curBpos += blocksPerUnusedMap;
 			}
 			else {
-				block.seek(0);
+				block.seekSet(0);
 				for (int m=0; m<blockSize; m++) {
 					b = block.readByte();
-					if ((b & grpMask) > 0) {
-						if (bpos<blocksTotal) {
-							if ((b & p0mask) > 0) {
-								if (m!=0) {
-									if (newBpos==0) {
-										newBpos = bpos;
-									}
-								}
-							}
-						}
-						bpos++;
-						if (bpos<blocksTotal) {
-							if ((b & p1mask) > 0) {
-								if (newBpos==0) {
-									newBpos = bpos;
-								}
-							}
-						}
-						bpos++;
-						if (bpos<blocksTotal) {
-							if ((b & p2mask) > 0) {
-								if (newBpos==0) {
-									newBpos = bpos;
-								}
-							}
-						}
-						bpos++;
-						if (bpos<blocksTotal) {
-							if ((b & p3mask) > 0) {
-								if (newBpos==0) {
-									newBpos = bpos;									
-								}
-							}
-						}
-						bpos++;
+					if ((b & grpMask) == grpMask) {
+						curBpos += BLOCKS_PER_BYTE;
 					}
 					else {
-						bpos += 4;
+						if (m!=SKIP_MAP_POSITION && curBpos<blocksTotal && ((b & p0mask) == 0)) {
+							newBpos = curBpos;
+							break;
+						}
+						curBpos++;
+						if (curBpos<blocksTotal && ((b & p1mask) == 0)) {
+							newBpos = curBpos;
+							break;
+						}
+						curBpos++;
+						if (curBpos<blocksTotal && ((b & p2mask) == 0)) {
+							newBpos = curBpos;
+							break;
+						}
+						curBpos++;
+						if (curBpos<blocksTotal && ((b & p3mask) == 0)) {
+							newBpos = curBpos;
+							break;
+						}
+						curBpos++;
 					}
 				}
-				if (newBpos==0 && bpos<blocksTotal) {
-					block.seek(0);
-					b = block.readByte();
-					block.seek(0);
-					block.writeByte(b | skipMapMask);
+				if (newBpos==0) {
+					// nothing found? skip this unusedMap next time it gets visited
+                    // TODO: optimization possible: if nothing found for inode, then also skip for data
+					block.seekSet(SKIP_MAP_POSITION);
+					b = block.readByte() | skipMapMask;
+					block.seekSet(SKIP_MAP_POSITION);
+					block.writeByte(b);
 					block.flushBlock();
 				}
 			}
+            startAtUnusedMap = unusedMap;
 			if (newBpos>0) {
-				if (startAt!=n) {
-					startAt = n;
-				}
 				return newBpos;
 			}
 		}
 		return 0; // no free block found in map		
 	}
-	
-	
-	/**
-	 * All "unused maps" will be searched to find an available block.
-	 * 
-	 * @return The number of the available block or 0 if none found
-	 * @throws IOException 
-	 * @throws IOException
-	 */
-	long getUnusedDataBpos() throws JafsException, IOException {
-		return getUnusedBpos(0x80, 0x20, 0x08, 0x02);
-	}
-	
-	/**
-	 * All "unused maps" will be searched to find an available block.
-	 * 
-	 * @return The number of the available block or 0 if none found
-	 * @throws IOException 
-	 * @throws IOException
-	 */
-	long getUnusedINodeBpos() throws JafsException, IOException {
-		return getUnusedBpos(0x40, 0x10, 0x04, 0x01);
-	}
 
-	int findUnusedByte(JafsBlock block, long bpos) throws JafsException, IOException {
+    /**
+     * All "unused maps" will be searched to find an available block (10101010)
+     *
+     * @return The number of the available block or 0 if none found
+     * @throws IOException
+     * @throws IOException
+     */
+    long getUnusedINodeBpos() throws JafsException, IOException {
+        return getUnusedBpos(2<<6, 2<<4, 2<<2, 2);
+    }
+
+    /**
+     * All "unused maps" will be searched to find an available block (01010101)
+     *
+     * @return The number of the available block or 0 if none found
+     * @throws IOException
+     * @throws IOException
+     */
+    long getUnusedDataBpos() throws JafsException, IOException {
+        return getUnusedBpos(1<<6, 1<<4, 1<<2, 1);
+    }
+
+	int getUnusedByte(JafsBlock block, long bpos) throws JafsException, IOException {
 		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>2);
-		block.seek(unusedIdx);
+		block.seekSet(unusedIdx);
 		int b = block.readByte();
-		block.seek(unusedIdx);
+		block.seekSet(unusedIdx);
 		return b;
 	}
-	
-	/**
-	 * Set a data block as being unused
-	 * 
-	 * @param bpos
-	 * @throws IOException 
-	 * @throws IOException
-	 */
-	void setUnusedBlock(long bpos) throws JafsException, IOException {
-		JafsBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
+
+    void setBlockAsAvailable(long bpos) throws JafsException, IOException {
+        JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
+        // Set to 00
+        int b = getUnusedByte(block, bpos);
+        b &= (0b11000000 >> ((bpos & 0x3)<<1)) ^ 0xff; // set block data bit to used (00)
+        block.writeByte(b);
+        block.flushBlock();
+    }
+
+    void setBlockAsUsed(long bpos) throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
 		// Set to 11b
-		int b = findUnusedByte(block, bpos);
-		int bitPos = 0x80 >> ((bpos & 0x3)<<1); 
-		b |= bitPos; // set block data bit to unused (1)
-		bitPos >>= 1;
-		b |= bitPos; // set inode bit to unused (1)
+		int b = getUnusedByte(block, bpos);
+		b |= 0b11000000 >> ((bpos & 0x3)<<1); // set block data bit to unused (11)
 		block.writeByte(b);
 		
 		// don't skip this map next time we look for a free block
-		block.seek(0);
+		block.seekSet(SKIP_MAP_POSITION);
 		b = block.readByte();
-		block.seek(0);
-		block.writeByte(b & 0x3f);
-		
-		// and flushBlock
+		block.seekSet(SKIP_MAP_POSITION);
+		block.writeByte(b & 0b00111111);
 		block.flushBlock();
 	}
-	
-	/**
-	 * Set a data block as being used
-	 * 
-	 * @param bpos
-	 * @throws IOException 
-	 * @throws IOException
-	 */
-	void setUsedDataBlock(long bpos) throws JafsException, IOException {
+
+	void setBlockAsPartlyUsed(long bpos) throws JafsException, IOException {
 		JafsBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
-		// Set to 00
-		int b = findUnusedByte(block, bpos);
-		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
-		b &= bitPos ^ 0xff; // set block data bit to used (0)
-		bitPos >>= 1;
-		b &= bitPos ^ 0xff; // set inode bit to used (0)
-		block.writeByte(b);
-		block.flushBlock();
-	}
-	
-	/**
-	 * Set a inode block as being used
-	 * 
-	 * @param bpos
-	 * @throws IOException 
-	 * @throws IOException
-	 */
-	void setPartlyUsedInode(long bpos) throws JafsException, IOException {
-		JafsBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
-		// Set to 01
-		int b = findUnusedByte(block, bpos);
+		// Set to 01, meaning: available for inode (=0) but not for data (=1)
+		int b = getUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
 		b &= bitPos ^ 0xff; // set block data to used (0)
-		bitPos >>= 1;
-		b |= bitPos; // set inode bit to unused (1)
+		b |= (bitPos>>1); // set inode bit to unused (1)
 		block.writeByte(b);
 
 		// don't skip this map next time we look for a free inode block
-		block.seek(0);
+		block.seekSet(SKIP_MAP_POSITION);
 		b = block.readByte();
-		block.seek(0);
-		block.writeByte(b & 0xbf);
-		
-		// and flushBlock
+		block.seekSet(SKIP_MAP_POSITION);
+		block.writeByte(b & 0b01111111);
 		block.flushBlock();
 	}
-	
-	/**
-	 * Set a inode block as being used
-	 * 
-	 * @param bpos
-	 * @throws IOException 
-	 * @throws IOException
-	 */
-	void setFullyUsedInode(long bpos) throws JafsException, IOException {
-		JafsBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
-		// Set to 00
-		int b = findUnusedByte(block, bpos);
-		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
-		b &= bitPos ^ 0xff; // set block data to used (0)
-		bitPos >>= 1;
-		b &= bitPos ^ 0xff; // set inode to used (0)
-		block.writeByte(b);
-		block.flushBlock();
-	}
-	
+
 	void create(long bpos) throws JafsException, IOException {
 		if (bpos!=getUnusedMapBpos(bpos)) {
 			throw new JafsException("supplied bpos is not an unused map bpos");
@@ -256,9 +198,7 @@ class JafsUnusedMap {
 		vfs.getRaf().setLength(superBlock.getBlockSize()*(superBlock.getBlocksTotal()+1));
 		JafsBlock block = new JafsBlock(vfs, bpos);
 		vfs.setCacheBlock(bpos, block);
-		block.initOnes();
-		block.seek(0);
-		block.writeByte(0x3f); // don't skip this new map
+		block.initZeros();
 		block.flushBlock();
 	}
 }

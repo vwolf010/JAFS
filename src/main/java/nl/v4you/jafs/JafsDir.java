@@ -4,11 +4,11 @@ import java.io.IOException;
 import java.util.TreeSet;
 
 /*
- * <ushort: next entry>
+ * <ushort: entry size>
+ * <byte: filename length>
+ * <byte: type> (f=file, d=directory)
  * <uint: inode block> (must be 0 if not used)
  * <ushort: inode ipos>
- * <byte: type> (f=file, d=directory)
- * <byte: filename length>
  * <string: filename>
  */
 class JafsDir {
@@ -54,20 +54,20 @@ class JafsDir {
 		
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int strLen = name.length;
-		inode.seek(0, JafsInode.SEEK_SET);
-		int nextEntry = inode.readShort();
-		while (nextEntry>0) {
+		inode.seekSet(0);
+		int entrySize = inode.readShort();
+		while (entrySize>0) {
 			long startPos = inode.getFpos();
-			inode.seek(7, JafsInode.SEEK_CUR); // skip bpos, ipos and type
 			int nameLength = inode.readByte();
 			if (nameLength!=strLen) {
-				inode.seek(startPos, JafsInode.SEEK_SET);
-				inode.seek(nextEntry, JafsInode.SEEK_CUR);
+				inode.seekSet(startPos);
+				inode.seekCur(entrySize);
 			}
 			else {
+				inode.seekCur(1+4+2);
                 if (inode.readBytes(tmp, 0, nameLength)!=nameLength) {
                     throw new IllegalStateException("could not read file/dir name");
-                };
+                }
 				int n=0;
 				while ((n<nameLength) && (tmp[n]==name[n])) {
 					n++;
@@ -76,11 +76,11 @@ class JafsDir {
 					return startPos;
 				}
 				else {
-					inode.seek(startPos, JafsInode.SEEK_SET);
-					inode.seek(nextEntry, JafsInode.SEEK_CUR);
+					inode.seekSet(startPos);
+					inode.seekCur(entrySize);
 				}
 			}
-			nextEntry = inode.readShort();
+			entrySize = inode.readShort();
 		}
 		return -1;
 	}
@@ -95,34 +95,35 @@ class JafsDir {
 				return null;
 			}
 			JafsDirEntry entry = new JafsDirEntry();
-			inode.seek(startPos, JafsInode.SEEK_SET);
 			entry.startPos = startPos;
+			entry.name = name;
 			entry.parentBpos = inode.getBpos();
 			entry.parentIpos = inode.getIpos();
+
+			inode.seekSet(startPos+1);
+			entry.type = (byte)inode.readByte();
 			entry.bpos = inode.readInt();
 			entry.ipos = inode.readShort();
-			entry.type = (byte)inode.readByte();
-			entry.name = name;
 			return entry;
 		}
 	}
 		
 	void updateEntry(JafsDirEntry entry) throws JafsException, IOException {
 		byte nameBuf[] = entry.name;
-		inode.seek(entry.startPos, JafsInode.SEEK_SET);
+		inode.seekSet(entry.startPos);
+		inode.writeByte(nameBuf.length);
+		inode.writeByte(entry.type); // file type
 		inode.writeInt((int)entry.bpos); // block position
 		inode.writeShort(entry.ipos); // inode index
-		inode.writeByte(entry.type); // file type
-		inode.writeByte(nameBuf.length);
 		inode.writeBytes(nameBuf, 0, nameBuf.length); // file name
 	}
 	
 	void deleteEntry(JafsDirEntry entry) throws JafsException, IOException {
-		inode.seek(entry.startPos, JafsInode.SEEK_SET);
+		inode.seekSet(entry.startPos);
+		inode.writeByte(0); // name length
+		inode.writeByte(0); // file type
 		inode.writeInt(0); // block position
 		inode.writeShort(0); // inode index
-		inode.writeByte(0); // file type
-		inode.writeByte(0); // name length
 	}
 	
 	JafsInode getInode(byte name[]) throws JafsException, IOException {
@@ -137,24 +138,29 @@ class JafsDir {
 
 	int countActiveEntries() throws JafsException, IOException {
 		int cnt = 0;
-		inode.seek(0, JafsInode.SEEK_SET);
-		int nextEntry = inode.readShort();
-		while (nextEntry>0) {
+		inode.seekSet(0);
+		int entrySize = inode.readShort();
+		while (entrySize>0) {
 			long startPos = inode.getFpos();
-			inode.seek(4+2+1, JafsInode.SEEK_CUR);
 			cnt++;
 			int len = inode.readByte();
 			if (len==0) {
 				cnt--;
 			}
-			else if ((len==1) && (inode.readByte()=='.')) {
-				cnt--;
+			else if (len==1) {
+				inode.seekCur(1+4+2);
+				if  (inode.readByte()=='.') {
+					cnt--;
+				}
 			}
-			else if ((len==2) && (inode.readByte()=='.') && (inode.readByte()=='.')) {
-				cnt--;
+			else if (len==2) {
+				inode.seekCur(1+4+2);
+				if ((inode.readByte()=='.') && (inode.readByte()=='.')) {
+					cnt--;
+				}
 			}
-			inode.seek(startPos+nextEntry, JafsInode.SEEK_SET);
-			nextEntry = inode.readShort();
+			inode.seekSet(startPos+entrySize);
+			entrySize = inode.readShort();
 		}
 		return cnt;
 	}
@@ -179,22 +185,22 @@ class JafsDir {
 		/*
 		 * Find smallest space to store entry
 		 */
-		inode.seek(0, JafsInode.SEEK_SET);
-		int nextEntry = inode.readShort();
+		inode.seekSet(0);
+		int entrySize = inode.readShort();
 		long newEntryStartPos = 0;
 		int newEntrySpaceForName = 1000; // way above maximum dir entry name length of 255
-		while (nextEntry>0) {
+		while (entrySize!=0) {
 			long startPos = inode.getFpos();
-			int spaceForName = nextEntry-4-2-1;
-			inode.seek(4+2+1, JafsInode.SEEK_CUR);
+			int spaceForName = entrySize-1-1-4-2;
+			//inode.seekCur(4+2+1);
 			int len = inode.readByte();
-			if (len==0 && nameLen<spaceForName && spaceForName<newEntrySpaceForName) {
+			if (len==0 && nameLen<=spaceForName && spaceForName<newEntrySpaceForName) {
 				newEntryStartPos = startPos;
 				newEntrySpaceForName = spaceForName;
 			}
-			inode.seek(startPos, JafsInode.SEEK_SET);
-			inode.seek(nextEntry, JafsInode.SEEK_CUR);
-			nextEntry = inode.readShort();
+			inode.seekSet(startPos);
+			inode.seekCur(entrySize);
+			entrySize = inode.readShort();
 		}
 		
 		/*
@@ -203,20 +209,20 @@ class JafsDir {
 		int tLen=0;
 		if (newEntryStartPos>0) {
 			// Re-use an existing entry
-			inode.seek(newEntryStartPos, JafsInode.SEEK_SET);
+			inode.seekSet(newEntryStartPos);
 		}
 		else {
 			// Append to the end
-			inode.seek(-2, JafsInode.SEEK_CUR);
-            Util.shortToArray(tmp, tLen, 4 + 2 + 1 + 1 + nameBuf.length);
+			inode.seekCur(-2);
+            Util.shortToArray(tmp, tLen, 1+1+4+2+nameBuf.length);
             tLen+=2;
 		}
+		tmp[tLen++] = (byte)nameBuf.length;
+		tmp[tLen++] = entry.type;
         Util.intToArray(tmp, tLen, (int)entry.bpos);
 		tLen+=4;
         Util.shortToArray(tmp, tLen, entry.ipos);
         tLen+=2;
-        tmp[tLen++] = entry.type;
-        tmp[tLen++] = (byte)nameBuf.length;
         System.arraycopy(nameBuf, 0, tmp, tLen, nameBuf.length);
         tLen += nameBuf.length;
 		if (newEntryStartPos==0) {
@@ -289,18 +295,19 @@ class JafsDir {
 	}
 
 	String[] list() throws JafsException, IOException {
-		TreeSet<String> l = new TreeSet<String>();
-		inode.seek(0, JafsInode.SEEK_SET);
-		int nextEntry = inode.readShort();
-		while (nextEntry>0) {
+		TreeSet<String> l = new TreeSet();
+		inode.seekSet(0);
+		int entrySize = inode.readShort();
+		while (entrySize!=0) {
 			long startPos = inode.getFpos();
-			inode.seek(4+2+1, JafsInode.SEEK_CUR);
 			int len = inode.readByte();
 			if (len>0) {
+				inode.seekCur(1+4+2);
 				byte name[] = new byte[len];
-				for (int n=0; n<len; n++) {
-					name[n] = (byte)inode.readByte();
-				}
+				inode.readBytes(name, 0, len);
+//				for (int n=0; n<len; n++) {
+//					name[n] = (byte)inode.readByte();
+//				}
 				if (name.length==1 && name[0]=='.') {
 					// ignore .
 				}
@@ -311,8 +318,8 @@ class JafsDir {
 					l.add(new String(name, "UTF-8"));
 				}
 			}
-			inode.seek(startPos+nextEntry, JafsInode.SEEK_SET);
-			nextEntry = inode.readShort();
+			inode.seekSet(startPos+entrySize);
+			entrySize = inode.readShort();
 		}
 		
 		String result[] = new String[0];

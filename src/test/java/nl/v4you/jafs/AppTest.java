@@ -240,6 +240,42 @@ public class AppTest {
         vfs.close();
     }
 
+    @Test
+    public void fileLengthIsCorrectAfterOverwrite() throws Exception {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+
+        JafsFile f = vfs.getFile("/content.txt");
+
+        JafsOutputStream fos = vfs.getOutputStream(f);
+        fos.write("1234567890".getBytes());
+        fos.close();
+
+        fos = vfs.getOutputStream(f, false);
+        fos.write("12345".getBytes());
+        fos.close();
+
+        assertEquals(5, f.length());
+        vfs.close();
+    }
+
+    @Test
+    public void fileLengthIsCorrectAfterAppend() throws Exception {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+
+        JafsFile f = vfs.getFile("/content.txt");
+
+        JafsOutputStream fos = vfs.getOutputStream(f);
+        fos.write("1234567890".getBytes());
+        fos.close();
+
+        fos = vfs.getOutputStream(f, true);
+        fos.write("12345".getBytes());
+        fos.close();
+
+        assertEquals(15, f.length());
+        vfs.close();
+    }
+
     private void createAndCheckFileLengthAndContent(int i) throws IOException, JafsException {
         byte content[] = new byte[i];
 

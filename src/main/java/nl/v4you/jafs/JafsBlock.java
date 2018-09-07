@@ -5,8 +5,7 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 
 class JafsBlock {
-//	private static final int MAX_BLOCKS = 10000;
-	
+
 	private int blockSize = -1;
 	private byte[] buf;
 	public long bpos = -1;
@@ -24,24 +23,14 @@ class JafsBlock {
 		}
 		buf = new byte[blockSize];
 	}
-	
-//	private VFSBlock(VFS vfs) {
-//		init(vfs);
-//	}
-	
+
 	JafsBlock(Jafs vfs, long bpos) throws JafsException {
-//		if (bpos>MAX_BLOCKS) {
-//			throw new JafsException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-//		}
 		init(vfs);
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
 	JafsBlock(Jafs vfs, long bpos, int blockSize) throws JafsException {
-//		if (bpos>MAX_BLOCKS) {
-//			throw new JafsException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-//		}
 		this.blockSize = blockSize;
 		init(vfs);
 		this.bpos = bpos;
@@ -57,17 +46,11 @@ class JafsBlock {
 	}
 	
 	void setBlock(long bpos) throws JafsException {
-//		if (bpos>MAX_BLOCKS) {
-//			throw new JafsException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-//		}
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
-	void seek(int b) throws JafsException {
-//		if (bpos>MAX_BLOCKS) {
-//			throw new JafsException("bpos>"+MAX_BLOCKS+" not allowed while debugging");
-//		}
+	void seekSet(int b) throws JafsException {
 		byteIdx = b;
 	}
 		

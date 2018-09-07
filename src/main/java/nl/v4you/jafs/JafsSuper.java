@@ -109,7 +109,7 @@ class JafsSuper {
 	}
 		
 	void read() throws JafsException, IOException {
-		rootBlock.seek(0);
+		rootBlock.seekSet(0);
 		rootBlock.readFromDisk();
 		rootBlock.readBytes(buf, 0, 34);
 		blockSize = (int)Util.arrayToInt(buf, 6);
@@ -123,7 +123,7 @@ class JafsSuper {
 	
 	void flush() throws JafsException, IOException {
 		rootBlock.initZeros();
-		rootBlock.seek(0);
+		rootBlock.seekSet(0);
 		buf[0]='J';
 		buf[1]='V';
 		buf[2]='F';

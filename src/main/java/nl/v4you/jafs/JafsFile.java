@@ -43,8 +43,8 @@ public class JafsFile {
 		return getParent(path);
 	}
 
-	public String getAbsoluthPath() {
-		return getAbsoluthPath(path);
+	public String getAbsolutePath() {
+		return getAbsolutePath(path);
 	}
 
 	public String getCanonicalPath() {
@@ -282,7 +282,7 @@ public class JafsFile {
 		}
 	}
 
-	private String getAbsoluthPath(String path) {
+	private String getAbsolutePath(String path) {
 		path = normalizePath(path);
 		// The working dir is always the root (/)
 		if (!path.startsWith("/")) {
