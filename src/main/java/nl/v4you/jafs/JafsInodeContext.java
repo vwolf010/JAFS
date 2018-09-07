@@ -30,7 +30,7 @@ class JafsInodeContext {
 	}
 		
 	long getBlkPos(long bpos, long off, long len, long fpos) throws JafsException, IOException {
-		JafsBlock block = vfs.setCacheBlock(bpos, null);
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		if (len>vfs.getSuper().getBlockSize()) {
 			long nextSize = len/ptrsPerPtrBlock;
 			int idx = (int)((fpos-off) / nextSize);
@@ -48,7 +48,7 @@ class JafsInodeContext {
 					dum = vfs.setCacheBlock(ptr, new JafsBlock(vfs, ptr));
 				}
 				else {
-					dum = vfs.setCacheBlock(ptr, null);
+					dum = vfs.getCacheBlock(ptr);
 				}
 				vfs.getSuper().incBlocksUsedAndFlush();
 				dum.initZeros();
@@ -86,7 +86,7 @@ class JafsInodeContext {
 							block = vfs.setCacheBlock(ptr, new JafsBlock(vfs, ptr));
 						}
 						else {
-							block = vfs.setCacheBlock(ptr, null);
+							block = vfs.getCacheBlock(ptr);
 						}						
 						vfs.getSuper().incBlocksUsedAndFlush();
 						block.initZeros();
@@ -107,7 +107,7 @@ class JafsInodeContext {
 							block = vfs.setCacheBlock(ptr, new JafsBlock(vfs, ptr));
 						}
 						else {
-							block = vfs.setCacheBlock(ptr, null);
+							block = vfs.getCacheBlock(ptr);
 						}
 						vfs.getSuper().incBlocksUsedAndFlush();
 						block.initZeros();
@@ -125,11 +125,11 @@ class JafsInodeContext {
 	
 	void free(long bpos, int level) throws JafsException, IOException {
 		if (level!=0) {
-			JafsBlock dum = vfs.setCacheBlock(bpos, null);
+			JafsBlock dum = vfs.getCacheBlock(bpos);
 			dum.seekSet(0);
 			for (int n=0; n<ptrsPerPtrBlock; n++) {
 				long ptr = dum.readInt();
-				if (ptr>0) {
+				if (ptr!=0) {
 					free(ptr, level-1);
 				}
 			}
@@ -141,7 +141,7 @@ class JafsInodeContext {
 	
 	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
 		for (int n=0; n<ptrsPerInode; n++) {
-			if (inode.ptrs[n]>0) {
+			if (inode.ptrs[n]!=0) {
 				free(inode.ptrs[n], ptrs[n].level);
 			}
 		}

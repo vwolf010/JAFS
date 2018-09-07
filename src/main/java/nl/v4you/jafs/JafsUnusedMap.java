@@ -170,7 +170,7 @@ class JafsUnusedMap {
 	}
 
 	void setBlockAsPartlyUsed(long bpos) throws JafsException, IOException {
-		JafsBlock block = vfs.setCacheBlock(getUnusedMapBpos(bpos), null);
+		JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
 		// Set to 01, meaning: available for inode (=0) but not for data (=1)
 		int b = getUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1);

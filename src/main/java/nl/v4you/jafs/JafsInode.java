@@ -365,7 +365,10 @@ class JafsInode {
 	}
 	
 	void free() throws JafsException, IOException {
-		ctx.freeDataAndPtrBlocks(this);
+		// free all data
+	    ctx.freeDataAndPtrBlocks(this);
+
+		// free the inode
 		if (getUsedIdxCount()>1) {
 			vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
 		}
