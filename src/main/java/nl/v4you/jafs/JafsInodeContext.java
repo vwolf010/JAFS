@@ -136,7 +136,7 @@ class JafsInodeContext {
 		}
 		vfs.getUnusedMap().setBlockAsAvailable(bpos);
 		vfs.getSuper().decBlocksUsed();
-		vfs.getUnusedMap().startAtUnusedMap =0;
+		vfs.getUnusedMap().setStartAtData(bpos);
 	}
 	
 	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {

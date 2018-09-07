@@ -353,15 +353,16 @@ class JafsInode {
 		writeBytes(bb, 0, 4);
 	}
 	
-	int getUsedIdxCount() throws JafsException, IOException {
+	private boolean isLastInodeInBlock() throws JafsException, IOException {
 		int cnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
 			iblock.seekSet(n*superInodeSize);
-			if ((iblock.readByte() & INODE_USED)>0) {
+			if ((iblock.readByte() & INODE_USED)!=0) {
 				cnt++;
+				if (cnt>1) break;
 			}
 		}
-		return cnt;
+		return cnt==1;
 	}
 	
 	void free() throws JafsException, IOException {
@@ -369,11 +370,13 @@ class JafsInode {
 	    ctx.freeDataAndPtrBlocks(this);
 
 		// free the inode
-		if (getUsedIdxCount()>1) {
+		if (!isLastInodeInBlock()) {
 			vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
+			vfs.getUnusedMap().setStartAtInode(bpos);
 		}
 		else {
 			vfs.getUnusedMap().setBlockAsAvailable(bpos);
+            vfs.getUnusedMap().setStartAtInode(bpos);
 			vfs.getSuper().decBlocksUsed();
 			vfs.getSuper().flush();
 		}
