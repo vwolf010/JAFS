@@ -227,15 +227,21 @@ public class AppTest {
         f = vfs.getFile("/sub3");
         f.mkdir();
 
+        f = vfs.getFile("/");
+        assertEquals(3, f.list().length);
+
         f = vfs.getFile("/sub2");
         f.delete();
 
         f = vfs.getFile("/sub1");
-        assertEquals(true, f.exists());
+        assertTrue(f.exists());
         f = vfs.getFile("/sub2");
-        assertEquals(false, f.exists());
+        assertTrue(!f.exists());
         f = vfs.getFile("/sub3");
-        assertEquals(true, f.exists());
+        assertTrue(f.exists());
+
+        f = vfs.getFile("/");
+        assertEquals(2, f.list().length);
 
         vfs.close();
     }

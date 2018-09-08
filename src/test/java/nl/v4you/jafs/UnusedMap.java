@@ -2,6 +2,7 @@ package nl.v4you.jafs;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -53,4 +54,92 @@ public class UnusedMap {
         jafs.close();
     }
 
+    @Test
+    public void fileSizeStable() throws JafsException, IOException {
+        int blockSize = 256;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 64, 1024 * 1024);
+        byte content[] = new byte[blockSize];
+        rnd.nextBytes(content);
+
+        JafsFile f = jafs.getFile("/abc.bin");
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        for (int i=0; i<50; i++) {
+            jos.write(content);
+        }
+        jos.close();
+        jafs.close();
+
+        File g = new File(TEST_ARCHIVE);
+        long flen1 = g.length();
+
+        jafs = new Jafs(TEST_ARCHIVE, blockSize, 64, 1024 * 1024);
+        for (int n=0; n<50; n++) {
+            f = jafs.getFile("/abc.bin");
+            jos = jafs.getOutputStream(f);
+            for (int i=0; i<20; i++) {
+                jos.write(content);
+            }
+            jos.close();
+        }
+        jafs.close();
+
+        g = new File(TEST_ARCHIVE);
+        long flen2 = g.length();
+
+        assertEquals(flen1, flen2);
+    }
+
+    @Ignore
+    @Test
+    public void randomWrites() throws JafsException, IOException {
+        int blockSize = 256;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 64, 1024 * 1024);
+        JafsFile f;
+        JafsOutputStream jos;
+        byte buf[] = new byte[blockSize];
+        rnd.nextBytes(buf);
+
+        for (int n=0; n<1000; n++) {
+
+            int i = rnd.nextInt(1000);
+
+            f = jafs.getFile("/" + (i*1000));
+
+            long fileLen;
+            if (f.exists()) {
+                if (f.length() < 4 * blockSize) {
+                    jos = jafs.getOutputStream(f, true);
+                    fileLen = f.length();
+                    jos.write(buf);
+                    jos.close();
+                    assertEquals(fileLen + blockSize, f.length());
+                } else {
+                    if (rnd.nextInt(100)<20) {
+                        assertTrue(f.delete());
+                        assertTrue(!f.exists());
+                    }
+                    else {
+                        fileLen = 0;
+                        jos = jafs.getOutputStream(f);
+                        jos.write(buf);
+                        jos.close();
+                        assertEquals(fileLen + blockSize, f.length());
+                    }
+                }
+            } else {
+                fileLen = 0;
+                jos = jafs.getOutputStream(f);
+                jos.write(buf);
+                jos.close();
+                assertEquals(fileLen + blockSize, f.length());
+            }
+        }
+
+        f = jafs.getFile("/");
+        for (String s : f.list()) {
+            System.out.println(s);
+        }
+
+        jafs.close();
+    }
 }

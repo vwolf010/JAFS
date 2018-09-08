@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.TreeSet;
 
 /*
@@ -295,7 +296,7 @@ class JafsDir {
 	}
 
 	String[] list() throws JafsException, IOException {
-		TreeSet<String> l = new TreeSet();
+		LinkedList<String> l = new LinkedList();
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
@@ -305,16 +306,10 @@ class JafsDir {
 				inode.seekCur(1+4+2);
 				byte name[] = new byte[len];
 				inode.readBytes(name, 0, len);
-//				for (int n=0; n<len; n++) {
-//					name[n] = (byte)inode.readByte();
-//				}
-				if (name.length==1 && name[0]=='.') {
-					// ignore .
+				if (len>2) {
+					l.add(new String(name, "UTF-8"));
 				}
-				else if (name.length==2 && name[0]=='.' && name[1]=='.') {
-					// ignore ..
-				}
-				else {
+				else if ((name[0]!='.') && !(name.length==2 && name[1]=='.')) {
 					l.add(new String(name, "UTF-8"));
 				}
 			}
@@ -322,7 +317,6 @@ class JafsDir {
 			entrySize = inode.readShort();
 		}
 		
-		String result[] = new String[0];
-		return l.toArray(result);
+		return l.toArray(new String[0]);
 	}
 }
