@@ -99,7 +99,9 @@ public class UnusedMap {
         byte buf[] = new byte[blockSize];
         rnd.nextBytes(buf);
 
-        for (int n=0; n<1000; n++) {
+        int TEST_LOOP = 1000;
+
+        for (int n=0; n<TEST_LOOP; n++) {
 
             int i = rnd.nextInt(1000);
 

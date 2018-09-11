@@ -11,7 +11,7 @@ public class JafsOutputStream extends OutputStream {
 	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
 		if (!f.exists() && !f.createNewFile()) {
-			throw new JafsException("Could not create "+f.getCanonicalPath());
+			throw new JafsException("Could not appendNewBlockToArchive "+f.getCanonicalPath());
 		}
 		this.path = f.getCanonicalPath();
 		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
@@ -32,7 +32,7 @@ public class JafsOutputStream extends OutputStream {
 //			throw new JafsException("Could not delete " + f.getCanonicalPath());
 //		}
 //		if (!f.exists() && !f.createNewFile()) {
-//			throw new JafsException("Could not create " + f.getCanonicalPath());
+//			throw new JafsException("Could not appendNewBlockToArchive " + f.getCanonicalPath());
 //		}
 //		this.path = f.getCanonicalPath();
 //		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());

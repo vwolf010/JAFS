@@ -24,13 +24,13 @@ class JafsBlock {
 		buf = new byte[blockSize];
 	}
 
-	JafsBlock(Jafs vfs, long bpos) throws JafsException {
+	JafsBlock(Jafs vfs, long bpos) {
 		init(vfs);
 		this.bpos = bpos;
 		byteIdx = 0;
 	}
 	
-	JafsBlock(Jafs vfs, long bpos, int blockSize) throws JafsException {
+	JafsBlock(Jafs vfs, long bpos, int blockSize) {
 		this.blockSize = blockSize;
 		init(vfs);
 		this.bpos = bpos;
@@ -41,28 +41,19 @@ class JafsBlock {
 		Arrays.fill(buf, (byte)0);
 	}
 	
-	void initOnes() {
-		Arrays.fill(buf, (byte)0xff);
-	}
-	
-	void setBlock(long bpos) throws JafsException {
-		this.bpos = bpos;
-		byteIdx = 0;
-	}
-	
-	void seekSet(int b) throws JafsException {
+	void seekSet(int b) {
 		byteIdx = b;
 	}
 		
 	void readFromDisk() throws IOException {
-		long start = blockSize + bpos*blockSize;
+		long start = (1+bpos) * blockSize;
 		raf.seek(start);
 		raf.read(buf);
 		byteIdx = 0;
 	}
 	
 	void flushBlock() throws IOException, JafsException {
-		long start = blockSize + bpos*blockSize;
+		long start = (1+bpos) * blockSize;
 		long end = start + blockSize;
 		if (end>raf.length()) {
 			throw new JafsException("Trying to write beyond filesize");

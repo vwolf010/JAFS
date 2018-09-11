@@ -37,7 +37,7 @@ class JafsBlockCache {
 		}
 
 		if (bpos>=vfs.getSuper().getBlocksTotal()) {
-			throw new JafsException("bpos >= blocks total");
+			throw new JafsException("bpos ("+bpos+") >= blocks total ("+vfs.getSuper().getBlocksTotal()+")");
 		}
 		
 		// Check if this block is already in cache

@@ -43,6 +43,10 @@ class JafsSuper {
 		return blocksTotal;
 	}
 
+	long getBlocksUsed() {
+		return blocksUsed;
+	}
+
 	void incBlocksTotal() {
 		blocksTotal++;
 	}
@@ -52,46 +56,30 @@ class JafsSuper {
 		flush();
 	}
 
-	long getBlocksUsed() {
-		return blocksUsed;
-	}
-
-	void incBlocksUsed() {
+	void incBlocksUsedAndFlush() throws JafsException, IOException {
 		blocksUsed++;
 		if (blocksUsed>blocksTotal) {
 			throw new RuntimeException("blocksUsed>blocksTotal!!!");
 		}
-	}
-
-	void incBlocksUsedAndFlush() throws JafsException, IOException {
-		incBlocksUsed();
 		flush();
 	}
-	
+
 	void decBlocksUsed() {
 		blocksUsed--;
 		if (blocksUsed<0) {
 			throw new RuntimeException("blocksUsed<0!!!");
-		}		
+		}
 	}
-	
+
 	void decBlocksUsedAndFlush() throws JafsException, IOException {
 		decBlocksUsed();
 		flush();
 	}
 			
-	long getBlocksUnused() {
-		return blocksTotal-blocksUsed;
-	}
-
 	int getBlockSize() {
 		return blockSize;
 	}
 	
-	void setBlockSize(int blockSize) {
-		this.blockSize = blockSize;
-	}
-
 	int getInodeSize() {
 		return inodeSize;
 	}
@@ -125,7 +113,7 @@ class JafsSuper {
 		rootBlock.initZeros();
 		rootBlock.seekSet(0);
 		buf[0]='J';
-		buf[1]='V';
+		buf[1]='A';
 		buf[2]='F';
 		buf[3]='S';
 		Util.shortToArray(buf, 4, VERSION);

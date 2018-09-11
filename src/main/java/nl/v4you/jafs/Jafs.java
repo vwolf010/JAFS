@@ -120,14 +120,14 @@ public class Jafs {
 		return cache.get(bpos, null);
 	}
 
-	long getNewUnusedBpos() throws JafsException, IOException {
+	long appendNewBlockToArchive() throws JafsException, IOException {
 		long bpos = superBlock.getBlocksTotal();
 		if (um.isUnusedMapBlock(bpos)) {
-			um.create(bpos);
+			um.createNewUnusedMap(bpos);
 			bpos = superBlock.getBlocksTotal();
 		}		
 		superBlock.incBlocksTotalAndFlush();
-		raf.setLength(superBlock.getBlockSize()*(superBlock.getBlocksTotal()+1));
+		raf.setLength(superBlock.getBlockSize()*(1+superBlock.getBlocksTotal()));
 		um.setBlockAsAvailable(bpos);
 		return bpos;
 	}

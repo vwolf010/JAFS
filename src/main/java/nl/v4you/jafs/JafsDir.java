@@ -120,6 +120,23 @@ class JafsDir {
 	}
 	
 	void deleteEntry(JafsDirEntry entry) throws JafsException, IOException {
+		// Test the next entry to see if we can merge with it
+		// in an attempt to avoid fragmentation of the directory list
+//		inode.seekSet(entry.startPos-2);
+//		int entrySize = inode.readShort();
+//		inode.seekCur(entrySize);
+//		int entrySizeNextEntry = inode.readShort();
+//		if (entrySizeNextEntry!=0) {
+//			int len = inode.readByte();
+//			if (len==0) {
+//				// we can merge with this entry
+//				entrySize += entrySizeNextEntry;
+//				inode.seekSet(entry.startPos-2);
+//				inode.writeShort(entrySize);
+//			}
+//		}
+
+		// Update the deleted entry
 		inode.seekSet(entry.startPos);
 		inode.writeByte(0); // name length
 		inode.writeByte(0); // file type
@@ -280,7 +297,10 @@ class JafsDir {
 	
 	JafsDirEntry mkinode(byte name[], int type) throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(name);
-		if (entry!=null) {
+		if (entry==null) {
+			throw new JafsException("Could not find entry ["+new String(name, "UTF-8")+"]");
+		}
+		else {
 			JafsInode childInode = new JafsInode(vfs);
 			childInode.createInode(type);
 			if ((type & JafsInode.INODE_DIR)>0) {
@@ -292,7 +312,6 @@ class JafsDir {
 			updateEntry(entry);
 			return entry;
 		}
-		return null;
 	}
 
 	String[] list() throws JafsException, IOException {

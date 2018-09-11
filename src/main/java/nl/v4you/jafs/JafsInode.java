@@ -24,9 +24,9 @@ class JafsInode {
 	private JafsBlock iblock = null;
 	
 	private long maxInlinedSize = 0;
-	private long bpos;
-	private int ipos; // Position of this inode inside the inode block
-	private long fpos=0;
+	private long bpos; // Position of this block in the archive
+	private int ipos; // Position of this inode inside the block
+	private long fpos=0; // Position of the file pointer
 	long ptrs[];
 
 	int superBlockSize;
@@ -75,36 +75,32 @@ class JafsInode {
 		return fpos;
 	}
 	
-	private boolean isInlined(int type) {
-		return (type & INODE_INLINED) > 0;
+	private boolean isInlined() {
+		return (type & INODE_INLINED) != 0;
 	}
 	
 	private boolean isUsed(int type) {
-		return (type & INODE_USED) > 0;
-	}
-
-	void flushInode(JafsBlock block) throws JafsException, IOException {
-		int len = 0;
-		block.seekSet(ipos *superInodeSize);
-		bb[len++] = (byte)type;
-		Util.longToArray(bb, len, size);
-		len += 8;
-		if (!isInlined(type)) {
-			for (int n=0; n<ctx.getPtrsPerInode(); n++) {
-				Util.intToArray(bb, len, ptrs[n]);
-				len += 4;
-			}
-			bb[len++] = 0;
-			bb[len++] = 0;
-			bb[len++] = 0;
-		}
-		block.writeBytes(bb, 0, len);
-		block.flushBlock();
+		return (type & INODE_USED) != 0;
 	}
 
 	void flushInode() throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlock(bpos);
-		flushInode(block);
+        iblock.seekSet(ipos * superInodeSize);
+
+        int len = 0;
+        bb[len++] = (byte)type;
+        Util.longToArray(bb, len, size);
+        len += 8;
+        if (size==0 || !isInlined()) {
+            for (int n=0; n<ctx.getPtrsPerInode(); n++) {
+                Util.intToArray(bb, len, ptrs[n]);
+                len += 4;
+            }
+            bb[len++] = 0;
+            bb[len++] = 0;
+            bb[len++] = 0;
+        }
+        iblock.writeBytes(bb, 0, len);
+        iblock.flushBlock();
 	}
 
 	void openInode(long bpos, int ipos) throws JafsException, IOException {
@@ -112,7 +108,7 @@ class JafsInode {
 		this.bpos = bpos;
 		this.ipos = ipos;
 		iblock.seekSet(ipos*superInodeSize);
-		if (isInlined(type)) {
+		if (isInlined()) {
 			iblock.readBytes(bb, 0, INODE_HEADER_SIZE);
 		}
 		else {
@@ -122,7 +118,7 @@ class JafsInode {
 		type = bb[off++] & 0xff;
 		size = Util.arrayToLong(bb, off);
 		off += 8;
-		if (!isInlined(type)) {
+		if (!isInlined()) {
 			for (int n=0; n<ctx.getPtrsPerInode(); n++) {
 				ptrs[n] = Util.arrayToInt(bb, off);
 				off+=4;
@@ -132,22 +128,19 @@ class JafsInode {
 	}
 
 	void createInode(int type) throws JafsException, IOException {
-		if (bpos>0) {
+		if (bpos!=0) {
 			throw new IllegalStateException("bpos already set");
 		}
-		bpos = vfs.getUnusedMap().getUnusedINodeBpos();
+        bpos = vfs.getUnusedMap().getUnusedINodeBpos();
 		if (bpos==0) {
-			// No new block could be found, we need to create a new one
-			bpos = vfs.getNewUnusedBpos();
-			iblock = vfs.setCacheBlock(bpos, new JafsBlock(vfs, bpos));
-		}
-		else {
-			iblock = vfs.setCacheBlock(bpos, iblock);
-
-		}
-		if (vfs.getUnusedMap().getUnusedDataBpos()==bpos) {
+			// No block could be found, we need to create a new one
+			bpos = vfs.appendNewBlockToArchive();
+			iblock = new JafsBlock(vfs, bpos);
 			iblock.initZeros();
 		}
+		else {
+            iblock = vfs.getCacheBlock(bpos);
+        }
 		// Find a free inode position in this block
 		// and count used inodes while we are here anyway
 		ipos = -1;
@@ -166,20 +159,19 @@ class JafsInode {
 		if (ipos <0) {
 			throw new JafsException("No free inode found in inode block");
 		}
-		this.type = INODE_USED | type | INODE_INLINED;
+		this.type = type | INODE_USED | INODE_INLINED;
+		//this.type = type | INODE_USED;
 		this.size = 0;
 		flushInode();
 		
 		if (idxCnt==0) {
 			vfs.getSuper().incBlocksUsedAndFlush();
+            vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
 		}
 		
 		// If we occupy the last entry in this block, adjust the unused map
 		if ((idxCnt+1)==vfs.getINodeContext().getInodesPerBlock()) {
 			vfs.getUnusedMap().setBlockAsUsed(bpos);
-		}
-		else {
-			vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
 		}
 	}
 
@@ -206,7 +198,7 @@ class JafsInode {
 		}
 		Arrays.fill(ptrs, 0);
 		type &= INODE_INLINED ^ 0xff; // Turn inlined mode off
-		flushInode(iblock);
+		flushInode();
 		if (size>0) {
 			long memFilePos = fpos;
 			seekSet(0);
@@ -216,14 +208,14 @@ class JafsInode {
 	}
 	
 	private void checkInlinedOverflow(int n) throws JafsException, IOException {
-		if (isInlined(type) && (fpos+n>maxInlinedSize)) {
+		if (isInlined() && (fpos+n>maxInlinedSize)) {
 			undoInlined();
 		}
 	}
 
 	void writeByte(int b) throws JafsException, IOException {
 		checkInlinedOverflow(1);
-		if (isInlined(type)) {
+		if (isInlined()) {
 			iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
 			iblock.writeByte(b);
 			fpos++;
@@ -251,7 +243,7 @@ class JafsInode {
 			return;
 		}
 		checkInlinedOverflow(len);
-		if (!isInlined(type)) {
+		if (!isInlined()) {
 			int todo = len;
 			int done = 0;
 			while (todo>0) {
@@ -282,7 +274,7 @@ class JafsInode {
 		if (fpos+1>size) {
 			return -1;
 		}
-		if (isInlined(type)) {
+		if (isInlined()) {
 			iblock.seekSet((int)(ipos *superInodeSize+INODE_HEADER_SIZE+fpos));
 			fpos++;
 			return iblock.readByte();
@@ -310,7 +302,7 @@ class JafsInode {
 		if ((fpos+len) > size) {
 			len = (int)(size-fpos);
 		}
-		if (!isInlined(type)) {
+		if (!isInlined()) {
 			int todo = len;
 			int done = 0;
 			while (todo>0) {
@@ -353,34 +345,38 @@ class JafsInode {
 		writeBytes(bb, 0, 4);
 	}
 	
-	private boolean isLastInodeInBlock() throws JafsException, IOException {
+	private int iNodesUsedInBlock() throws JafsException, IOException {
 		int cnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
 			iblock.seekSet(n*superInodeSize);
 			if ((iblock.readByte() & INODE_USED)!=0) {
 				cnt++;
-				if (cnt>1) break;
 			}
 		}
-		return cnt==1;
+		return cnt;
 	}
 	
 	void free() throws JafsException, IOException {
 		// free all data
-	    ctx.freeDataAndPtrBlocks(this);
+        if (!isInlined()) {
+            ctx.freeDataAndPtrBlocks(this);
+        }
 
-		// free the inode
-		if (!isLastInodeInBlock()) {
-			vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
-			vfs.getUnusedMap().setStartAtInode(bpos);
+        // free the iNode
+        type=0;
+        iblock.seekSet(ipos * superInodeSize);
+        iblock.writeByte(type);
+        iblock.flushBlock();
+
+		// update the unusedMap
+        int iNodesCount = iNodesUsedInBlock();
+		if (iNodesCount==0) {
+            vfs.getUnusedMap().setBlockAsAvailable(bpos);
+            vfs.getSuper().decBlocksUsedAndFlush();
 		}
-		else {
-			vfs.getUnusedMap().setBlockAsAvailable(bpos);
-            vfs.getUnusedMap().setStartAtInode(bpos);
-			vfs.getSuper().decBlocksUsed();
-			vfs.getSuper().flush();
+		else if (iNodesCount==(vfs.getINodeContext().getInodesPerBlock()-1)) {
+            vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
 		}
-		type=0;
-		flushInode();
+        vfs.getUnusedMap().setStartAtInode(bpos);
 	}
 }
