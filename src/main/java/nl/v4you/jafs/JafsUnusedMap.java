@@ -6,6 +6,23 @@ class JafsUnusedMap {
 
 	static final int SKIP_MAP_POSITION = 0;
 	static final int BLOCKS_PER_BYTE = 4;
+
+	static final int INODE0_MASK = 2<<6;
+    static final int INODE1_MASK = 2<<4;
+    static final int INODE2_MASK = 2<<2;
+    static final int INODE3_MASK = 2;
+
+    static final int DATA0_MASK = 1<<6;
+    static final int DATA1_MASK = 1<<4;
+    static final int DATA2_MASK = 1<<2;
+    static final int DATA3_MASK = 1;
+
+    // when inode, the data mask shows if the entry is already being used (1) or not (0)
+    static final int PARTLY0_MASK = DATA0_MASK;
+    static final int PARTLY1_MASK = DATA1_MASK;
+    static final int PARTLY2_MASK = DATA2_MASK;
+    static final int PARTLY3_MASK = DATA3_MASK;
+
 	/*
 	 * 0 = available, 1 = used
 	 * |-------|-------|
@@ -51,35 +68,36 @@ class JafsUnusedMap {
 		return bpos == getUnusedMapBpos(bpos);
 	}
 
-	private long getUnusedBpos(boolean isData) throws JafsException, IOException {
+	private long getUnusedBpos(boolean isInode) throws JafsException, IOException {
 	    int p0mask;
 	    int p1mask;
 	    int p2mask;
 	    int p3mask;
 
-        p0mask = 2<<6;
-        p1mask = 2<<4;
-        p2mask = 2<<2;
-        p3mask = 2;
-
-	    if (isData) {
-	        p0mask>>=1;
-	        p1mask>>=1;
-	        p2mask>>=1;
-	        p3mask>>=1;
+	    if (isInode) {
+            p0mask = INODE0_MASK;
+            p1mask = INODE1_MASK;
+            p2mask = INODE2_MASK;
+            p3mask = INODE3_MASK;
+        }
+        else {
+            p0mask = DATA0_MASK;
+            p1mask = DATA1_MASK;
+            p2mask = DATA2_MASK;
+            p3mask = DATA3_MASK;
         }
 
 		int skipMapMask = p0mask;
 		int grpMask = p0mask | p1mask | p2mask | p3mask;
 		long blocksTotal = superBlock.getBlocksTotal();
-		long curBpos = (isData ? startAtData : startAtInode) * blocksPerUnusedMap;
+		long curBpos = (isInode ? startAtInode : startAtData) * blocksPerUnusedMap;
 		long newBpos = 0;
-		for (long unusedMap = (isData ? startAtData : startAtInode); curBpos<blocksTotal; unusedMap++) {
-            if (isData) {
-                startAtData = unusedMap;
+		for (long unusedMap = (isInode ? startAtInode : startAtData); curBpos<blocksTotal; unusedMap++) {
+            if (isInode) {
+                startAtInode = unusedMap;
             }
             else {
-                startAtInode = unusedMap;
+                startAtData = unusedMap;
             }
 			JafsBlock block = vfs.getCacheBlock(unusedMap * blocksPerUnusedMap);
 			block.seekSet(0);
@@ -97,7 +115,7 @@ class JafsUnusedMap {
 					else {
 						if (m!=SKIP_MAP_POSITION && curBpos<blocksTotal && ((b & p0mask) == 0)) {
 							newBpos = curBpos;
-							if (!isData && ((b & (p0mask>>1))==0)) {
+							if (isInode && ((b & PARTLY0_MASK)==0)) {
                                 JafsBlock tmp = vfs.getCacheBlock(newBpos);
                                 tmp.initZeros();
                                 tmp.flushBlock();
@@ -107,7 +125,7 @@ class JafsUnusedMap {
 						curBpos++;
 						if (curBpos<blocksTotal && ((b & p1mask) == 0)) {
 							newBpos = curBpos;
-                            if (!isData && ((b & (p1mask>>1))==0)) {
+                            if (isInode && ((b & PARTLY1_MASK)==0)) {
                                 JafsBlock tmp = vfs.getCacheBlock(newBpos);
                                 tmp.initZeros();
                                 tmp.flushBlock();
@@ -117,7 +135,7 @@ class JafsUnusedMap {
 						curBpos++;
 						if (curBpos<blocksTotal && ((b & p2mask) == 0)) {
 							newBpos = curBpos;
-                            if (!isData && ((b & (p2mask>>1))==0)) {
+                            if (isInode && ((b & PARTLY2_MASK)==0)) {
                                 JafsBlock tmp = vfs.getCacheBlock(newBpos);
                                 tmp.initZeros();
                                 tmp.flushBlock();
@@ -127,7 +145,7 @@ class JafsUnusedMap {
 						curBpos++;
 						if (curBpos<blocksTotal && ((b & p3mask) == 0)) {
 							newBpos = curBpos;
-                            if (!isData && ((b & (p3mask>>1))==0)) {
+                            if (isInode && ((b & PARTLY3_MASK)==0)) {
                                 JafsBlock tmp = vfs.getCacheBlock(newBpos);
                                 tmp.initZeros();
                                 tmp.flushBlock();
@@ -162,7 +180,7 @@ class JafsUnusedMap {
      * @throws IOException
      */
     long getUnusedINodeBpos() throws JafsException, IOException {
-        return getUnusedBpos(false);
+        return getUnusedBpos(true);
     }
 
     /**
@@ -173,7 +191,7 @@ class JafsUnusedMap {
      * @throws IOException
      */
     long getUnusedDataBpos() throws JafsException, IOException {
-        return getUnusedBpos(true);
+        return getUnusedBpos(false);
     }
 
 	int getUnusedByte(JafsBlock block, long bpos) throws JafsException, IOException {
