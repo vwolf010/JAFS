@@ -55,6 +55,35 @@ public class UnusedMap {
     }
 
     @Test
+    public void reuseDataBlockAsInodeBlock() throws JafsException, IOException {
+        int blockSize = 128;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize, 1024 * 1024 * 1024);
+        byte content[] = new byte[blockSize];
+        Arrays.fill(content, (byte)0xff); // if this were an inode record, all flags would be set
+
+        JafsFile f = jafs.getFile("/abc1");
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        for (int i=0; i<10; i++) {
+            // write ten blocks of ones
+            jos.write(content);
+        }
+        jos.close();
+
+        jos = jafs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+
+        // The inode block of this file should re-use the data block of the file
+        // that was previously deleted.
+        f = jafs.getFile("/abc2");
+        jos = jafs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+
+        jafs.close();
+    }
+
+    @Test
     public void fileSizeStable() throws JafsException, IOException {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 64, 1024 * 1024);
