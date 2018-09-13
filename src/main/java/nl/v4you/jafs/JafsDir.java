@@ -164,11 +164,6 @@ class JafsDir {
 			}
 		}
 
-		// TODO: see if we can get rid of this expensive check
-		if (getEntryPos(entry.name)>=0) {
-			throw new JafsException("Name ["+entry.name+"] already exists");
-		}
-		
 		byte nameBuf[] = entry.name;
 		int nameLen = nameBuf.length;
 
@@ -182,17 +177,32 @@ class JafsDir {
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
 			long startPos = inode.getFpos();
+
+			int nameLength = inode.readByte();
+			if (nameLength==nameLen) {
+				inode.seekCur(1+4+2);
+				inode.readBytes(bb, 0, nameLength);
+				int n=0;
+				while ((n<nameLength) && (bb[n]==nameBuf[n])) {
+					n++;
+				}
+				if (n==nameLength) {
+					throw new JafsException("Name ["+entry.name+"] already exists");
+				}
+			}
+
 			int spaceForName = entrySize-1-1-4-2;
-			if (spaceForName>=nameLen && spaceForName<newEntrySpaceForName && (inode.readByte() == 0)) {
+			if (spaceForName>=nameLen && spaceForName<newEntrySpaceForName && (nameLen==0)) {
 				newEntryStartPos = startPos;
 				newEntrySpaceForName = spaceForName;
 			}
+
 			inode.seekSet(startPos+entrySize);
 			entrySize = inode.readShort();
 		}
 		
 		/*
-		 * Insert new node
+		 * Insert new entry
 		 */
 		int tLen=0;
 		if (newEntryStartPos>0) {
@@ -229,18 +239,25 @@ class JafsDir {
 		inode.writeShort(0);
 	}
 	
-	boolean createNewEntry(byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
+	void createNewEntry(byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
+	    if (name==null || name.length==0) {
+	        throw new JafsException("Name not suppied");
+        }
+        if (name[0]=='.') {
+	        if (name.length==1) {
+                throw new JafsException("Name '.' not allowed");
+            }
+            else if (name.length==2 && name[1]=='.') {
+                throw new JafsException("Name '..' not allowed");
+            }
+        }
 		if (Util.contains(name, SLASH)) {
-			if ((type & JafsDirEntry.TYPE_FILE)>0) {
+			if ((type & JafsDirEntry.TYPE_FILE)!=0) {
 				throw new JafsException("File name ["+name+"] should not contain a slash (/)");
 			}
 			else {
 				throw new JafsException("Dir name ["+name+"] should not contain a slash (/)");
 			}
-		}
-		if (getEntry(name)!=null) {
-			// name already exists
-			return false;
 		}
 		JafsDirEntry entry = new JafsDirEntry();
 		entry.bpos = bpos;
@@ -248,7 +265,6 @@ class JafsDir {
 		entry.type = type;
 		entry.name = name;
 		createEntry(entry);		
-		return true;
 	}
 	
 	JafsDirEntry mkinode(byte name[], int type) throws JafsException, IOException {

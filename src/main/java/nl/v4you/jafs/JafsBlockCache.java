@@ -15,9 +15,9 @@ class JafsBlockCache {
 	static int CACHE_MAX_SIZE = 1000;
 
 	private Jafs vfs;
-	private Map<Long, CacheEntry> cache = new HashMap<Long, CacheEntry>();
-	private CacheEntry mostLeft = null;
-	private CacheEntry mostRight = null;
+	private Map<Long, CacheEntry> cache = new HashMap<>();
+	private CacheEntry mostLeft;
+	private CacheEntry mostRight;
 
 	JafsBlockCache(Jafs vfs) {
 		this.vfs = vfs;

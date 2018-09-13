@@ -128,7 +128,7 @@ public class UnusedMap {
         byte buf[] = new byte[blockSize];
         rnd.nextBytes(buf);
 
-        int TEST_LOOP = 1000000;
+        int TEST_LOOP = 100000;
 
         for (int n=0; n<TEST_LOOP; n++) {
 

@@ -84,9 +84,15 @@ public class JafsFile {
 				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
-			return dir.createNewEntry(getName().getBytes("UTF-8"), JafsDirEntry.TYPE_FILE, 0, 0);
+			try {
+				dir.createNewEntry(getName().getBytes("UTF-8"), JafsDirEntry.TYPE_FILE, 0, 0);
+				return true;
+			}
+			catch (JafsException e) {
+				return false;
+			}
 		}
-		return false;		
+		return false;
 	}
 
 	public boolean mkdir() throws JafsException, IOException {
@@ -335,7 +341,13 @@ public class JafsFile {
 				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
-			return dir.createNewEntry(getName(path).getBytes("UTF-8"), JafsDirEntry.TYPE_DIR, 0, 0);
+			try {
+				dir.createNewEntry(getName(path).getBytes("UTF-8"), JafsDirEntry.TYPE_DIR, 0, 0);
+				return true;
+			}
+			catch (JafsException e) {
+				return false;
+			}
 		}
 		return false;		
 	}
