@@ -346,7 +346,7 @@ public class JafsFile {
 		}
 		if (!exists(path)) {
 			boolean result = mkdir(path);
-			if (result==false) {
+			if (!result) {
 				mkParentDirs(getParent(path));
 				mkdir(path);
 			}

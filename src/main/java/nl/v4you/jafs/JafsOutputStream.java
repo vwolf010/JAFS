@@ -21,29 +21,8 @@ public class JafsOutputStream extends OutputStream {
 				if (append) {
 					inode.seekEnd(0);
 				}
-//				else {
-//					inode.size = 0;
-//				}
 			}
 		}
-
-//		this.vfs = vfs;
-//		if (!append && f.exists() && !f.delete()) {
-//			throw new JafsException("Could not delete " + f.getCanonicalPath());
-//		}
-//		if (!f.exists() && !f.createNewFile()) {
-//			throw new JafsException("Could not appendNewBlockToArchive " + f.getCanonicalPath());
-//		}
-//		this.path = f.getCanonicalPath();
-//		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
-//		if (entry!=null) {
-//			if (entry.bpos>0) {
-//				inode = new JafsInode(vfs, entry);
-//				if (append) {
-//					inode.seekSet(0, JafsInode.SEEK_END);
-//				}
-//			}
-//		}
 	}
 	
 	@Override

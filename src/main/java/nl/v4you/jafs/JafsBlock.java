@@ -52,7 +52,7 @@ class JafsBlock {
 		byteIdx = 0;
 	}
 	
-	void flushBlock() throws IOException, JafsException {
+	void writeToDisk() throws IOException, JafsException {
 		long start = (1+bpos) * blockSize;
 		long end = start + blockSize;
 		if (end>raf.length()) {
@@ -82,7 +82,7 @@ class JafsBlock {
 		} else if (off < 0 || len < 0 || len > b.length - off) {
 			throw new IndexOutOfBoundsException();
 		} else if (byteIdx+len>blockSize) {
-			throw new IllegalStateException("Trying to read beyond block");
+			throw new IllegalStateException("Trying to read beyond block, byteIdx="+byteIdx+", len="+len+", blockSize="+blockSize);
 		} else if (len == 0) {
 			return;
 		}

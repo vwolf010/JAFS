@@ -10,6 +10,7 @@ import java.util.LinkedList;
 
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class Directories {
     @Before
@@ -61,6 +62,50 @@ public class Directories {
         assertEquals(0, f.length());
         vfs.close();
     }
+
+    @Test
+    public void localDirIndicatorWorks() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/a");
+        f.createNewFile();
+        f = vfs.getFile("/./a");
+        assertTrue(f.exists());
+        vfs.close();
+    }
+
+    @Test
+    public void parentDirIndicatorWorks() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/a");
+        f.mkdir();
+        f = vfs.getFile("/a/b");
+        f.createNewFile();
+        f = vfs.getFile("/a/../a/b");
+        assertTrue(f.exists());
+        vfs.close();
+    }
+
+        @Test
+    public void a() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/z");
+        f.createNewFile();
+        f = vfs.getFile("/zz");
+        f.createNewFile();
+        f = vfs.getFile("/zzz");
+        f.createNewFile();
+
+        f = vfs.getFile("/zz");
+        f.delete();
+        f = vfs.getFile("/y");
+        f.createNewFile();
+
+        f = vfs.getFile("/z");
+        System.out.println(f.list().length);
+
+        vfs.close();
+    }
+
 
 //    @Test
 //    public void creatingRootDirAsFileShouldNotResultInANullPointerException() throws JafsException, IOException {
