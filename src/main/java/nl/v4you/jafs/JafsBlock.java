@@ -10,7 +10,6 @@ class JafsBlock {
 	public long bpos = -1;
 	private RandomAccessFile raf;
 	public int byteIdx = 0;
-	boolean isSaved=false;
 
 	int bytesLeft() {
 		return blockSize-byteIdx;
@@ -60,7 +59,6 @@ class JafsBlock {
 		}
 		raf.seek(start);
 		raf.write(buf);
-		isSaved=true;
 	}
 
 	void dumpBlock(File f) {
@@ -80,14 +78,14 @@ class JafsBlock {
 	}
 
 	int readByte() throws JafsException {
-		if (byteIdx+1>blockSize) {
+		if (byteIdx>=blockSize) {
 			throw new JafsException("Trying to read beyond buffer");
 		}
 		return buf[byteIdx++] & 0xff;
 	}
 
 	void writeByte(int b) throws JafsException {
-		if (byteIdx+1>blockSize) {
+		if (byteIdx>=blockSize) {
 			throw new JafsException("Trying to write beyond buffer");
 		}
 		buf[byteIdx++] = (byte)(b & 0xff);

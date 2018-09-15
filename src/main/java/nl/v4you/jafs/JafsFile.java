@@ -26,7 +26,7 @@ public class JafsFile {
 	JafsDirEntry entry;	
 	String path;
 	
-	public static final String seperator = "/";
+	public static final String separator = "/";
 	
 	/* 
 	 * public 
@@ -194,11 +194,11 @@ public class JafsFile {
 	}
 	
 	JafsFile(Jafs vfs, JafsFile parent, String child) {
-		construct(vfs, parent.getCanonicalPath()+JafsFile.seperator+child);
+		construct(vfs, parent.getCanonicalPath()+JafsFile.separator +child);
 	}
 	
 	JafsFile(Jafs vfs, String parent, String child) {
-		construct(vfs, parent+JafsFile.seperator+child);
+		construct(vfs, parent+JafsFile.separator +child);
 	}
 	
 	JafsDirEntry getEntry(String path) throws JafsException, IOException {

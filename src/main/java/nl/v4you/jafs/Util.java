@@ -56,6 +56,7 @@ public class Util {
         return i;
     }
 
+    // str2 inside str1 ?
     static boolean contains(byte str1[], byte str2[]) {
         int len1 = str1.length;
         int len2 = str2.length;

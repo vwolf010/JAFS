@@ -107,7 +107,7 @@ class JafsInode {
         if (isInlined()) {
             size = iblock.readLong();
         }
-		else if (!isInlined()) {
+		else {
 			iblock.readBytes(bb, 0, 8+(ctx.getPtrsPerInode()<<2));
             size = Util.arrayToLong(bb, 0);
             for (int off=8, n=0; n<ctx.getPtrsPerInode(); n++) {
@@ -194,21 +194,21 @@ class JafsInode {
 
 	private void undoInlined() throws IOException, JafsException {
 		// The inlined data needs to be copied to a real data block.
-		iblock.seekSet((int)(ipos *superInodeSize+INODE_HEADER_SIZE));
+		iblock.seekSet(ipos *superInodeSize+INODE_HEADER_SIZE);
 
 		byte buf[] = null;
-		if (size>0) {
+		if (size!=0) {
 			buf = new byte[(int)size];
 			iblock.readBytes(buf, 0, (int)size);
 		}
 		Arrays.fill(ptrs, 0);
 		type &= INODE_INLINED ^ 0xff; // Turn inlined mode off
 		flushInode();
-		if (size>0) {
-			long memFilePos = fpos;
+		if (size!=0) {
+			long fposMem = fpos;
 			seekSet(0);
 			writeBytes(buf, 0, (int)size);
-			fpos = memFilePos;
+			fpos = fposMem;
 		}
 	}
 	
@@ -312,9 +312,6 @@ class JafsInode {
 		}
 		if (isInlined()) {
 		    int x = (int)(ipos*superInodeSize + INODE_HEADER_SIZE + fpos);
-		    if (x==29556) {
-		        System.err.println(ipos+" "+superInodeSize+" " + INODE_HEADER_SIZE +" "+ fpos);
-            }
             iblock.seekSet(x);
             iblock.readBytes(b, off, len);
             fpos+=len;
