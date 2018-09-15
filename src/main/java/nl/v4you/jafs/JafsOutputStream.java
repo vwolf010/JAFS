@@ -10,6 +10,7 @@ public class JafsOutputStream extends OutputStream {
 	
 	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
+		//System.err.println(f.getAbsolutePath());
 		if (!f.exists() && !f.createNewFile()) {
 			throw new JafsException("Could not appendNewBlockToArchive "+f.getCanonicalPath());
 		}

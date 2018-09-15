@@ -13,19 +13,19 @@ import java.util.Arrays;
 class JafsInode {
 	static final int INODE_HEADER_SIZE = 9; // type + size
 
-    static final int INODE_FILE    = 0x1;
-    static final int INODE_DIR     = 0x2;
+    static final byte INODE_FILE    = 0x1;
+    static final byte INODE_DIR     = 0x2;
 	private static final int INODE_INLINED = 0x4;
 
-    private static final int INODE_USED    = INODE_DIR | INODE_FILE;
+    private static final int INODE_USED = INODE_DIR | INODE_FILE;
 
 	private Jafs vfs;
 	private JafsInodeContext ctx;
 	private JafsBlock iblock = null;
 	
 	private long maxInlinedSize = 0;
-	private long bpos; // Position of this block in the archive
-	private int ipos; // Position of this inode inside the block
+	private long bpos=0; // Position of this block in the archive
+	private int ipos=0; // Position of this inode inside the block
 	private long fpos=0; // Position of the file pointer
 	long ptrs[];
 
@@ -36,8 +36,8 @@ class JafsInode {
 	byte bb[];
 
 	/* INode header */
-	int type;
-	long size;
+	int type=0;
+	long size=0;
 
 	long getBpos() {
 		return bpos;
@@ -81,10 +81,6 @@ class JafsInode {
 		return (type & INODE_INLINED) != 0;
 	}
 	
-	private boolean isUsed(int type) {
-		return (type & INODE_USED) != 0;
-	}
-
 	void flushInode() throws JafsException, IOException {
         iblock.seekSet(ipos * superInodeSize);
 
@@ -135,11 +131,11 @@ class JafsInode {
 		}
         bpos = vfs.getUnusedMap().getUnusedINodeBpos();
 		if (bpos!=0) {
+            // will be initialized with zeros by the getUnusedINodeBpos() call if needed
             iblock = vfs.getCacheBlock(bpos);
-            // will be initialized with zeros by the getUnusedINodeBpos() call
 		}
 		else {
-            // No block could be found, we need to create a new one
+            // no block could be found, we need to create a new one
             bpos = vfs.appendNewBlockToArchive();
             iblock = new JafsBlock(vfs, bpos);
             iblock.initZeros();
@@ -148,34 +144,37 @@ class JafsInode {
 		// Find a free inode position in this block
 		// and count used inodes while we are here anyway
 		ipos = -1;
-		int idxCnt = 0;
+		int inodeCnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
 			iblock.seekSet(n*superInodeSize);
-			if (isUsed(iblock.readByte())) {
-				idxCnt++;
+			if ((iblock.readByte() & INODE_USED) != 0) {
+				inodeCnt++;
 			}
 			else {
 				if (ipos <0) {
 					ipos = n;
-					idxCnt++;
+					inodeCnt++;
 				}
 			}
 		}
 		if (ipos <0) {
-			throw new JafsException("No free inode found in inode block");
+			iblock.dumpBlock();
+			vfs.getUnusedMap().dumpLastVisited();
+			throw new JafsException("No free inode found in inode block, bpos:"+bpos);
 		}
+
 		this.type = type | INODE_INLINED;
 		this.size = 0;
 		flushInode();
 		
-		if (idxCnt==1) {
+		if (inodeCnt==1) {
 			vfs.getSuper().incBlocksUsedAndFlush();
-            vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
+            vfs.getUnusedMap().setAvailableForInodeOnly(bpos);
 		}
 		
 		// If we occupy the last entry in this block, adjust the unused map
-		if (idxCnt==vfs.getINodeContext().getInodesPerBlock()) {
-			vfs.getUnusedMap().setBlockAsUsed(bpos);
+		if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
+			vfs.getUnusedMap().setAvailableForNeither(bpos);
 		}
 	}
 
@@ -391,11 +390,12 @@ class JafsInode {
 		// update the unusedMap
         int iNodesCount = iNodesUsedInBlock();
 		if (iNodesCount==0) {
-            vfs.getUnusedMap().setBlockAsAvailable(bpos);
+            vfs.getUnusedMap().setAvailableForBoth(bpos);
+            vfs.getUnusedMap().setStartAtData(bpos);
             vfs.getSuper().decBlocksUsedAndFlush();
 		}
         else {
-            vfs.getUnusedMap().setBlockAsPartlyUsed(bpos);
+            vfs.getUnusedMap().setAvailableForInodeOnly(bpos);
 		}
         vfs.getUnusedMap().setStartAtInode(bpos);
 	}

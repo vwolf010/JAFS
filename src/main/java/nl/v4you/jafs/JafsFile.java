@@ -81,11 +81,11 @@ public class JafsFile {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
 				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
+				dir.mkinode(entry, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
 			try {
-				dir.createNewEntry(getName().getBytes("UTF-8"), JafsDirEntry.TYPE_FILE, 0, 0);
+				dir.createNewEntry(getName().getBytes("UTF-8"), JafsInode.INODE_FILE, 0, 0);
 				return true;
 			}
 			catch (JafsException e) {
@@ -207,13 +207,13 @@ public class JafsFile {
 		entry.parentIpos = vfs.getRootIpos();
 		entry.bpos = vfs.getRootBpos();
 		entry.ipos = vfs.getRootIpos();
-		entry.type = JafsDirEntry.TYPE_DIR;
+		entry.type = JafsInode.INODE_DIR;
 		entry.name = "/".getBytes("UTF-8");
 		JafsDir dir = new JafsDir(vfs, entry);
 		String parts[] = getCanonicalPath(path).split("/");
 		for (int n=0; n<parts.length; n++) {
 			String part = parts[n];
-			if (part.length()>0 && 0!=part.compareTo(".")) {
+			if (part.length()!=0) {
 				entry = dir.getEntry(part.getBytes("UTF-8"));
 				if (entry==null) {
 					return null;
@@ -228,7 +228,7 @@ public class JafsFile {
 						return null;
 					}
 					else {
-						if (entry.bpos>0) {
+						if (entry.bpos!=0) {
 							dir = new JafsDir(vfs, entry);
 						}
 						else {
@@ -338,11 +338,11 @@ public class JafsFile {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
 				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-				entry = dir.mkinode(entry.name, JafsInode.INODE_DIR);
+				dir.mkinode(entry, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
 			try {
-				dir.createNewEntry(getName(path).getBytes("UTF-8"), JafsDirEntry.TYPE_DIR, 0, 0);
+				dir.createNewEntry(getName(path).getBytes("UTF-8"), JafsInode.INODE_DIR, 0, 0);
 				return true;
 			}
 			catch (JafsException e) {

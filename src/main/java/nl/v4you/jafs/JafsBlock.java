@@ -1,7 +1,6 @@
 package nl.v4you.jafs;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.Arrays;
 
 class JafsBlock {
@@ -11,6 +10,7 @@ class JafsBlock {
 	public long bpos = -1;
 	private RandomAccessFile raf;
 	public int byteIdx = 0;
+	boolean isSaved=false;
 
 	int bytesLeft() {
 		return blockSize-byteIdx;
@@ -60,6 +60,23 @@ class JafsBlock {
 		}
 		raf.seek(start);
 		raf.write(buf);
+		isSaved=true;
+	}
+
+	void dumpBlock(File f) {
+		try {
+			FileOutputStream fos = new FileOutputStream(f);
+			fos.write(buf);
+			fos.close();
+		}
+		catch (Exception e) {
+			System.err.println("Failed to dump block "+f.getAbsolutePath());
+		}
+	}
+
+	void dumpBlock() {
+		File f = new File("c:/data/temp/inode_block_"+bpos+".dmp");
+		dumpBlock(f);
 	}
 
 	int readByte() throws JafsException {

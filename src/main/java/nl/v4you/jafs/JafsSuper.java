@@ -59,7 +59,7 @@ class JafsSuper {
 	void incBlocksUsedAndFlush() throws JafsException, IOException {
 		blocksUsed++;
 		if (blocksUsed>blocksTotal) {
-			throw new RuntimeException("blocksUsed>blocksTotal!!!");
+			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
 		}
 		flush();
 	}

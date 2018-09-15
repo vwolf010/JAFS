@@ -13,7 +13,7 @@ import static junit.framework.TestCase.assertTrue;
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
 import static org.junit.Assert.assertEquals;
 
-public class ReadWriteBytes {
+public class ReadWriteBytesTest {
 
     Random rnd = new Random();
 
@@ -91,7 +91,7 @@ public class ReadWriteBytes {
     @Test
     public void writeReadBytesWithOffsetAndLength() throws JafsException, IOException {
         int blockSize = 256;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize/2, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc");
         byte content[] = "abcdef".getBytes();
         JafsOutputStream jos = jafs.getOutputStream(f);
@@ -105,4 +105,57 @@ public class ReadWriteBytes {
         assertEquals('d', buf[2]);
         jafs.close();
     }
+
+    @Test
+    public void writeReadBytesUsingMaxFileSize() throws JafsException, IOException {
+        int blockSize = 128;
+        int inodeSize = 64;
+        long maxFileSize = 4330000;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize,  maxFileSize);
+        System.err.println(jafs.getINodeContext().toString());
+        JafsFile f = jafs.getFile("/abc");
+        byte content[] = new byte[blockSize];
+
+        long blocksUsed = jafs.getSuper().getBlocksUsed();
+        System.err.println("blocksUsed: "+blocksUsed);
+
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        long len = 0;
+        int i = 0;
+        while (len+blockSize<=maxFileSize) {
+            for (int n=0; n<blockSize; n++) {
+                content[n] = (byte)i++;
+                if (i==17) i=0;
+            }
+            len += blockSize;
+            jos.write(content);
+        }
+        jos.close();
+
+        System.err.println("blocksUsed: "+jafs.getSuper().getBlocksUsed());
+
+        JafsInputStream jis = jafs.getInputStream(f);
+        len = 0;
+        i = 0;
+        while (len+blockSize<maxFileSize) {
+            assertEquals(blockSize, jis.read(content));
+            for (int n=0; n<blockSize; n++) {
+                if (content[n]!=(byte)i) {
+                    assertTrue(false);
+                }
+                i++;
+                if (i==17) i=0;
+            }
+            len += blockSize;
+        }
+        jis.close();
+
+        f.delete();
+
+        System.err.println("blocksUsed: "+jafs.getSuper().getBlocksUsed());
+
+        jafs.close();
+        System.err.println(len+" bytes written");
+    }
+
 }

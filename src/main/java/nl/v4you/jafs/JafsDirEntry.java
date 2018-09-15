@@ -1,9 +1,6 @@
 package nl.v4you.jafs;
 
 class JafsDirEntry {
-	static final byte TYPE_FILE = 0x01;
-	static final byte TYPE_DIR = 0x02;
-	
 	long startPos;
 	long parentBpos;
 	int parentIpos;
@@ -14,10 +11,10 @@ class JafsDirEntry {
 	byte name[];
 	
 	boolean isFile() {
-		return (type & TYPE_FILE) > 0; 
+		return (type & JafsInode.INODE_FILE) != 0;
 	}
 	
 	boolean isDirectory() {
-		return (type & TYPE_DIR) > 0; 
+		return (type & JafsInode.INODE_DIR) != 0;
 	}
 }

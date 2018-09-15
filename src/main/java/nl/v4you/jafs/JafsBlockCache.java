@@ -29,8 +29,7 @@ class JafsBlockCache {
 	JafsBlock get(long bpos, JafsBlock block) throws JafsException, IOException {
 
 		CacheEntry ce = null;
-		boolean cacheHit = false;
-		
+
 		if (bpos<0) {
 			// SuperBlock bpos = -1 and is not cached
 			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
@@ -42,14 +41,14 @@ class JafsBlockCache {
 		
 		// Check if this block is already in cache
 		if (cache.containsKey(bpos)) {
-			cacheHit = true;
 			ce = cache.get(bpos);
 			if (block!=null) {
 				throw new JafsException("Cache hit unexpected, block supplied to cache get method");
 			}
-		}
+//			if (!ce.block.isSaved) {
+//				throw new JafsException("Retrieving block that has not been saved");
+//			}
 
-		if (cacheHit) {
 			// Remove our entry from the access list
 			CacheEntry l = ce.l;
 			CacheEntry r = ce.r;

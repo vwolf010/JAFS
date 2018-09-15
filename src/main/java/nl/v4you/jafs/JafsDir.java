@@ -27,7 +27,7 @@ class JafsDir {
 		inode.createInode(JafsInode.INODE_DIR);
 		inode.flushInode();
 		JafsDir dir = new JafsDir(vfs, inode);
-		dir.initDir(inode.getBpos(), inode.getIpos());
+		dir.initDir();
 		vfs.getSuper().setRootDirBpos(inode.getBpos());
 		vfs.getSuper().setRootDirIpos(inode.getIpos());
 		vfs.getSuper().flush();
@@ -154,7 +154,7 @@ class JafsDir {
 		return cnt;
 	}
 	
-	void createEntry(JafsDirEntry entry) throws JafsException, IOException {
+	private void createEntry(JafsDirEntry entry) throws JafsException, IOException {
 		if (Util.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
 				throw new JafsException("Directory name ["+entry.name+"] should not contain a slash (/)");
@@ -208,6 +208,7 @@ class JafsDir {
 		if (newEntryStartPos>0) {
 			// Re-use an existing entry
 			inode.seekSet(newEntryStartPos);
+			// TODO: if we do not need the complete entry, split it into 2 entries here
 		}
 		else {
 			// Append to the end
@@ -220,7 +221,7 @@ class JafsDir {
             tLen+=2;
 		}
 		bb[tLen++] = (byte)nameBuf.length;
-		bb[tLen++] = entry.type;
+		bb[tLen++] = (byte)entry.type;
         Util.intToArray(bb, tLen, (int)entry.bpos);
 		tLen+=4;
         Util.shortToArray(bb, tLen, entry.ipos);
@@ -234,7 +235,7 @@ class JafsDir {
 		inode.writeBytes(bb, 0, tLen);
 	}
 
-	void initDir(long parentBpos, int parentIpos) throws JafsException, IOException {
+	private void initDir() throws JafsException, IOException {
 		inode.seekSet(0);
 		inode.writeShort(0);
 	}
@@ -252,7 +253,7 @@ class JafsDir {
             }
         }
 		if (Util.contains(name, SLASH)) {
-			if ((type & JafsDirEntry.TYPE_FILE)!=0) {
+			if ((type & JafsInode.INODE_FILE)!=0) {
 				throw new JafsException("File name ["+name+"] should not contain a slash (/)");
 			}
 			else {
@@ -266,28 +267,35 @@ class JafsDir {
 		entry.name = name;
 		createEntry(entry);		
 	}
-	
-	JafsDirEntry mkinode(byte name[], int type) throws JafsException, IOException {
+
+    void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
+        if (entry==null) {
+            throw new JafsException("entry cannot be null");
+        }
+        else {
+            JafsInode childInode = new JafsInode(vfs);
+            childInode.createInode(type);
+            if ((type & JafsInode.INODE_DIR)!=0) {
+                JafsDir dir = new JafsDir(vfs, childInode);
+                dir.initDir();
+            }
+
+            entry.bpos = childInode.getBpos();
+            entry.ipos = childInode.getIpos();
+
+            inode.seekSet(entry.startPos+1+1);
+            inode.writeInt((int)entry.bpos); // block position
+            inode.writeShort(entry.ipos); // inode index
+        }
+    }
+
+	void mkinode(byte name[], int type) throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(name);
 		if (entry==null) {
 			throw new JafsException("Could not find entry ["+new String(name, "UTF-8")+"]");
 		}
 		else {
-			JafsInode childInode = new JafsInode(vfs);
-			childInode.createInode(type);
-			if ((type & JafsInode.INODE_DIR)!=0) {
-				JafsDir dir = new JafsDir(vfs, childInode);
-				dir.initDir(inode.getBpos(), inode.getIpos());
-			}
-
-			entry.bpos = childInode.getBpos();
-			entry.ipos = childInode.getIpos();
-
-			inode.seekSet(entry.startPos+1+1);
-			inode.writeInt((int)entry.bpos); // block position
-			inode.writeShort(entry.ipos); // inode index
-
-			return entry;
+		    mkinode(entry, type);
 		}
 	}
 

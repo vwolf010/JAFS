@@ -18,22 +18,29 @@ public class Jafs {
 	public Jafs(String fname) throws IOException, JafsException {
 		init(fname, -1, -1, -1);
 	}
+
+	boolean isSupportedSize(int size, int sizeMin, int sizeMax) {
+        boolean supported = false;
+        int n;
+        for (n=1; n<=16; n++) {
+            int pow = 2 << n;
+            if (size==pow && sizeMin<=size && size<=sizeMax) {
+                supported = true;
+                break;
+            }
+        }
+        return supported;
+    }
 	
 	public Jafs(String fname, int blockSize, int inodeSize, long maxFileSize) throws JafsException, IOException {
-		int n;
-		for (n=6; n<=16; n++) {
-			int pow=2;
-			for (int i=0;i<n;i++) pow *= 2;
-			if (blockSize<=pow) {
-				blockSize=pow;
-				break;
-			}				
+		if (!isSupportedSize(blockSize, 128, 8192)) {
+			throw new JafsException("block size "+blockSize+" not supported");
 		}
-		if (n>16) {
-			throw new JafsException("block size"+blockSize+" not supported");
-		}
+        if (!isSupportedSize(inodeSize, 32, 8192)) {
+            throw new JafsException("inode size "+inodeSize+" not supported");
+        }
 		if (inodeSize>blockSize) {
-			throw new JafsException("inode size"+inodeSize+" should be smaller or equal to block size");
+			throw new JafsException("inode size "+inodeSize+" should be smaller or equal to block size "+blockSize);
 		}
 		if (maxFileSize<0) {
 			maxFileSize = 0;
@@ -122,13 +129,13 @@ public class Jafs {
 
 	long appendNewBlockToArchive() throws JafsException, IOException {
 		long bpos = superBlock.getBlocksTotal();
-		if (um.isUnusedMapBlock(bpos)) {
+		if (bpos==um.getUnusedMapBpos(bpos)) {
 			um.createNewUnusedMap(bpos);
 			bpos = superBlock.getBlocksTotal();
-		}		
+		}
 		superBlock.incBlocksTotalAndFlush();
-		raf.setLength(superBlock.getBlockSize()*(1+superBlock.getBlocksTotal()));
-		um.setBlockAsAvailable(bpos); // TODO: remove, will always be zero anyway because unusedmap gets initialized with zeros
+		raf.setLength((1+superBlock.getBlocksTotal())*superBlock.getBlockSize());
+        um.setAvailableForBoth(bpos); // TODO: remove, will always be zero anyway because unusedmap gets initialized with zeros
 		return bpos;
 	}
 

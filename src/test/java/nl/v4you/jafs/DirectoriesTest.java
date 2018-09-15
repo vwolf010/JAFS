@@ -12,7 +12,7 @@ import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class Directories {
+public class DirectoriesTest {
     @Before
     public void doBefore() {
         File f = new File(TEST_ARCHIVE);

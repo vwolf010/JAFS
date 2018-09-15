@@ -2,6 +2,8 @@ package nl.v4you.jafs;
 
 public class Util {
 
+    static final String DUMP_DIR = "c:/data/temp";
+
     static void shortToArray(byte b[], int off, int i) {
         b[off] = (byte)((i>>8) & 0xff);
         b[off+1] = (byte)(i & 0xff);
