@@ -65,10 +65,19 @@ class JafsUnusedMap {
 
 	long getUnusedMapBpos(long bpos) {
 		int n = (int)(bpos/blocksPerUnusedMap);
-		return n*(blocksPerUnusedMap);
+		return n*blocksPerUnusedMap;
 	}
 
 	private long getUnusedBpos(boolean isInode) throws JafsException, IOException {
+        long blocksTotal = superBlock.getBlocksTotal();
+
+        if (!isInode && (vfs.getSuper().getBlocksUsed()==blocksTotal)) {
+            // performance shortcut for data blocks,
+            // if used==total then there are no more data blocks available
+            // handy for situations where no deletes are performed
+            return 0;
+        }
+
 	    int p0mask;
 	    int p1mask;
 	    int p2mask;
@@ -96,7 +105,6 @@ class JafsUnusedMap {
             startAt = startAtData;
         }
 
-		long blocksTotal = superBlock.getBlocksTotal();
 	    long lastUnusedMap = blocksTotal/blocksPerUnusedMap;
 		long curBpos = startAt * blocksPerUnusedMap;
 		for (long unusedMap = startAt; curBpos<blocksTotal; unusedMap++) {
@@ -164,8 +172,10 @@ class JafsUnusedMap {
 						curBpos++;
 					}
 				}
-				if (unusedMap<lastUnusedMap) {
+				if (unusedMap!=lastUnusedMap) {
 					// nothing found? skip this unusedMap next time it gets visited
+                    // but not for the last unusedMap since we need to come back
+                    // to that one in order to find partially used inode blocks
 					block.seekSet(SKIP_MAP_POSITION);
 					b = block.readByte() | SKIP_MAP;
                     if (isInode) {

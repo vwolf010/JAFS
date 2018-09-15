@@ -11,7 +11,7 @@ import java.util.Arrays;
  * 9
  */	
 class JafsInode {
-	static final int INODE_HEADER_SIZE = 9; // type + size
+	static final int INODE_HEADER_SIZE = 1+8; // type + size
 
     static final byte INODE_FILE    = 0x1;
     static final byte INODE_DIR     = 0x2;
@@ -93,34 +93,27 @@ class JafsInode {
                 Util.intToArray(bb, len, ptrs[n]);
                 len += 4;
             }
-            bb[len++] = 0;
-            bb[len++] = 0;
-            bb[len++] = 0;
         }
         iblock.writeBytes(bb, 0, len);
         iblock.writeToDisk();
 	}
 
 	void openInode(long bpos, int ipos) throws JafsException, IOException {
+        this.bpos = bpos;
+        this.ipos = ipos;
 		iblock = vfs.getCacheBlock(bpos);
-		this.bpos = bpos;
-		this.ipos = ipos;
 		iblock.seekSet(ipos*superInodeSize);
-		if (isInlined()) {
-			iblock.readBytes(bb, 0, INODE_HEADER_SIZE);
-		}
-		else {
-			iblock.readBytes(bb, 0, superInodeSize);
-		}
-		int off=0;
-		type = bb[off++] & 0xff;
-		size = Util.arrayToLong(bb, off);
-		off += 8;
-		if (!isInlined()) {
-			for (int n=0; n<ctx.getPtrsPerInode(); n++) {
-				ptrs[n] = Util.arrayToInt(bb, off);
-				off+=4;
-			}
+        type = iblock.readByte();
+        if (isInlined()) {
+            size = iblock.readLong();
+        }
+		else if (!isInlined()) {
+			iblock.readBytes(bb, 0, 8+(ctx.getPtrsPerInode()<<2));
+            size = Util.arrayToLong(bb, 0);
+            for (int off=8, n=0; n<ctx.getPtrsPerInode(); n++) {
+                ptrs[n] = Util.arrayToInt(bb, off);
+                off+=4;
+            }
 		}
 		fpos = 0;
 	}
@@ -153,7 +146,6 @@ class JafsInode {
 			else {
 				if (ipos <0) {
 					ipos = n;
-					inodeCnt++;
 				}
 			}
 		}
@@ -166,14 +158,15 @@ class JafsInode {
 		this.type = type | INODE_INLINED;
 		this.size = 0;
 		flushInode();
-		
+        inodeCnt++;
+
 		if (inodeCnt==1) {
 			vfs.getSuper().incBlocksUsedAndFlush();
             vfs.getUnusedMap().setAvailableForInodeOnly(bpos);
 		}
 		
 		// If we occupy the last entry in this block, adjust the unused map
-		if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
+		if (inodeCnt==ctx.getInodesPerBlock()) {
 			vfs.getUnusedMap().setAvailableForNeither(bpos);
 		}
 	}

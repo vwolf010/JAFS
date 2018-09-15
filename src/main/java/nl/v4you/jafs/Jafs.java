@@ -135,7 +135,6 @@ public class Jafs {
 		}
 		superBlock.incBlocksTotalAndFlush();
 		raf.setLength((1+superBlock.getBlocksTotal())*superBlock.getBlockSize());
-        um.setAvailableForBoth(bpos); // TODO: remove, will always be zero anyway because unusedmap gets initialized with zeros
 		return bpos;
 	}
 
