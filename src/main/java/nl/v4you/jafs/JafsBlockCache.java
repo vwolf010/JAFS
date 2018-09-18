@@ -12,7 +12,7 @@ class CacheEntry {
 }
 
 class JafsBlockCache {
-	static int CACHE_MAX_SIZE = 1000;
+	static int CACHE_MAX_SIZE = 1000; // 3 is the minimum size!
 
 	private Jafs vfs;
 	private Map<Long, CacheEntry> cache = new HashMap<>();
@@ -25,9 +25,12 @@ class JafsBlockCache {
 		mostRight = null;
 		cache.clear();
 	}
-	
-	JafsBlock get(long bpos, JafsBlock block) throws JafsException, IOException {
 
+	boolean isInCache(long bpos) {
+        return cache.containsKey(bpos);
+	}
+
+	JafsBlock get(long bpos, JafsBlock block) throws JafsException, IOException {
 		CacheEntry ce = null;
 
 		if (bpos<0) {
@@ -38,26 +41,23 @@ class JafsBlockCache {
 		if (bpos>=vfs.getSuper().getBlocksTotal()) {
 			throw new JafsException("bpos ("+bpos+") >= blocks total ("+vfs.getSuper().getBlocksTotal()+")");
 		}
-		
+
 		// Check if this block is already in cache
 		if (cache.containsKey(bpos)) {
 			ce = cache.get(bpos);
 			if (block!=null) {
 				throw new JafsException("Cache hit unexpected, block supplied to cache get method");
 			}
-//			if (!ce.block.isSaved) {
-//				throw new JafsException("Retrieving block that has not been saved");
-//			}
 
-			// Remove our entry from the access list
-			CacheEntry l = ce.l;
-			CacheEntry r = ce.r;
+			// Remove this entry from the access list
+            if (ce==mostLeft) mostLeft=ce.r;
+            if (mostLeft!=null) mostLeft.l=null;
 
-			if (l != null) l.r = r;
-			if (r != null) r.l = l;
+            if (ce==mostRight) mostRight=ce.l;
+            if (mostRight!=null) mostRight.r=null;
 
-			if (ce==mostLeft) mostLeft=mostLeft.r;
-			if (ce==mostRight) mostRight=mostRight.l;
+			if (ce.l != null) ce.l.r = ce.r;
+			if (ce.r != null) ce.r.l = ce.l;
 		}
 
 		if (cache.size()>=CACHE_MAX_SIZE) {
@@ -81,12 +81,14 @@ class JafsBlockCache {
 			cache.put(bpos, ce);
 		}
 
-		// Update access list (add to the right)
+		// First entry? Set mostleft
+        if (mostLeft==null) mostLeft=ce;
+
+        // Update access list (add to the right)
 		ce.r = null;
 		ce.l = mostRight;
 		if (mostRight!=null) mostRight.r = ce;
 		mostRight = ce;
-		if (mostLeft==null) mostLeft=ce;
 
 		if (ce.bpos!=bpos) {
 			throw new JafsException("Cached block bpos is not equal to requested bpos");

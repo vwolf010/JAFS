@@ -2,6 +2,7 @@ package nl.v4you.jafs;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -158,4 +159,36 @@ public class ReadWriteBytesTest {
         System.err.println(len+" bytes written");
     }
 
+    @Ignore
+    @Test
+    public void x() throws JafsException, IOException {
+        int blockSize = 256;
+        Jafs jafs = new Jafs("c:/data/ggc/ggc_1024_128_10MB.jafs");
+        JafsFile f = jafs.getFile("/e3/ff/b9/e3/419540539.xml");
+        byte content[] = new byte[256];
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+        jafs.close();
+    }
+
+    @Ignore
+    @Test
+    public void y() throws JafsException, IOException {
+        int blockSize = 256;
+
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize/2, 10L * 1024L * 1024L);
+        JafsFile f = jafs.getFile("/a");
+        byte content[] = new byte[blockSize];
+
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+
+        jos = jafs.getOutputStream(f);
+        jos.write("abcd".getBytes());
+        jos.close();
+
+        jafs.close();
+    }
 }

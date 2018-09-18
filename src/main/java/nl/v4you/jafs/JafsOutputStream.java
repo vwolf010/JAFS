@@ -10,7 +10,6 @@ public class JafsOutputStream extends OutputStream {
 	
 	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
-		//System.err.println(f.getAbsolutePath());
 		if (!f.exists() && !f.createNewFile()) {
 			throw new JafsException("Could not appendNewBlockToArchive "+f.getCanonicalPath());
 		}
@@ -41,8 +40,12 @@ public class JafsOutputStream extends OutputStream {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
 				JafsDir dir = new JafsDir(vfs, f.getEntry(f.getParent()));
-				dir.mkinode(f.getName().getBytes("UTF-8"), JafsInode.INODE_FILE);
-				inode = new JafsInode(vfs, f.getEntry(path));
+				JafsDirEntry entry = f.getEntry(path);
+				if (entry==null) {
+				    throw new JafsException("No entry found for ["+path+"]");
+                }
+				dir.mkinode(entry, JafsInode.INODE_FILE);
+				inode = new JafsInode(vfs, entry);
 			}
 		} catch (JafsException e) {
 			e.printStackTrace();

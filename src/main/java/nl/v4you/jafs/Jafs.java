@@ -119,13 +119,13 @@ public class Jafs {
 		return superBlock;
 	}
 
-	JafsBlock setCacheBlock(long bpos, JafsBlock block) throws JafsException, IOException {
-		return cache.get(bpos, block);
-	}
-	
 	JafsBlock getCacheBlock(long bpos) throws JafsException, IOException {
 		return cache.get(bpos, null);
 	}
+
+	boolean isInCache(long bpos) {
+	    return cache.isInCache(bpos);
+    }
 
 	long appendNewBlockToArchive() throws JafsException, IOException {
 		long bpos = superBlock.getBlocksTotal();

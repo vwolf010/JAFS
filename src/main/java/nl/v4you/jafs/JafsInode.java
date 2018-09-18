@@ -88,7 +88,7 @@ class JafsInode {
         bb[len++] = (byte)type;
         Util.longToArray(bb, len, size);
         len += 8;
-        if (size==0 || !isInlined()) {
+        if (!isInlined()) {
             for (int n=0; n<ctx.getPtrsPerInode(); n++) {
                 Util.intToArray(bb, len, ptrs[n]);
                 len += 4;
@@ -130,7 +130,7 @@ class JafsInode {
 		else {
             // no block could be found, we need to create a new one
             bpos = vfs.appendNewBlockToArchive();
-            iblock = new JafsBlock(vfs, bpos);
+            iblock = vfs.getCacheBlock(bpos);
             iblock.initZeros();
         }
 

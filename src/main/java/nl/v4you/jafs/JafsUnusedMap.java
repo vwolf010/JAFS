@@ -273,10 +273,9 @@ class JafsUnusedMap {
 		superBlock.incBlocksTotal();
 		superBlock.incBlocksUsedAndFlush();
 		vfs.getRaf().setLength((1+superBlock.getBlocksTotal())*superBlock.getBlockSize());
-		JafsBlock block = new JafsBlock(vfs, bpos);
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		block.initZeros();
 		block.writeToDisk();
-        vfs.setCacheBlock(bpos, block);
 	}
 
 	void dumpLastVisited() {
