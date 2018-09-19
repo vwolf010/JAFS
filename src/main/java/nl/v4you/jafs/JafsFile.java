@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 /*
 File f = new File("/");
@@ -25,10 +26,23 @@ public class JafsFile {
 	Jafs vfs;
 	JafsDirEntry entry;	
 	String path;
-	
-	public static final String separator = "/";
-	
-	/* 
+    JafsDirCache dc;
+
+    public static final String separator = "/";
+
+    JafsFile(Jafs vfs, String path) throws JafsException, IOException {
+        construct(vfs, path);
+    }
+
+    JafsFile(Jafs vfs, JafsFile parent, String child) {
+        construct(vfs, parent.getCanonicalPath()+JafsFile.separator +child);
+    }
+
+    JafsFile(Jafs vfs, String parent, String child) {
+        construct(vfs, parent+JafsFile.separator +child);
+    }
+
+	/*
 	 * public 
 	 */
 	public String getName() {
@@ -81,7 +95,7 @@ public class JafsFile {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
 				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-				dir.mkinode(entry, JafsInode.INODE_DIR);
+				dir.mkinode(path, entry, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
 			try {
@@ -121,6 +135,9 @@ public class JafsFile {
 	public boolean delete() throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(path);
 		if (entry!=null) {
+            if (entry.isDirectory()) {
+                dc.remove(getCanonicalPath(path));
+            }
 			if (entry.bpos>0) {
 				if (entry.isDirectory()) {
 					JafsDir dir = new JafsDir(vfs, entry);
@@ -131,8 +148,8 @@ public class JafsFile {
 				JafsInode inode = new JafsInode(vfs, entry.bpos, entry.ipos);
 				inode.free();				
 			}
-			JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-			dir.deleteEntry(entry);
+			JafsDir parentDir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
+			parentDir.deleteEntry(entry);
 			return true;
 		}
 		return false;
@@ -182,36 +199,56 @@ public class JafsFile {
 			path = "/" + path;
 		}
 		this.vfs = vfs;
+		this.dc = vfs.getDirCache();
 		this.path = normalizePath(path);				
 	}
 	
-	
+	JafsDirEntry getRootEntry() throws UnsupportedEncodingException {
+        entry = new JafsDirEntry();
+        entry.parentBpos = vfs.getRootBpos();
+        entry.parentIpos = vfs.getRootIpos();
+        entry.bpos = vfs.getRootBpos();
+        entry.ipos = vfs.getRootIpos();
+        entry.type = JafsInode.INODE_DIR;
+        entry.name = "/".getBytes("UTF-8");
+        return entry;
+    }
+
 	/* 
 	 * default 
-	 */	
-	JafsFile(Jafs vfs, String path) throws JafsException, IOException {
-		construct(vfs, path);
-	}
-	
-	JafsFile(Jafs vfs, JafsFile parent, String child) {
-		construct(vfs, parent.getCanonicalPath()+JafsFile.separator +child);
-	}
-	
-	JafsFile(Jafs vfs, String parent, String child) {
-		construct(vfs, parent+JafsFile.separator +child);
-	}
-	
+	 */
 	JafsDirEntry getEntry(String path) throws JafsException, IOException {
-		JafsDirEntry entry = new JafsDirEntry();
-		entry.parentBpos = vfs.getRootBpos();
-		entry.parentIpos = vfs.getRootIpos();
-		entry.bpos = vfs.getRootBpos();
-		entry.ipos = vfs.getRootIpos();
-		entry.type = JafsInode.INODE_DIR;
-		entry.name = "/".getBytes("UTF-8");
+	    String normPath = getCanonicalPath(path);
+
+        if (normPath.equals("/")) {
+            return getRootEntry();
+        }
+
+        String parts[] = normPath.split("/");
+        int n=parts.length;
+
+        JafsDirEntry entry=null;
+
+        String curPath = path;
+        while (n>0) {
+            entry = dc.get(curPath);
+            if (entry!=null) {
+                break;
+            }
+            curPath = getParent(curPath);
+            n--;
+        }
+
+        if (n==parts.length) {
+            return entry;
+        }
+
+        if (entry==null) {
+            entry = getRootEntry();
+        }
+
 		JafsDir dir = new JafsDir(vfs, entry);
-		String parts[] = getCanonicalPath(path).split("/");
-		for (int n=0; n<parts.length; n++) {
+		for (; n<parts.length; n++) {
 			String part = parts[n];
 			if (part.length()!=0) {
 				entry = dir.getEntry(part.getBytes("UTF-8"));
@@ -221,6 +258,9 @@ public class JafsFile {
 				else {
 					if (n==(parts.length-1)) {
 						// The last part of the path? Then it exists.
+                        if (entry.isDirectory()) {
+                            dc.add(normPath, entry);
+                        }
 						break;
 					}
 					else if (entry.isFile()) {
@@ -244,7 +284,7 @@ public class JafsFile {
 	/*
 	 * private
 	 */	
-	private String normalizePath(String path) {
+	private static String normalizePath(String path) {
 		path = path.replaceAll("//*/", "/"); // replace // with /
 		if (path.length()>1) {
 			// Remove trailing slash except when it is the root slash
@@ -297,7 +337,7 @@ public class JafsFile {
 		return path;
 	}
 		
-	private String getCanonicalPath(String path) {
+	public static String getCanonicalPath(String path) {
 		int len;
 		
 		path = normalizePath(path);
@@ -338,7 +378,7 @@ public class JafsFile {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
 				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-				dir.mkinode(entry, JafsInode.INODE_DIR);
+				dir.mkinode(path, entry, JafsInode.INODE_DIR);
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
 			try {

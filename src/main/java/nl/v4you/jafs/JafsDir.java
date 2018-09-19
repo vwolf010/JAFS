@@ -254,7 +254,7 @@ class JafsDir {
 		createEntry(entry);		
 	}
 
-    void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
+    void mkinode(String path, JafsDirEntry entry, int type) throws JafsException, IOException {
         if (entry==null) {
             throw new JafsException("entry cannot be null");
         }
@@ -272,6 +272,12 @@ class JafsDir {
             inode.seekSet(entry.startPos+1+1);
             inode.writeInt((int)entry.bpos); // block position
             inode.writeShort(entry.ipos); // inode index
+
+            JafsDirEntry tmp = vfs.getDirCache().get(JafsFile.getCanonicalPath(path));
+            if (tmp!=null) {
+                tmp.bpos = entry.bpos;
+                tmp.ipos = entry.ipos;
+            }
         }
     }
 

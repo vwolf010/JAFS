@@ -89,35 +89,38 @@ public class DirectoriesTest {
     public void directoryEntryReuseWorks() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
         JafsFile f;
-        f = vfs.getFile("/aa");
+        f = vfs.getFile("/home");
+        f.mkdir();
+
+        f = vfs.getFile("/home/aa");
         f.createNewFile();
-        f = vfs.getFile("/bb");
+        f = vfs.getFile("/home/bb");
         f.createNewFile();
-        f = vfs.getFile("/cc");
+        f = vfs.getFile("/home/cc");
         f.createNewFile();
 
         // reuse middle entry
-        f = vfs.getFile("/bb");
+        f = vfs.getFile("/home/bb");
         f.delete();
-        f = vfs.getFile("/dd");
+        f = vfs.getFile("/home/dd");
         f.createNewFile();
         assertTrue(f.exists());
 
         // reuse middle last entry
-        f = vfs.getFile("/cc");
+        f = vfs.getFile("/home/cc");
         f.delete();
-        f = vfs.getFile("/ee");
+        f = vfs.getFile("/home/ee");
         f.createNewFile();
         assertTrue(f.exists());
 
         // add to the end
-        f = vfs.getFile("/dd");
+        f = vfs.getFile("/home/dd");
         f.delete();
-        f = vfs.getFile("/fff");
+        f = vfs.getFile("/home/fff");
         f.createNewFile();
         assertTrue(f.exists());
 
-        f = vfs.getFile("/");
+        f = vfs.getFile("/home");
         assertEquals(3, f.list().length);
         assertEquals("aa", f.list()[0]);
         assertEquals("ee", f.list()[1]);

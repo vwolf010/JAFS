@@ -5,7 +5,11 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 public class Jafs {
+    private static int CACHE_BLOCK_MAX = 1000;
+    private static int CACHE_DIR_MAX = 1000;
+
 	private JafsBlockCache cache;
+	private JafsDirCache dirCache;
 	private JafsSuper superBlock;
 	private String fname;
 	private RandomAccessFile raf;		
@@ -123,11 +127,11 @@ public class Jafs {
 		return cache.get(bpos, null);
 	}
 
-	boolean isInCache(long bpos) {
-	    return cache.isInCache(bpos);
+    JafsDirCache getDirCache() {
+        return dirCache;
     }
 
-	long appendNewBlockToArchive() throws JafsException, IOException {
+    long appendNewBlockToArchive() throws JafsException, IOException {
 		long bpos = superBlock.getBlocksTotal();
 		if (bpos==um.getUnusedMapBpos(bpos)) {
 			um.createNewUnusedMap(bpos);
@@ -156,7 +160,8 @@ public class Jafs {
 			superBlock.setInodeSize(inodeSize);
 			superBlock.setMaxFileSize(maxFileSize);
 			superBlock.flush();
-			cache = new JafsBlockCache(this);
+			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
+			dirCache = new JafsDirCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
 			JafsDir.createRootDir(this);
@@ -166,7 +171,8 @@ public class Jafs {
 			superBlock.read();
 			superBlock = new JafsSuper(this, superBlock.getBlockSize()); // reconnect with correct blocksize
 			superBlock.read();
-			cache = new JafsBlockCache(this);
+			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
+            dirCache = new JafsDirCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
 		}

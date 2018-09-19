@@ -44,7 +44,7 @@ public class JafsOutputStream extends OutputStream {
 				if (entry==null) {
 				    throw new JafsException("No entry found for ["+path+"]");
                 }
-				dir.mkinode(entry, JafsInode.INODE_FILE);
+				dir.mkinode(f.path, entry, JafsInode.INODE_FILE);
 				inode = new JafsInode(vfs, entry);
 			}
 		} catch (JafsException e) {

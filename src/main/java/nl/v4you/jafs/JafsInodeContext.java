@@ -2,14 +2,15 @@ package nl.v4you.jafs;
 
 import java.io.IOException;
 
-class JafsINodePtr {
-	int level;
-	long size;
-	long fPosStart;
-	long fPosEnd;
-}
-
 class JafsInodeContext {
+
+    class JafsINodePtr {
+        int level;
+        long size;
+        long fPosStart;
+        long fPosEnd;
+    }
+
 	static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
 	
 	private Jafs vfs;
