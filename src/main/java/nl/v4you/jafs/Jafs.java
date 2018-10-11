@@ -6,10 +6,10 @@ import java.io.RandomAccessFile;
 
 public class Jafs {
     private static int CACHE_BLOCK_MAX = 1000;
-    private static int CACHE_DIR_MAX = 1000;
+    private static int CACHE_DIR_MAX = 10000;
 
 	private JafsBlockCache cache;
-	private JafsDirCache dirCache;
+	private JafsDirEntryCache dirCache;
 	private JafsSuper superBlock;
 	private String fname;
 	private RandomAccessFile raf;		
@@ -128,7 +128,7 @@ public class Jafs {
 		return cache.get(bpos, null);
 	}
 
-    JafsDirCache getDirCache() {
+    JafsDirEntryCache getDirCache() {
         return dirCache;
     }
 
@@ -180,7 +180,7 @@ public class Jafs {
 			superBlock.setMaxFileSize(maxFileSize);
 			superBlock.flush();
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
-			dirCache = new JafsDirCache(CACHE_DIR_MAX);
+			dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
 			JafsDir.createRootDir(this);
@@ -191,7 +191,7 @@ public class Jafs {
 			superBlock = new JafsSuper(this, superBlock.getBlockSize()); // reconnect with correct blocksize
 			superBlock.read();
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
-            dirCache = new JafsDirCache(CACHE_DIR_MAX);
+            dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
 		}

@@ -25,7 +25,7 @@ public class JafsFile {
 	Jafs vfs;
 	String path;
 	String canonicalPath;
-    JafsDirCache dc;
+    JafsDirEntryCache dc;
 
     public static final String separator = "/";
 
@@ -112,8 +112,8 @@ public class JafsFile {
 			JafsDir dir = new JafsDir(vfs, parent);
 			try {
 				dir.createNewEntry(
-						//canonicalPath,
-						getName().getBytes("UTF-8"),
+						canonicalPath,
+						getName().getBytes(Util.UTF8),
 						JafsInode.INODE_FILE,
 						0,
 						0);
@@ -197,10 +197,10 @@ public class JafsFile {
 					JafsDir srcDir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
 					JafsDir dstDir = new JafsDir(vfs, getEntry(target.getParent()));
 					srcDir.deleteEntry(canonicalPath, entry);
-					entry.name = target.getName().getBytes("UTF-8");
+					entry.name = target.getName().getBytes(Util.UTF8);
 					dstDir.createNewEntry(
-							//JafsFile.getCanonicalPath(target.path),
-							target.getName().getBytes("UTF-8"), entry.type, entry.bpos, entry.ipos);
+							target.getCanonicalPath(),
+							target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
 				}
 			}
 		}
@@ -246,7 +246,7 @@ public class JafsFile {
 			String part = parts[n];
 			if (part.length()!=0) {
 			    curPath += "/" + part;
-				entry = dir.getEntry(part.getBytes("UTF-8"));
+				entry = dir.getEntry(part.getBytes(Util.UTF8));
 				if (entry==null) {
 					return null;
 				}
@@ -377,7 +377,12 @@ public class JafsFile {
 			}
 			JafsDir dir = new JafsDir(vfs, entry);
 			try {
-				dir.createNewEntry(getName(path).getBytes("UTF-8"), JafsInode.INODE_DIR, 0, 0);
+				dir.createNewEntry(
+						getCanonicalPath(path),
+						getName(path).getBytes(Util.UTF8),
+						JafsInode.INODE_DIR,
+						0,
+						0);
 				return true;
 			}
 			catch (JafsException e) {

@@ -229,7 +229,7 @@ class JafsDir {
 		inode.writeShort(0);
 	}
 	
-	void createNewEntry(byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
+	void createNewEntry(String canonicalPath, byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
 	    if (name==null || name.length==0) {
 	        throw new JafsException("Name not suppied");
         }
@@ -246,12 +246,13 @@ class JafsDir {
 		}
 
 		JafsDirEntry entry = new JafsDirEntry();
+	    entry.parentBpos = inode.getBpos();
+	    entry.parentIpos = inode.getIpos();
 		entry.bpos = bpos;
 		entry.ipos = ipos;
 		entry.type = type;
 		entry.name = name;
 		createEntry(entry);
-		//vfs.getDirCache().add(canonicalPath, entry);
 	}
 
     void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
@@ -286,7 +287,7 @@ class JafsDir {
 				inode.seekCur(1+4+2);
 				byte name[] = new byte[len];
 				inode.readBytes(name, 0, len);
-				l.add(new String(name, "UTF-8"));
+				l.add(new String(name, Util.UTF8));
 			}
 			inode.seekSet(startPos+entrySize);
 			entrySize = inode.readShort();
