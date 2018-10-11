@@ -302,7 +302,7 @@ class JafsInode {
 		if (b == null) {
 			throw new NullPointerException();
 		}
-        else if (len == 0) {
+        else if (b.length==0 || len == 0) {
             return 0;
         }
 		else if (off < 0 || len < 0 || len > b.length - off) {

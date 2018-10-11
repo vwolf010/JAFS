@@ -199,7 +199,7 @@ public class AppTest {
 
         byte content[] = "1234567890".getBytes();
 
-        f = vfs.getFile("/sub1/sub2/sub3/test123");
+        f = vfs.getFile("/sub1/sub2/sub3/test123.file");
         JafsOutputStream fos = vfs.getOutputStream(f);
         fos.write(content);
 

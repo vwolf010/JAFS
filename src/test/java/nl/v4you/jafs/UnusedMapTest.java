@@ -41,7 +41,7 @@ public class UnusedMapTest {
         byte content[] = new byte[blockSize];
         byte buf[] = new byte[blockSize];
         for (int i=0; i<2*blockSize; i++) {
-            JafsFile f = jafs.getFile("/abc"+i);
+            JafsFile f = jafs.getFile("/abc"+i+".txt");
             JafsOutputStream jos = jafs.getOutputStream(f);
             rnd.nextBytes(content);
             jos.write(content);
@@ -61,7 +61,7 @@ public class UnusedMapTest {
         byte content[] = new byte[blockSize];
         Arrays.fill(content, (byte)0xff); // if this were an inode record, all flags would be set
 
-        JafsFile f = jafs.getFile("/abc1");
+        JafsFile f = jafs.getFile("/abc1.txt");
         JafsOutputStream jos = jafs.getOutputStream(f);
         for (int i=0; i<10; i++) {
             // write ten blocks of ones
@@ -75,7 +75,7 @@ public class UnusedMapTest {
 
         // The inode block of this file should re-use the data block of the file
         // that was previously deleted.
-        f = jafs.getFile("/abc2");
+        f = jafs.getFile("/abc2.txt");
         jos = jafs.getOutputStream(f);
         jos.write(content);
         jos.close();

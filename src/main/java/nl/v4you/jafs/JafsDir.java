@@ -102,7 +102,7 @@ class JafsDir {
 		}
 	}
 
-	void deleteEntry(JafsDirEntry entry) throws JafsException, IOException {
+	void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
 		// Test the next entry to see if we can merge with it
 		// in an attempt to avoid fragmentation of the directory list
 //		inode.seekSet(entry.startPos-2);
@@ -120,7 +120,8 @@ class JafsDir {
 //		}
 
 		// Update the deleted entry
-		inode.seekSet(entry.startPos);
+        vfs.getDirCache().remove(canonicalPath);
+        inode.seekSet(entry.startPos);
 		inode.writeByte(0); // name length
 	}
 	
@@ -139,7 +140,7 @@ class JafsDir {
 		}
 		return cnt;
 	}
-	
+
 	private void createEntry(JafsDirEntry entry) throws JafsException, IOException {
 		if (Util.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
@@ -195,14 +196,16 @@ class JafsDir {
 			// Re-use an existing entry
 			inode.seekSet(newEntryStartPos);
 			// TODO: if we do not need the complete entry, split it into 2 entries here
+            entry.startPos = newEntryStartPos;
 		}
 		else {
 			// Append to the end
+//			inode.seekCur(-2);
+//			if (inode.readInt()!=0) {
+//				throw new JafsException("end of dir list does not contain entrySize=0");
+//			}
 			inode.seekCur(-2);
-			if (inode.readInt()!=0) {
-				throw new JafsException("end of dir list does not contain entrySize=0");
-			}
-			inode.seekCur(-2);
+			entry.startPos = inode.getFpos()+2;
             Util.shortToArray(bb, tLen, 1+1+4+2+nameBuf.length);
             tLen+=2;
 		}
@@ -239,22 +242,19 @@ class JafsDir {
             }
         }
 		if (Util.contains(name, SLASH)) {
-			if ((type & JafsInode.INODE_FILE)!=0) {
-				throw new JafsException("File name ["+name+"] should not contain a slash (/)");
-			}
-			else {
-				throw new JafsException("Dir name ["+name+"] should not contain a slash (/)");
-			}
+			throw new JafsException(((type & JafsInode.INODE_FILE)!=0 ? "File" : "Dir") + " name ["+name+"] should not contain a slash (/)");
 		}
+
 		JafsDirEntry entry = new JafsDirEntry();
 		entry.bpos = bpos;
 		entry.ipos = ipos;
 		entry.type = type;
 		entry.name = name;
-		createEntry(entry);		
+		createEntry(entry);
+		//vfs.getDirCache().add(canonicalPath, entry);
 	}
 
-    void mkinode(String path, JafsDirEntry entry, int type) throws JafsException, IOException {
+    void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
         if (entry==null) {
             throw new JafsException("entry cannot be null");
         }
@@ -272,12 +272,6 @@ class JafsDir {
             inode.seekSet(entry.startPos+1+1);
             inode.writeInt((int)entry.bpos); // block position
             inode.writeShort(entry.ipos); // inode index
-
-            JafsDirEntry tmp = vfs.getDirCache().get(JafsFile.getCanonicalPath(path));
-            if (tmp!=null) {
-                tmp.bpos = entry.bpos;
-                tmp.ipos = entry.ipos;
-            }
         }
     }
 

@@ -15,6 +15,7 @@ public class Jafs {
 	private RandomAccessFile raf;		
 	private JafsInodeContext ctx;
 	private JafsUnusedMap um;
+	private JafsDirEntry rootEntry = null;
 	
 	/*
 	 * Public
@@ -143,9 +144,27 @@ public class Jafs {
 	}
 
 	/*
+	 * Package private
+	 */
+    JafsDirEntry getRootEntry() {
+        if (rootEntry != null) {
+            return rootEntry;
+        } else {
+            rootEntry = new JafsDirEntry();
+            rootEntry.parentBpos = getRootBpos();
+            rootEntry.parentIpos = getRootIpos();
+            rootEntry.bpos = getRootBpos();
+            rootEntry.ipos = getRootIpos();
+            rootEntry.type = JafsInode.INODE_DIR;
+            rootEntry.name = "/".getBytes();
+            return rootEntry;
+        }
+    }
+
+    /*
 	 * Private
 	 */
-	private void open(int blockSize, int inodeSize, long maxFileSize) throws IOException, JafsException {
+    private void open(int blockSize, int inodeSize, long maxFileSize) throws IOException, JafsException {
 		File f = new File(fname);
 		if (!f.exists() && blockSize<0) {
 			throw new JafsException("["+fname+"] does not exist");

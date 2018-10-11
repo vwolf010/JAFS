@@ -57,7 +57,7 @@ public class DirectoriesTest {
     @Test
     public void fileLengthShouldBeZeroAfterCreate() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
-        JafsFile f = vfs.getFile("/abc");
+        JafsFile f = vfs.getFile("/abc.file");
         f.createNewFile();
         assertEquals(0, f.length());
         vfs.close();
@@ -66,9 +66,25 @@ public class DirectoriesTest {
     @Test
     public void localDirIndicatorWorks() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
-        JafsFile f = vfs.getFile("/a");
+        JafsFile f = vfs.getFile("/a.txt");
         f.createNewFile();
-        f = vfs.getFile("/./a");
+        f = vfs.getFile("/./a.txt");
+        assertTrue(f.exists());
+        vfs.close();
+    }
+
+    @Test
+    public void aaa() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/11/11/11/11");
+        f.mkdirs();
+        f = vfs.getFile("/11/11/11/11/a.txt");
+        f.createNewFile();
+        assertTrue(f.exists());
+        f = vfs.getFile("/22/22/22/22");
+        f.mkdirs();
+        f = vfs.getFile("/22/22/22/22/a.txt");
+        f.createNewFile();
         assertTrue(f.exists());
         vfs.close();
     }
@@ -78,10 +94,23 @@ public class DirectoriesTest {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
         JafsFile f = vfs.getFile("/a");
         f.mkdir();
-        f = vfs.getFile("/a/b");
+        f = vfs.getFile("/a/b.txt");
         f.createNewFile();
-        f = vfs.getFile("/a/../a/b");
+        f = vfs.getFile("/a/../a/b.txt");
         assertTrue(f.exists());
+        vfs.close();
+    }
+
+    @Test
+    public void cachEntryRemovedAfterDeletingFile() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/a.txt");
+        JafsOutputStream jos = vfs.getOutputStream(f);
+        jos.write("12345".getBytes());
+        jos.close();
+        assertTrue(f.length()==5);
+        f.delete();
+        assertTrue(f.length()==0);
         vfs.close();
     }
 
@@ -92,39 +121,39 @@ public class DirectoriesTest {
         f = vfs.getFile("/home");
         f.mkdir();
 
-        f = vfs.getFile("/home/aa");
+        f = vfs.getFile("/home/aa.txt");
         f.createNewFile();
-        f = vfs.getFile("/home/bb");
+        f = vfs.getFile("/home/bb.txt");
         f.createNewFile();
-        f = vfs.getFile("/home/cc");
+        f = vfs.getFile("/home/cc.txt");
         f.createNewFile();
 
         // reuse middle entry
-        f = vfs.getFile("/home/bb");
+        f = vfs.getFile("/home/bb.txt");
         f.delete();
-        f = vfs.getFile("/home/dd");
+        f = vfs.getFile("/home/dd.txt");
         f.createNewFile();
         assertTrue(f.exists());
 
         // reuse middle last entry
-        f = vfs.getFile("/home/cc");
+        f = vfs.getFile("/home/cc.txt");
         f.delete();
-        f = vfs.getFile("/home/ee");
+        f = vfs.getFile("/home/ee.txt");
         f.createNewFile();
         assertTrue(f.exists());
 
         // add to the end
-        f = vfs.getFile("/home/dd");
+        f = vfs.getFile("/home/dd.txt");
         f.delete();
-        f = vfs.getFile("/home/fff");
+        f = vfs.getFile("/home/fff.txt");
         f.createNewFile();
         assertTrue(f.exists());
 
         f = vfs.getFile("/home");
         assertEquals(3, f.list().length);
-        assertEquals("aa", f.list()[0]);
-        assertEquals("ee", f.list()[1]);
-        assertEquals("fff", f.list()[2]);
+        assertEquals("aa.txt", f.list()[0]);
+        assertEquals("ee.txt", f.list()[1]);
+        assertEquals("fff.txt", f.list()[2]);
 
         vfs.close();
     }
