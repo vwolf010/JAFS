@@ -17,7 +17,8 @@ public class JafsOutputStream extends OutputStream {
 		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
 		if (entry!=null) {
 			if (entry.bpos>0) {
-				inode = new JafsInode(vfs, entry);
+				inode = new JafsInode(vfs);
+				inode.openInode(entry);
 				if (append) {
 					inode.seekEnd(0);
 				}
@@ -29,25 +30,26 @@ public class JafsOutputStream extends OutputStream {
 	public void flush() throws IOException {
 		super.flush();
 	}
-	
-	@Override
-	public void close() throws IOException {
-		super.close();
-	}
 
 	private void createInodeIfNeeded() throws IOException {
 		try {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
-				JafsDir dir = new JafsDir(vfs, f.getEntry(f.getParent()));
-				JafsDirEntry entry = f.getEntry(path);
-				if (entry==null) {
-				    throw new JafsException("No entry found for ["+path+"]");
+				JafsInode inodeParent = vfs.getInodePool().get();
+				try {
+                    inodeParent.openInode(f.getEntry(f.getParent()));
+                    JafsDir dir = new JafsDir(vfs, inodeParent);
+                    JafsDirEntry entry = f.getEntry(path);
+                    if (entry == null) {
+                        throw new JafsException("No entry found for [" + path + "]");
+                    }
+                    dir.mkinode(entry, JafsInode.INODE_FILE);
+                    inode = new JafsInode(vfs);
+                    inode.openInode(entry);
                 }
-				dir.mkinode(
-						entry,
-						JafsInode.INODE_FILE);
-				inode = new JafsInode(vfs, entry);
+                finally {
+				    vfs.getInodePool().free(inodeParent);
+                }
 			}
 		} catch (JafsException e) {
 			e.printStackTrace();

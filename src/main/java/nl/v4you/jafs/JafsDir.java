@@ -23,14 +23,19 @@ class JafsDir {
 	private byte bb[] = new byte[512];
 	
 	static void createRootDir(Jafs vfs) throws JafsException, IOException {
-		JafsInode inode = new JafsInode(vfs);
-		inode.createInode(JafsInode.INODE_DIR);
-		inode.flushInode();
-		JafsDir dir = new JafsDir(vfs, inode);
-		dir.initDir();
-		vfs.getSuper().setRootDirBpos(inode.getBpos());
-		vfs.getSuper().setRootDirIpos(inode.getIpos());
-		vfs.getSuper().flush();
+        JafsInode rootInode = vfs.getInodePool().get();
+        try {
+            rootInode.createInode(JafsInode.INODE_DIR);
+            rootInode.flushInode();
+            JafsDir dir = new JafsDir(vfs, rootInode);
+            dir.initDir();
+            vfs.getSuper().setRootDirBpos(rootInode.getBpos());
+            vfs.getSuper().setRootDirIpos(rootInode.getIpos());
+            vfs.getSuper().flush();
+        }
+        finally {
+            vfs.getInodePool().free(rootInode);
+        }
 	}
 	
 	JafsDir(Jafs vfs, JafsInode inode) throws JafsException {
@@ -42,16 +47,7 @@ class JafsDir {
 			}
 		}
 	}
-	
-	JafsDir(Jafs vfs, long bpos, int ipos) throws JafsException, IOException {
-		this.vfs = vfs;
-		this.inode = new JafsInode(vfs, bpos, ipos);
-	}
-		
-	JafsDir(Jafs vfs, JafsDirEntry entry) throws JafsException, IOException {
-		this(vfs, entry.bpos, entry.ipos);
-	}
-		
+
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int nameLen = name.length;
 		inode.seekSet(0);
@@ -125,20 +121,19 @@ class JafsDir {
 		inode.writeByte(0); // name length
 	}
 	
-	int countActiveEntries() throws JafsException, IOException {
-		int cnt = 0;
+	boolean hasActiveEntries() throws JafsException, IOException {
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
 			long startPos = inode.getFpos();
 			int len = inode.readByte();
 			if (len>0) {
-				cnt++;
+				return true;
 			}
 			inode.seekSet(startPos+entrySize);
 			entrySize = inode.readShort();
 		}
-		return cnt;
+		return false;
 	}
 
 	private void createEntry(JafsDirEntry entry) throws JafsException, IOException {
@@ -210,7 +205,7 @@ class JafsDir {
             tLen+=2;
 		}
 		bb[tLen++] = (byte)nameBuf.length;
-		bb[tLen++] = entry.type;
+		bb[tLen++] = (byte)entry.type;
         Util.intToArray(bb, tLen, (int)entry.bpos);
 		tLen+=4;
         Util.shortToArray(bb, tLen, entry.ipos);
@@ -229,7 +224,7 @@ class JafsDir {
 		inode.writeShort(0);
 	}
 	
-	void createNewEntry(String canonicalPath, byte name[], byte type, long bpos, int ipos) throws JafsException, IOException {
+	void createNewEntry(String canonicalPath, byte name[], int type, long bpos, int ipos) throws JafsException, IOException {
 	    if (name==null || name.length==0) {
 	        throw new JafsException("Name not suppied");
         }
@@ -253,6 +248,7 @@ class JafsDir {
 		entry.type = type;
 		entry.name = name;
 		createEntry(entry);
+		vfs.getDirCache().add(canonicalPath, entry);
 	}
 
     void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
@@ -260,19 +256,25 @@ class JafsDir {
             throw new JafsException("entry cannot be null");
         }
         else {
-            JafsInode newInode = new JafsInode(vfs);
-            newInode.createInode(type);
-            if ((type & JafsInode.INODE_DIR)!=0) {
-                JafsDir dir = new JafsDir(vfs, newInode);
-                dir.initDir();
+            JafsInode newInode = vfs.getInodePool().get();
+            try {
+                newInode.createInode(type);
+                if ((type & JafsInode.INODE_DIR) != 0) {
+                    JafsDir dir = new JafsDir(vfs, newInode);
+                    dir.initDir();
+                }
+
+                entry.bpos = newInode.getBpos();
+                entry.ipos = newInode.getIpos();
+            }
+            finally {
+                vfs.getInodePool().free(newInode);
             }
 
-            entry.bpos = newInode.getBpos();
-            entry.ipos = newInode.getIpos();
-
             inode.seekSet(entry.startPos+1+1);
-            inode.writeInt((int)entry.bpos); // block position
-            inode.writeShort(entry.ipos); // inode index
+            Util.intToArray(bb, 0, (int)entry.bpos);
+            Util.shortToArray(bb, 4, entry.ipos);
+            inode.writeBytes(bb, 0, 6);
         }
     }
 

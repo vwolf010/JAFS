@@ -282,7 +282,7 @@ class JafsUnusedMap {
         long blockPos = lastVisitedMap*blocksPerUnusedMap;
         File f = new File(Util.DUMP_DIR+"/unused_"+lastVisitedMap+"_block_"+blockPos+".dmp");
         try {
-            vfs.getCacheBlock(blockPos).dumpBlock(f);
+            //vfs.getCacheBlock(blockPos).dumpBlock(f);
         }
         catch(Exception e) {
             System.err.println("unable to dump unusedmap "+lastVisitedMap+" block "+blockPos);

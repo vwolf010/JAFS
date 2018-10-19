@@ -94,8 +94,15 @@ public class JafsFile {
 		if (entry==null || entry.bpos==0) {
 			return 0;
 		}
-		JafsInode inode = new JafsInode(vfs, entry);
-		return inode.size;
+        JafsInode inode = vfs.getInodePool().get();
+		try {
+            inode.openInode(entry);
+            long inodeSize = inode.size;
+            return inodeSize;
+        }
+        finally {
+            vfs.getInodePool().free(inode);
+        }
 	}
 
 	public boolean createNewFile() throws JafsException, IOException {
@@ -104,24 +111,29 @@ public class JafsFile {
 		if (parent!=null) {
 			if (parent.bpos==0) {
 				// Parent exists but has no inode yet, let's create it
-				JafsDir dir = new JafsDir(vfs, parent.parentBpos, parent.parentIpos);
-				dir.mkinode(
-						parent,
-						JafsInode.INODE_DIR);
+                JafsInode inode = vfs.getInodePool().get();
+                try {
+                    inode.openInode(parent.parentBpos, parent.parentIpos);
+                    JafsDir dir = new JafsDir(vfs, inode);
+                    dir.mkinode(parent, JafsInode.INODE_DIR);
+                }
+                finally {
+                    vfs.getInodePool().free(inode);
+                }
 			}
-			JafsDir dir = new JafsDir(vfs, parent);
+			JafsInode inode = vfs.getInodePool().get();
 			try {
-				dir.createNewEntry(
-						canonicalPath,
-						getName().getBytes(Util.UTF8),
-						JafsInode.INODE_FILE,
-						0,
-						0);
-				return true;
-			}
-			catch (JafsException e) {
-				return false;
-			}
+                inode.openInode(parent);
+                JafsDir dir = new JafsDir(vfs, inode);
+                dir.createNewEntry(canonicalPath, getName().getBytes(Util.UTF8), JafsInode.INODE_FILE, 0, 0);
+                return true;
+            }
+            catch (Throwable t) {
+			    return false;
+            }
+            finally {
+                vfs.getInodePool().free(inode);
+            }
 		}
 		return false;
 	}
@@ -142,8 +154,16 @@ public class JafsFile {
 				return new String[0];
 			}
 			else {
-				JafsDir dir = new JafsDir(vfs, entry);
-				return dir.list();
+			    JafsInode inode = vfs.getInodePool().get();
+			    try {
+                    inode.openInode(entry);
+                    JafsDir dir = new JafsDir(vfs, inode);
+                    String lst[] = dir.list();
+                    return lst;
+                }
+                finally {
+                    vfs.getInodePool().free(inode);
+                }
 			}
 		}
 		return new String[0];
@@ -154,16 +174,36 @@ public class JafsFile {
 		if (entry!=null) {
 			if (entry.bpos>0) {
 				if (entry.isDirectory()) {
-					JafsDir dir = new JafsDir(vfs, entry);
-					if (dir.countActiveEntries()>0) {
-						throw new JafsException("directory "+getCanonicalPath()+" not empty");
-					}
+				    JafsInode inode = vfs.getInodePool().get();
+				    try {
+                        inode.openInode(entry);
+                        JafsDir dir = new JafsDir(vfs, inode);
+                        if (dir.hasActiveEntries()) {
+                            throw new JafsException("directory " + getCanonicalPath() + " not empty");
+                        }
+                    }
+                    finally {
+                        vfs.getInodePool().free(inode);
+                    }
 				}
-				JafsInode inode = new JafsInode(vfs, entry.bpos, entry.ipos);
-				inode.free();				
+				JafsInode inode = vfs.getInodePool().get();
+				try {
+                    inode.openInode(entry);
+                    inode.free();
+                }
+                finally {
+                    vfs.getInodePool().free(inode);
+                }
 			}
-			JafsDir parentDir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-			parentDir.deleteEntry(getCanonicalPath(), entry);
+			JafsInode inode = vfs.getInodePool().get();
+			try {
+                inode.openInode(entry.parentBpos, entry.parentIpos);
+                JafsDir parentDir = new JafsDir(vfs, inode);
+                parentDir.deleteEntry(getCanonicalPath(), entry);
+            }
+            finally {
+                vfs.getInodePool().free(inode);
+            }
 			return true;
 		}
 		return false;
@@ -177,13 +217,21 @@ public class JafsFile {
 				return new JafsFile[0];
 			}
 			else {
-				JafsDir dir = new JafsDir(vfs, entry);
-				String l[] = dir.list();
-				JafsFile fl[] = new JafsFile[l.length];
-				for (int n=0; n<fl.length; n++) {
-					fl[n] = new JafsFile(vfs, parent + "/" + l[n]);
-				}
-				return fl;
+			    JafsInode inode = vfs.getInodePool().get();
+			    try {
+                    inode.openInode(entry);
+                    JafsDir dir = new JafsDir(vfs, inode);
+                    String l[] = dir.list();
+                    JafsFile fl[] = new JafsFile[l.length];
+                    for (int n=0; n<fl.length; n++) {
+                        fl[n] = new JafsFile(vfs, parent + "/" + l[n]);
+                    }
+                    return fl;
+                }
+                finally {
+                    vfs.getInodePool().free(inode);
+                }
+
 			}
 		}
 		return new JafsFile[0];
@@ -194,13 +242,23 @@ public class JafsFile {
 			if (!target.exists()) {
 				if (exists(target.getParent())) {
 					JafsDirEntry entry = getEntry(canonicalPath);
-					JafsDir srcDir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-					JafsDir dstDir = new JafsDir(vfs, getEntry(target.getParent()));
-					srcDir.deleteEntry(canonicalPath, entry);
-					entry.name = target.getName().getBytes(Util.UTF8);
-					dstDir.createNewEntry(
-							target.getCanonicalPath(),
-							target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
+					JafsInode inodeSrc = vfs.getInodePool().get();
+                    JafsInode inodeDst = vfs.getInodePool().get();
+					try {
+                        inodeSrc.openInode(entry.parentBpos, entry.parentIpos);
+                        JafsDir srcDir = new JafsDir(vfs, inodeSrc);
+                        inodeDst.openInode(getEntry(target.getParent()));
+                        JafsDir dstDir = new JafsDir(vfs, inodeDst);
+                        srcDir.deleteEntry(canonicalPath, entry);
+                        entry.name = target.getName().getBytes(Util.UTF8);
+                        dstDir.createNewEntry(
+                                target.canonicalPath,
+                                target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
+                    }
+                    finally {
+					    vfs.getInodePool().free(inodeSrc);
+					    vfs.getInodePool().free(inodeDst);
+                    }
 				}
 			}
 		}
@@ -241,37 +299,47 @@ public class JafsFile {
             n=1;
         }
 
-		JafsDir dir = new JafsDir(vfs, entry);
-		for (; n<parts.length; n++) {
-			String part = parts[n];
-			if (part.length()!=0) {
-			    curPath += "/" + part;
-				entry = dir.getEntry(part.getBytes(Util.UTF8));
-				if (entry==null) {
-					return null;
-				}
-				else {
-					if (n==(parts.length-1)) {
-						// The last part of the path? Then it exists.
-                        dc.add(curPath, entry);
-						break;
-					}
-					else if (entry.isFile()) {
-						// Files should always be last part of the path.
-						return null;
-					}
-					else {
-						dc.add(curPath, entry);
-						if (entry.bpos!=0) {
-							dir = new JafsDir(vfs, entry);
-						}
-						else {
-							return null;
-						}
-					}
-				}
-			}
-		}
+        if (entry.bpos==0) {
+            return null;
+        }
+
+        JafsInode inode = vfs.getInodePool().get();
+        try {
+            inode.openInode(entry);
+            JafsDir dir = new JafsDir(vfs, inode);
+            for (; n < parts.length; n++) {
+                String part = parts[n];
+                if (part.length() != 0) {
+                    curPath += "/" + part;
+                    entry = dir.getEntry(part.getBytes(Util.UTF8));
+                    if (entry == null) {
+                        break;
+                    } else {
+                        if (n == (parts.length - 1)) {
+                            // The last part of the path? Then it exists.
+                            dc.add(curPath, entry);
+                            break;
+                        } else if (entry.isFile()) {
+                            // Files should always be last part of the path.
+                            entry = null;
+                            break;
+                        } else {
+                            dc.add(curPath, entry);
+                            if (entry.bpos != 0) {
+                                inode.openInode(entry);
+                                dir = new JafsDir(vfs, inode); // TODO: reuse dir variable
+                            } else {
+                                entry = null;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        finally {
+            vfs.getInodePool().free(inode);
+        }
 		return entry;
 	}
 	
@@ -372,11 +440,20 @@ public class JafsFile {
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
-				JafsDir dir = new JafsDir(vfs, entry.parentBpos, entry.parentIpos);
-				dir.mkinode(entry, JafsInode.INODE_DIR);
+                JafsInode inode = vfs.getInodePool().get();
+                try {
+                    inode.openInode(entry.parentBpos, entry.parentIpos);
+                    JafsDir dir = new JafsDir(vfs, inode);
+                    dir.mkinode(entry, JafsInode.INODE_DIR);
+                }
+                finally {
+                    vfs.getInodePool().free(inode);
+                }
 			}
-			JafsDir dir = new JafsDir(vfs, entry);
+			JafsInode inode = vfs.getInodePool().get();
 			try {
+                inode.openInode(entry);
+                JafsDir dir = new JafsDir(vfs, inode);
 				dir.createNewEntry(
 						getCanonicalPath(path),
 						getName(path).getBytes(Util.UTF8),
@@ -388,6 +465,9 @@ public class JafsFile {
 			catch (JafsException e) {
 				return false;
 			}
+			finally {
+			    vfs.getInodePool().free(inode);
+            }
 		}
 		return false;		
 	}

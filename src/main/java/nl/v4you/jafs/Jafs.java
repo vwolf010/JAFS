@@ -16,6 +16,7 @@ public class Jafs {
 	private JafsInodeContext ctx;
 	private JafsUnusedMap um;
 	private JafsDirEntry rootEntry = null;
+	private JafsInodePool inodePool = null;
 	
 	/*
 	 * Public
@@ -179,6 +180,7 @@ public class Jafs {
 			superBlock.setInodeSize(inodeSize);
 			superBlock.setMaxFileSize(maxFileSize);
 			superBlock.flush();
+			inodePool = new JafsInodePool(this);
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
 			dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
@@ -190,6 +192,7 @@ public class Jafs {
 			superBlock.read();
 			superBlock = new JafsSuper(this, superBlock.getBlockSize()); // reconnect with correct blocksize
 			superBlock.read();
+            inodePool = new JafsInodePool(this);
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
             dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
@@ -201,4 +204,8 @@ public class Jafs {
 		this.fname = fname;
 		open(blockSize, inodeSize, maxFileSize);
 	}
+
+	JafsInodePool getInodePool() {
+        return inodePool;
+    }
 }

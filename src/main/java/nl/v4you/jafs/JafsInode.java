@@ -13,10 +13,9 @@ import java.util.Arrays;
 class JafsInode {
 	static final int INODE_HEADER_SIZE = 1+8; // type + size
 
-    static final byte INODE_FILE    = 0x1;
-    static final byte INODE_DIR     = 0x2;
+    static final int INODE_FILE    = 0x1;
+    static final int INODE_DIR     = 0x2;
 	private static final int INODE_INLINED = 0x4;
-
     private static final int INODE_USED = INODE_DIR | INODE_FILE;
 
 	private Jafs vfs;
@@ -32,7 +31,7 @@ class JafsInode {
 	int superBlockSizeMask;
 	int superInodeSize;
 
-	byte bb[];
+	private byte bb[];
 
 	/* INode header */
 	int type=0;
@@ -46,30 +45,16 @@ class JafsInode {
 		return ipos;
 	}
 
-	void init(Jafs vfs) {
-		this.vfs = vfs;
-		superBlockSize = vfs.getSuper().getBlockSize();
-		superBlockSizeMask = superBlockSize-1;
-		superInodeSize = vfs.getSuper().getInodeSize();
-		ctx = vfs.getINodeContext();
-		ptrs = new long[ctx.getPtrsPerInode()];
-		Arrays.fill(ptrs, 0);
-		maxInlinedSize = superInodeSize-INODE_HEADER_SIZE;
-		bb = new byte[superInodeSize];
-	}
-	
 	JafsInode(Jafs vfs) {
-		init(vfs);
-	}
-	
-	JafsInode(Jafs vfs, JafsDirEntry entry) throws JafsException, IOException {
-		init(vfs);
-		openInode(entry.bpos, entry.ipos);
-	}
-	
-	JafsInode(Jafs vfs, long bpos, int ipos) throws JafsException, IOException {
-		init(vfs);
-		openInode(bpos, ipos);
+        this.vfs = vfs;
+        superBlockSize = vfs.getSuper().getBlockSize();
+        superBlockSizeMask = superBlockSize-1;
+        superInodeSize = vfs.getSuper().getInodeSize();
+        ctx = vfs.getINodeContext();
+        ptrs = new long[ctx.getPtrsPerInode()];
+        Arrays.fill(ptrs, 0);
+        maxInlinedSize = superInodeSize-INODE_HEADER_SIZE;
+        bb = new byte[superInodeSize];
 	}
 
 	long getFpos() {
@@ -118,14 +103,14 @@ class JafsInode {
 		fpos = 0;
 	}
 
+    void openInode(JafsDirEntry entry) throws JafsException, IOException {
+	    openInode(entry.bpos, entry.ipos);
+    }
+
 	void createInode(int type) throws JafsException, IOException {
-		if (bpos!=0) {
-			throw new IllegalStateException("bpos already set");
-		}
         JafsBlock iblock;
         bpos = vfs.getUnusedMap().getUnusedINodeBpos();
         if (bpos!=0) {
-            // will be initialized with zeros by the getUnusedINodeBpos() call if needed
             iblock = vfs.getCacheBlock(bpos);
 		}
 		else {
@@ -151,8 +136,8 @@ class JafsInode {
 			}
 		}
 		if (ipos <0) {
-			iblock.dumpBlock();
-			vfs.getUnusedMap().dumpLastVisited();
+			//iblock.dumpBlock();
+			//vfs.getUnusedMap().dumpLastVisited();
 			throw new JafsException("No free inode found in inode block, bpos:"+bpos);
 		}
 
@@ -249,7 +234,7 @@ class JafsInode {
         else if (len == 0) {
             return;
         }
-        else if ((off < 0) || (len < 0) || (len > b.length-off)) {
+        else if ((off < 0) || (len < 0) || (b.length < off + len)) {
 			throw new IndexOutOfBoundsException();
 		}
 		checkInlinedOverflow(len);
@@ -305,7 +290,7 @@ class JafsInode {
         else if (b.length==0 || len == 0) {
             return 0;
         }
-		else if (off < 0 || len < 0 || len > b.length - off) {
+		else if (off < 0 || len < 0 || b.length < off + len) {
 			throw new IndexOutOfBoundsException();
 		}
 
@@ -316,9 +301,8 @@ class JafsInode {
 			len = (int)(size-fpos);
 		}
 		if (isInlined()) {
-		    int x = (int)(ipos*superInodeSize + INODE_HEADER_SIZE + fpos);
             JafsBlock iblock = vfs.getCacheBlock(bpos);
-            iblock.seekSet(x);
+            iblock.seekSet((int)(ipos*superInodeSize + INODE_HEADER_SIZE + fpos));
             iblock.readBytes(b, off, len);
             fpos+=len;
 		}
@@ -330,7 +314,9 @@ class JafsInode {
                 JafsBlock dum = vfs.getCacheBlock(bpos);
                 dum.seekSet((int)(fpos & superBlockSizeMask));
                 done = dum.bytesLeft();
-                if (todo<done) done=todo;
+                if (todo<done) {
+                	done=todo;
+				}
                 dum.readBytes(b, off, done);
                 todo -= done;
                 off += done;
@@ -355,11 +341,6 @@ class JafsInode {
 		return Util.arrayToInt(bb, 0);
 	}
 
-	void writeInt(int i) throws JafsException, IOException {
-		Util.intToArray(bb, 0, i);
-		writeBytes(bb, 0, 4);
-	}
-	
 	private int iNodesUsedInBlock() throws JafsException, IOException {
 		int cnt = 0;
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {

@@ -7,7 +7,7 @@ class JafsDirEntry {
 	
 	long bpos;
 	int ipos;
-	byte type;
+	int type;
 	byte name[];
 	
 	boolean isFile() {
