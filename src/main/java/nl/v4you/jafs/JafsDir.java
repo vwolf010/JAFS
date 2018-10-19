@@ -24,10 +24,11 @@ class JafsDir {
 	
 	static void createRootDir(Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().get();
+        JafsDir dir = vfs.getDirPool().get();
         try {
             rootInode.createInode(JafsInode.INODE_DIR);
             rootInode.flushInode();
-            JafsDir dir = new JafsDir(vfs, rootInode);
+            dir.setInode(rootInode);
             dir.initDir();
             vfs.getSuper().setRootDirBpos(rootInode.getBpos());
             vfs.getSuper().setRootDirIpos(rootInode.getIpos());
@@ -35,18 +36,22 @@ class JafsDir {
         }
         finally {
             vfs.getInodePool().free(rootInode);
+            vfs.getDirPool().free(dir);
         }
 	}
 	
-	JafsDir(Jafs vfs, JafsInode inode) throws JafsException {
+	JafsDir(Jafs vfs) {
 		this.vfs = vfs;
-		this.inode = inode;
-		if (inode!=null) {
-			if ((inode.type & JafsInode.INODE_DIR)==0) {
-				throw new JafsException("supplied inode is not of type directory");
-			}
-		}
 	}
+
+	void setInode(JafsInode inode) throws JafsException {
+        this.inode = inode;
+        if (inode!=null) {
+            if ((inode.type & JafsInode.INODE_DIR)==0) {
+                throw new JafsException("supplied inode is not of type directory");
+            }
+        }
+    }
 
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int nameLen = name.length;
@@ -257,18 +262,19 @@ class JafsDir {
         }
         else {
             JafsInode newInode = vfs.getInodePool().get();
+            JafsDir dir = vfs.getDirPool().get();
             try {
                 newInode.createInode(type);
                 if ((type & JafsInode.INODE_DIR) != 0) {
-                    JafsDir dir = new JafsDir(vfs, newInode);
+                    dir.setInode(newInode);
                     dir.initDir();
                 }
-
                 entry.bpos = newInode.getBpos();
                 entry.ipos = newInode.getIpos();
             }
             finally {
                 vfs.getInodePool().free(newInode);
+                vfs.getDirPool().free(dir);
             }
 
             inode.seekSet(entry.startPos+1+1);

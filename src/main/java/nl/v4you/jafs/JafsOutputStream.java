@@ -36,9 +36,10 @@ public class JafsOutputStream extends OutputStream {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
 				JafsInode inodeParent = vfs.getInodePool().get();
+                JafsDir dir = vfs.getDirPool().get();
 				try {
                     inodeParent.openInode(f.getEntry(f.getParent()));
-                    JafsDir dir = new JafsDir(vfs, inodeParent);
+                    dir.setInode(inodeParent);
                     JafsDirEntry entry = f.getEntry(path);
                     if (entry == null) {
                         throw new JafsException("No entry found for [" + path + "]");
@@ -49,6 +50,7 @@ public class JafsOutputStream extends OutputStream {
                 }
                 finally {
 				    vfs.getInodePool().free(inodeParent);
+                    vfs.getDirPool().free(dir);
                 }
 			}
 		} catch (JafsException e) {
