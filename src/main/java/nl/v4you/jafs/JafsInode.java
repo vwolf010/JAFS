@@ -228,15 +228,9 @@ class JafsInode {
 	}
 
 	void writeBytes(byte[] b, int off, int len) throws JafsException, IOException {
-		if (b == null) {
-			throw new NullPointerException();
-		}
-        else if (len == 0) {
+        if (len == 0) {
             return;
         }
-        else if ((off < 0) || (len < 0) || (b.length < off + len)) {
-			throw new IndexOutOfBoundsException();
-		}
 		checkInlinedOverflow(len);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
@@ -284,16 +278,9 @@ class JafsInode {
 	}
 	
 	int readBytes(byte[] b, int off, int len) throws JafsException, IOException {
-		if (b == null) {
-			throw new NullPointerException();
-		}
-        else if (b.length==0 || len == 0) {
+        if (b.length==0 || len == 0) {
             return 0;
         }
-		else if (off < 0 || len < 0 || b.length < off + len) {
-			throw new IndexOutOfBoundsException();
-		}
-
 		if (fpos>=size) {
 			return -1;
 		}

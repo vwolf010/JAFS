@@ -71,27 +71,15 @@ class JafsBlock {
 //	}
 
 	int readByte() throws JafsException {
-		if (byteIdx>=blockSize) {
-			throw new JafsException("Trying to read beyond buffer");
-		}
 		return buf[byteIdx++] & 0xff;
 	}
 
 	void writeByte(int b) throws JafsException {
-		if (byteIdx>=blockSize) {
-			throw new JafsException("Trying to write beyond buffer");
-		}
 		buf[byteIdx++] = (byte)(b & 0xff);
 	}
 
 	void readBytes(byte b[], int off, int len) {
-		if (b == null) {
-			throw new NullPointerException();
-		} else if (off < 0 || len < 0 || b.length < off + len) {
-			throw new IndexOutOfBoundsException();
-		} else if (byteIdx+len>blockSize) {
-			throw new IllegalStateException("Trying to read beyond block, byteIdx="+byteIdx+", len="+len+", blockSize="+blockSize);
-		} else if (len == 0) {
+		if (len == 0) {
 			return;
 		}
 		System.arraycopy(buf, byteIdx, b, off, len);
@@ -99,13 +87,7 @@ class JafsBlock {
 	}
 
 	void writeBytes(byte b[], int off, int len) {
-		if (b == null) {
-			throw new NullPointerException();
-		} else if (off < 0 || len < 0 || b.length < off + len) {
-			throw new IndexOutOfBoundsException();
-		} else if (byteIdx+len>blockSize) {
-			throw new IllegalStateException("Trying to write beyond block");
-		} else if (len == 0) {
+		if (len == 0) {
 			return;
 		}
 		System.arraycopy(b, off, buf, byteIdx, len);
@@ -113,9 +95,6 @@ class JafsBlock {
 	}
 		
 	long readInt() throws JafsException {
-		if (byteIdx+4>blockSize) {
-			throw new JafsException("Trying to read beyond buffer");
-		}
 		long i = 0;
 		i |= (buf[byteIdx++] & 0xffL)<<24;
 		i |= (buf[byteIdx++] & 0xffL)<<16;
@@ -125,9 +104,6 @@ class JafsBlock {
 	}
 
 	void writeInt(long l) throws JafsException {
-		if (byteIdx+4>blockSize) {
-			throw new JafsException("Trying to write beyond buffer");
-		}
 		buf[byteIdx++] = (byte)((l >> 24) & 0xffL);
 		buf[byteIdx++] = (byte)((l >> 16) & 0xffL);
 		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
@@ -135,9 +111,6 @@ class JafsBlock {
 	}
 
 	long readLong() throws JafsException {
-		if (byteIdx+8>blockSize) {
-			throw new JafsException("Trying to read beyond buffer");
-		}
 		long l = 0;
 		l |= (buf[byteIdx++] & 0xffL)<<56;
 		l |= (buf[byteIdx++] & 0xffL)<<48;
@@ -147,7 +120,6 @@ class JafsBlock {
 		l |= (buf[byteIdx++] & 0xffL)<<16;
 		l |= (buf[byteIdx++] & 0xffL)<< 8;
 		l |= (buf[byteIdx++] & 0xffL);
-
 		return l;
 	}
 }

@@ -52,7 +52,7 @@ class JafsUnusedMap {
 	private long startAtData = 0;
 	long lastVisitedMap = -1;
 
-	JafsUnusedMap(Jafs vfs) throws JafsException {
+	JafsUnusedMap(Jafs vfs) {
 		this.vfs = vfs;
 		superBlock = vfs.getSuper();
 		blockSize = superBlock.getBlockSize();
@@ -177,9 +177,9 @@ class JafsUnusedMap {
                     // but not for the last unusedMap since we need to come back
                     // to that one in order to find partially used inode blocks
 					block.seekSet(SKIP_MAP_POSITION);
-					b = block.readByte() | SKIP_MAP;
+					b = block.readByte() | SKIP_DATA;
                     if (isInode) {
-                        b |= SKIP_DATA;
+                        b |= SKIP_INODE;
                     }
 					block.seekSet(SKIP_MAP_POSITION);
 					block.writeByte(b);
