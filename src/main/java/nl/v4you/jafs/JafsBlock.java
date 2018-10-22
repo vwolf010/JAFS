@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
 
 class JafsBlock {
@@ -70,11 +71,11 @@ class JafsBlock {
 //		dumpBlock(f);
 //	}
 
-	int readByte() throws JafsException {
+	int readByte() {
 		return buf[byteIdx++] & 0xff;
 	}
 
-	void writeByte(int b) throws JafsException {
+	void writeByte(int b) {
 		buf[byteIdx++] = (byte)(b & 0xff);
 	}
 
@@ -94,7 +95,7 @@ class JafsBlock {
 		byteIdx+=len;
 	}
 		
-	long readInt() throws JafsException {
+	long readInt() {
 		long i = 0;
 		i |= (buf[byteIdx++] & 0xffL)<<24;
 		i |= (buf[byteIdx++] & 0xffL)<<16;
@@ -103,23 +104,23 @@ class JafsBlock {
 		return i;
 	}
 
-	void writeInt(long l) throws JafsException {
+	void writeInt(long l) {
 		buf[byteIdx++] = (byte)((l >> 24) & 0xffL);
 		buf[byteIdx++] = (byte)((l >> 16) & 0xffL);
 		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
 		buf[byteIdx++] = (byte)(l & 0xffL);
 	}
 
-	long readLong() throws JafsException {
-		long l = 0;
-		l |= (buf[byteIdx++] & 0xffL)<<56;
-		l |= (buf[byteIdx++] & 0xffL)<<48;
-		l |= (buf[byteIdx++] & 0xffL)<<40;
-		l |= (buf[byteIdx++] & 0xffL)<<32;
-		l |= (buf[byteIdx++] & 0xffL)<<24;
-		l |= (buf[byteIdx++] & 0xffL)<<16;
-		l |= (buf[byteIdx++] & 0xffL)<< 8;
-		l |= (buf[byteIdx++] & 0xffL);
-		return l;
-	}
+//	long readLong() {
+//		long l = 0;
+//		l |= (buf[byteIdx++] & 0xffL)<<56;
+//		l |= (buf[byteIdx++] & 0xffL)<<48;
+//		l |= (buf[byteIdx++] & 0xffL)<<40;
+//		l |= (buf[byteIdx++] & 0xffL)<<32;
+//		l |= (buf[byteIdx++] & 0xffL)<<24;
+//		l |= (buf[byteIdx++] & 0xffL)<<16;
+//		l |= (buf[byteIdx++] & 0xffL)<< 8;
+//		l |= (buf[byteIdx++] & 0xffL);
+//		return l;
+//	}
 }

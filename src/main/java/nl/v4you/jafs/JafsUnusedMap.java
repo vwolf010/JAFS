@@ -1,6 +1,5 @@
 package nl.v4you.jafs;
 
-import java.io.File;
 import java.io.IOException;
 
 class JafsUnusedMap {
@@ -198,7 +197,7 @@ class JafsUnusedMap {
         return getUnusedBpos(false);
     }
 
-	int getUnusedByte(JafsBlock block, long bpos) throws JafsException, IOException {
+	int getUnusedByte(JafsBlock block, long bpos) throws JafsException {
 		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>2);
 		block.seekSet(unusedIdx);
 		int b = block.readByte();
@@ -278,14 +277,14 @@ class JafsUnusedMap {
 		block.writeToDisk();
 	}
 
-	void dumpLastVisited() {
-        long blockPos = lastVisitedMap*blocksPerUnusedMap;
-        File f = new File(Util.DUMP_DIR+"/unused_"+lastVisitedMap+"_block_"+blockPos+".dmp");
-        try {
-            //vfs.getCacheBlock(blockPos).dumpBlock(f);
-        }
-        catch(Exception e) {
-            System.err.println("unable to dump unusedmap "+lastVisitedMap+" block "+blockPos);
-        }
-    }
+//	void dumpLastVisited() {
+//        long blockPos = lastVisitedMap*blocksPerUnusedMap;
+//        File f = new File(Util.DUMP_DIR+"/unused_"+lastVisitedMap+"_block_"+blockPos+".dmp");
+//        try {
+//            //vfs.getCacheBlock(blockPos).dumpBlock(f);
+//        }
+//        catch(Exception e) {
+//            System.err.println("unable to dump unusedmap "+lastVisitedMap+" block "+blockPos);
+//        }
+//    }
 }

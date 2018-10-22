@@ -116,20 +116,23 @@ class JafsInode {
                 // no block could be found, we need to create a new one
                 bpos = vfs.appendNewBlockToArchive();
                 iblock = vfs.getCacheBlock(bpos);
-                iblock.initZeros();
+                for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
+                    iblock.seekSet((n-1) * superInodeSize);
+                    iblock.writeByte(0);
+                }
             }
 
             // Find the first free inode position in this block
             // and try to find at least 1 other used position
             int inodeCnt = 0;
-            for (int n = 0; n<ctx.getInodesPerBlock(); n++) {
-                iblock.seekSet(n * superInodeSize);
+            for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
+                iblock.seekSet((n-1) * superInodeSize);
                 if ((iblock.readByte() & INODE_USED) != 0) {
                     inodeCnt++;
                 }
                 else if (ipos==-1) {
                     inodeCnt++;
-                    ipos = n;
+                    ipos = (n-1);
                 }
                 if (ipos!=-1 && inodeCnt>1) {
                     break;
@@ -331,9 +334,9 @@ class JafsInode {
 	}
 
 	private boolean iNodesBlockIsUsed() throws JafsException, IOException {
-		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
-            JafsBlock iblock = vfs.getCacheBlock(bpos);
-            iblock.seekSet(n*superInodeSize);
+        JafsBlock iblock = vfs.getCacheBlock(bpos);
+        for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
+            iblock.seekSet((n-1)*superInodeSize);
 			if ((iblock.readByte() & INODE_USED)!=0) {
 				return true;
 			}

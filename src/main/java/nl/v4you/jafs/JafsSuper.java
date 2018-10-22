@@ -110,7 +110,6 @@ class JafsSuper {
 	}
 	
 	void flush() throws JafsException, IOException {
-		rootBlock.initZeros();
 		rootBlock.seekSet(0);
 		buf[0]='J';
 		buf[1]='A';
