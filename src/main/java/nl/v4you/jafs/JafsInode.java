@@ -151,7 +151,7 @@ class JafsInode {
                     vfs.getSuper().incBlocksUsedAndFlush();
                 }
                 if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
-                    // vfs.getINodeContext().getInodesPerBlock() can be 1
+                    // vfs.getINodeContext().getInodesPerBlock() can be 1 so check that first
                     vfs.getUnusedMap().setAvailableForNeither(bpos);
                 }
                 else if (inodeCnt==1) {
@@ -330,16 +330,15 @@ class JafsInode {
 		return Util.arrayToInt(bb1, 0);
 	}
 
-	private int iNodesUsedInBlock() throws JafsException, IOException {
-		int cnt = 0;
+	private boolean iNodesBlockIsUsed() throws JafsException, IOException {
 		for (int n=0; n<ctx.getInodesPerBlock(); n++) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet(n*superInodeSize);
 			if ((iblock.readByte() & INODE_USED)!=0) {
-				cnt++;
+				return true;
 			}
 		}
-		return cnt;
+		return false;
 	}
 	
 	void free() throws JafsException, IOException {
@@ -349,21 +348,20 @@ class JafsInode {
         }
 
         // free the iNode
-        type=0;
         JafsBlock iblock = vfs.getCacheBlock(bpos);
         iblock.seekSet(ipos * superInodeSize);
+        type=0;
         iblock.writeByte(type);
         iblock.writeToDisk();
 
 		// update the unusedMap
-        int iNodesCount = iNodesUsedInBlock();
-		if (iNodesCount==0) {
+		if (iNodesBlockIsUsed()) {
+            vfs.getUnusedMap().setAvailableForInodeOnly(bpos);
+		}
+        else {
             vfs.getUnusedMap().setAvailableForBoth(bpos);
             vfs.getUnusedMap().setStartAtData(bpos);
             vfs.getSuper().decBlocksUsedAndFlush();
-		}
-        else {
-            vfs.getUnusedMap().setAvailableForInodeOnly(bpos);
 		}
         vfs.getUnusedMap().setStartAtInode(bpos);
 	}

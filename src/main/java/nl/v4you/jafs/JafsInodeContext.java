@@ -52,7 +52,6 @@ class JafsInodeContext {
 					dum = vfs.getCacheBlock(ptr);
 				}
 				vfs.getSuper().incBlocksUsedAndFlush();
-				dum.initZeros();
 				dum.writeToDisk();
 				block.seekSet(idx<<2);
 				block.writeInt(ptr);
@@ -66,7 +65,7 @@ class JafsInodeContext {
 		}
 	}
 
-	void createNewBlock(JafsInode inode, int n) throws JafsException, IOException {
+	void createNewBlock(JafsInode inode, int n, boolean init) throws JafsException, IOException {
         JafsBlock block;
         long ptr = vfs.getUnusedMap().getUnusedDataBpos();
         if (ptr!=0) {
@@ -77,7 +76,9 @@ class JafsInodeContext {
 			block = vfs.getCacheBlock(ptr);
         }
 		vfs.getSuper().incBlocksUsedAndFlush();
-        block.initZeros();
+        if (init) {
+			block.initZeros();
+		}
         block.writeToDisk();
         inode.ptrs[n] = ptr;
         inode.flushInode();
@@ -98,14 +99,14 @@ class JafsInodeContext {
 				if (ptrs[n].level==0) {
 					if (inode.ptrs[n]==0) {
 						// Create new data block
-                        createNewBlock(inode, n);
+                        createNewBlock(inode, n, false);
 					}
 					return inode.ptrs[n];
 				}
 				else {
 					if (inode.ptrs[n]==0) {
 						// Create new ptr block
-                        createNewBlock(inode, n);
+                        createNewBlock(inode, n, true);
 					}
 					return getBlkPos(inode.ptrs[n], ptrs[n].fPosStart, ptrs[n].fPosEnd-ptrs[n].fPosStart, fpos);
 				}
@@ -146,13 +147,6 @@ class JafsInodeContext {
 		vfs.getSuper().flush();
 	}
 
-	/**
-	 * Create the inode pointers structure.
-	 * 
-	 * @param blockSize
-	 * @param iNodeSize
-	 * @param maxFileSize
-	 */	
 	JafsInodeContext(Jafs vfs, int blockSize, int iNodeSize, long maxFileSize) {
 		this.vfs = vfs;
 		iNodesPerBlock = blockSize/iNodeSize;
