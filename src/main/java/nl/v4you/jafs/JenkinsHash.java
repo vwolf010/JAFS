@@ -1,7 +1,10 @@
 package nl.v4you.jafs;
 
+import java.util.Arrays;
+
 public class JenkinsHash {
     byte b[];
+    int hash; // defaults to 0
 
     JenkinsHash(byte b[]) {
         this.b = b;
@@ -9,33 +12,25 @@ public class JenkinsHash {
 
     JenkinsHash set(byte b[]) {
         this.b = b;
+        hash=0;
         return this;
     }
 
     @Override
     public boolean equals(Object o) {
         if (o == this) return true;
-        if (!(o instanceof JenkinsHash)) {
-            return false;
-        }
-        JenkinsHash user = (JenkinsHash) o;
-        if (user.b.length!=b.length) {
-            return false;
-        }
-        for (int n=0; n<b.length; n++) {
-            if (user.b[n]!=b[n]) {
-                return false;
-            }
-        }
-        return true;
+        return Arrays.equals(b, ((JenkinsHash) o).b);
     }
 
     @Override
     public int hashCode() {
-        return hash(b);
+        if (hash==0 && b.length>0) {
+            hash = calcHash(b);
+        }
+        return hash;
     }
 
-    static int hash(byte data[]) {
+    static int calcHash(byte data[]) {
         int hash = 0;
 
         for (byte b : data) {
