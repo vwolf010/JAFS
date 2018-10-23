@@ -194,21 +194,20 @@ public class JafsFile {
                         vfs.getDirPool().free(dir);
                     }
 				}
-				JafsInode inode = vfs.getInodePool().get();
-				try {
-                    inode.openInode(entry);
-                    inode.free();
-                }
-                finally {
-                    vfs.getInodePool().free(inode);
-                }
 			}
 			JafsInode inode = vfs.getInodePool().get();
             JafsDir parentDir = vfs.getDirPool().get();
 			try {
+			    // first remove the entry from the directory
                 inode.openInode(entry.parentBpos, entry.parentIpos);
                 parentDir.setInode(inode);
                 parentDir.deleteEntry(getCanonicalPath(), entry);
+
+                // then free the inode, pointerblocks and datablocks
+				if (entry.bpos>0) {
+					inode.openInode(entry);
+					inode.free();
+				}
             }
             finally {
                 vfs.getInodePool().free(inode);
