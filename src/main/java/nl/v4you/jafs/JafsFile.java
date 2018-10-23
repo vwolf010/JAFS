@@ -474,7 +474,7 @@ public class JafsFile {
 			JafsInode inode = vfs.getInodePool().get();
 			try {
                 inode.openInode(entry);
-                JafsDir dir = new JafsDir(vfs);
+                JafsDir dir = vfs.getDirPool().get();
                 try {
                     dir.setInode(inode);
                     dir.createNewEntry(

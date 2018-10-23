@@ -69,6 +69,10 @@ class GenericCache<K, V> {
         }
     }
 
+    int size() {
+        return cache.size();
+    }
+
     private void addEntry(GenericCacheEntry ce) {
         // First entry? Set mostleft
         if (mostLeft==null) mostLeft=ce;
