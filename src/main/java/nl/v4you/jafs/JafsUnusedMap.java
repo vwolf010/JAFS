@@ -223,7 +223,7 @@ class JafsUnusedMap {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 00
         int b = getUnusedByte(block, bpos);
-        b &= (0b11000000 >> ((bpos & 0x3)<<1)) ^ 0xff; // set block data bit to unused (00)
+        b &= ~(0b11000000 >> ((bpos & 0x3)<<1)); // set block data bit to unused (00)
         block.writeByte(b);
 
         // don't skip this map next time we look for a free block
@@ -249,7 +249,7 @@ class JafsUnusedMap {
 		int b = getUnusedByte(block, bpos);
 		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
         if (((b & bitPos) != 0) || ((b & (bitPos>>1)) != 1)) {
-            b &= bitPos ^ 0xff; // set inode bit to unused (0)
+            b &= ~bitPos; // set inode bit to unused (0)
             b |= (bitPos >> 1); // set data bit to used (1)
             block.writeByte(b);
 

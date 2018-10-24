@@ -110,6 +110,7 @@ public class UnusedMapTest {
             }
             jos.close();
         }
+        System.err.println(jafs.stats());
         jafs.close();
 
         g = new File(TEST_ARCHIVE);
@@ -131,7 +132,9 @@ public class UnusedMapTest {
             int old = 0;
             block.seekSet(1);
             block.writeByte(old);
+            block.writeToDisk();
             jafs.getUnusedMap().setAvailableForBoth(4+n);
+            block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
             assertEquals(0, x & mask);
@@ -140,7 +143,9 @@ public class UnusedMapTest {
             old = 0b11111111;
             block.seekSet(1);
             block.writeByte(old);
+            block.writeToDisk();
             jafs.getUnusedMap().setAvailableForBoth(4+n);
+            block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
             assertEquals(0, x & mask);
@@ -149,7 +154,9 @@ public class UnusedMapTest {
             old = 0;
             block.seekSet(1);
             block.writeByte(old);
+            block.writeToDisk();
             jafs.getUnusedMap().setAvailableForInodeOnly(4+n);
+            block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
             assertEquals(0b01000000 >> (n*2), x & mask);
@@ -158,7 +165,9 @@ public class UnusedMapTest {
             old = 0b11111111;
             block.seekSet(1);
             block.writeByte(old);
+            block.writeToDisk();
             jafs.getUnusedMap().setAvailableForInodeOnly(4+n);
+            block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
             assertEquals(0b01000000 >> (n*2), x & mask);
@@ -167,7 +176,9 @@ public class UnusedMapTest {
             old = 0;
             block.seekSet(1);
             block.writeByte(old);
+            block.writeToDisk();
             jafs.getUnusedMap().setAvailableForNeither(4+n);
+            block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
             assertEquals(0b11000000 >> (n*2), x & mask);
@@ -176,7 +187,9 @@ public class UnusedMapTest {
             old = 0b11111111;
             block.seekSet(1);
             block.writeByte(old);
+            block.writeToDisk();
             jafs.getUnusedMap().setAvailableForNeither(4+n);
+            block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
             assertEquals(0b11000000 >> (n*2), x & mask);

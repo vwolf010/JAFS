@@ -24,4 +24,8 @@ public class JafsDirEntryCache {
     void remove(String dirName) {
         gcache.remove(hs.set(dirName.getBytes(Util.UTF8)));
     }
+
+    String stats() {
+        return gcache.stats();
+    }
 }

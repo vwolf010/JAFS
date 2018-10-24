@@ -29,4 +29,8 @@ public class JafsInodePool {
         busy.remove(inode);
         free.add(inode);
     }
+
+    String stats() {
+        return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n";
+    }
 }

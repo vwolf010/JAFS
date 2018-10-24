@@ -194,7 +194,7 @@ class JafsInode {
 			iblock.readBytes(bb2, 0, (int)size);
 		}
 		Arrays.fill(ptrs, 0);
-		type &= INODE_INLINED ^ 0xff; // Turn inlined mode off
+		type &= ~INODE_INLINED; // Turn inlined mode off
 		flushInode();
 		if (size!=0) {
 			long fposMem = fpos;
@@ -250,7 +250,9 @@ class JafsInode {
                 JafsBlock dum = vfs.getCacheBlock(ctx.getBlkPos(this, fpos));
                 dum.seekSet((int)(fpos & superBlockSizeMask));
                 int done = dum.bytesLeft();
-                if (todo<done) done=todo;
+                if (todo<done) {
+                    done=todo;
+                }
                 dum.writeBytes(b, off, done);
                 dum.writeToDisk();
                 fpos += done;

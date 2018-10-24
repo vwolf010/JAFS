@@ -156,6 +156,7 @@ public class ReadWriteBytesTest {
 
         System.err.println("blocksUsed: "+jafs.getSuper().getBlocksUsed());
 
+        System.err.println(jafs.stats());
         jafs.close();
         System.err.println(len+" bytes written");
     }

@@ -471,28 +471,24 @@ public class JafsFile {
                 }
 			}
 			JafsInode inode = vfs.getInodePool().get();
+            JafsDir dir = vfs.getDirPool().get();
 			try {
                 inode.openInode(entry);
-                JafsDir dir = vfs.getDirPool().get();
-                try {
-                    dir.setInode(inode);
-                    dir.createNewEntry(
-                            getCanonicalPath(path),
-                            getName(path).getBytes(Util.UTF8),
-                            JafsInode.INODE_DIR,
-                            0,
-                            0);
-                    return true;
-                }
-                finally {
-                    vfs.getDirPool().free(dir);
-                }
+                dir.setInode(inode);
+                dir.createNewEntry(
+                        getCanonicalPath(path),
+                        getName(path).getBytes(Util.UTF8),
+                        JafsInode.INODE_DIR,
+                        0,
+                        0);
+                return true;
 			}
 			catch (JafsException e) {
 				return false;
 			}
 			finally {
 			    vfs.getInodePool().free(inode);
+                vfs.getDirPool().free(dir);
             }
 		}
 		return false;		

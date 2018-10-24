@@ -1,6 +1,5 @@
 package nl.v4you.jafs;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +18,12 @@ class GenericCache<K, V> {
     private GenericCacheEntry mostLeft;
     private GenericCacheEntry mostRight;
 
+    private long cntAdded = 0;
+    private long cntEvicted = 0;
+    private long cntHit = 0;
+    private long cntMiss = 0;
+    private long cntRemoved = 0;
+
     GenericCache(int size) throws JafsException {
         mostLeft = null;
         mostRight = null;
@@ -28,22 +33,32 @@ class GenericCache<K, V> {
         cacheMaxSize = size;
     }
 
-    void add(K key, V value) {
+    V add(K key, V value) {
+        GenericCacheEntry ce = null;
+        V evicted = null;
+
         if (cache.size()>= cacheMaxSize) {
             // Cache too big? Evict (=delete) the oldest entry
             GenericCacheEntry tmp = mostLeft;
             mostLeft = mostLeft.r;
             mostLeft.l = null;
-            cache.remove(tmp.key);
+            ce = cache.remove(tmp.key);
+            evicted = ce.value;
+            cntEvicted++;
         }
 
         // Create new entry
-        GenericCacheEntry ce = new GenericCacheEntry();
+        if (ce==null) {
+            ce = new GenericCacheEntry();
+        }
         ce.key = key;
         ce.value = value;
         cache.put(key, ce);
 
         addEntry(ce);
+        cntAdded++;
+
+        return evicted;
     }
 
     V get(K key) {
@@ -52,8 +67,10 @@ class GenericCache<K, V> {
         // Check if this block is already in cache
         ce = cache.get(key);
         if (ce==null) {
+            cntMiss++;
             return null;
         }
+        cntHit++;
 
         removeEntry(ce);
         addEntry(ce);
@@ -66,6 +83,7 @@ class GenericCache<K, V> {
         if (ce!=null) {
             removeEntry(cache.get(key));
             cache.remove(ce.key);
+            cntRemoved++;
         }
     }
 
@@ -95,5 +113,15 @@ class GenericCache<K, V> {
             if (ce.l != null) ce.l.r = ce.r;
             if (ce.r != null) ce.r.l = ce.l;
         }
+    }
+
+    String stats() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("   added   : "+cntAdded+"\n");
+        sb.append("   evicted : "+cntEvicted+"\n");
+        sb.append("   removed : "+cntRemoved+"\n");
+        sb.append("   hit     : "+cntHit+"\n");
+        sb.append("   miss    : "+cntMiss+"\n");
+        return sb.toString();
     }
 }

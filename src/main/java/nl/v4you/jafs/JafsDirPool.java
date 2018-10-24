@@ -26,6 +26,11 @@ public class JafsDirPool {
     }
 
     void free(JafsDir dir) {
+        busy.remove(dir);
         free.add(dir);
+    }
+
+    String stats() {
+        return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n";
     }
 }

@@ -30,6 +30,11 @@ class JafsBlock {
 		byteIdx = 0;
 	}
 
+	void setBpos(long bpos) {
+	    this.bpos = bpos;
+        byteIdx = 0;
+    }
+
 	void initZeros() {
 		Arrays.fill(buf, (byte)0);
 	}

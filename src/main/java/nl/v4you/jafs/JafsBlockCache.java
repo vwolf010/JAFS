@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.LinkedList;
 
 class JafsBlockCache {
 
@@ -8,7 +9,10 @@ class JafsBlockCache {
 
 	private GenericCache<Long, JafsBlock> gcache;
 
-	public int cacheMaxSize = 100;
+    private LinkedList<JafsBlock> free = new LinkedList<>();
+    private LinkedList<JafsBlock> busy = new LinkedList<>();
+
+    public int cacheMaxSize = 100;
 
 	JafsBlockCache(Jafs vfs, int size) throws JafsException {
 	    this.vfs = vfs;
@@ -16,7 +20,7 @@ class JafsBlockCache {
 	    gcache = new GenericCache<>(size);
     }
 
-	JafsBlock get(long bpos, JafsBlock block) throws JafsException, IOException {
+	JafsBlock get(long bpos) throws JafsException, IOException {
 		if (bpos<0) {
 			// SuperBlock bpos = -1 and is not cached
 			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
@@ -26,22 +30,32 @@ class JafsBlockCache {
 			throw new JafsException("bpos ("+bpos+") >= blocks total ("+vfs.getSuper().getBlocksTotal()+")");
 		}
 
+//        JafsBlock blk = new JafsBlock(vfs, bpos);
+//        blk.readFromDisk();
+
         JafsBlock blk = gcache.get(bpos);
-		if (block==null) {
-		    if (blk==null) {
+        if (blk==null) {
+            if (free.size()==0) {
                 blk = new JafsBlock(vfs, bpos);
-                blk.readFromDisk();
-                gcache.add(bpos, blk);
+                busy.add(blk);
             }
-        }
-        else {
-            if (blk!=null) {
-                throw new JafsException("Cache hit unexpected, block supplied to cache get method");
+            else {
+                blk = free.removeFirst();
+                blk.setBpos(bpos);
+                busy.add(blk);
             }
-            blk = block;
-            gcache.add(bpos, blk);
+            blk.readFromDisk();
+            JafsBlock evicted = gcache.add(bpos, blk);
+            if (evicted!=null) {
+                busy.remove(evicted);
+                free.add(evicted);
+            }
         }
 
 		return blk;
 	}
+
+	String stats() {
+        return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n" + gcache.stats();
+    }
 }

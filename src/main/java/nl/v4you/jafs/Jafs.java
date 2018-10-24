@@ -127,7 +127,7 @@ public class Jafs {
 	}
 
 	JafsBlock getCacheBlock(long bpos) throws JafsException, IOException {
-		return cache.get(bpos, null);
+		return cache.get(bpos);
 	}
 
     JafsDirEntryCache getDirCache() {
@@ -215,4 +215,13 @@ public class Jafs {
     JafsDirPool getDirPool() {
     	return dirPool;
 	}
+
+	public String stats() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("blockCache:\n"+cache.stats());
+        sb.append("inodePool:\n"+inodePool.stats());
+        sb.append("dirPool:\n"+dirPool.stats());
+        sb.append("dirCache:\n"+dirCache.stats());
+        return sb.toString();
+    }
 }
