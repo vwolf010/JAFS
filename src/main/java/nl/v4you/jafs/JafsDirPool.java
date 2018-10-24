@@ -23,6 +23,7 @@ public class JafsDirPool {
             busy.add(dir);
         }
         return dir;
+//        return new JafsDir(vfs);
     }
 
     void free(JafsDir dir) {

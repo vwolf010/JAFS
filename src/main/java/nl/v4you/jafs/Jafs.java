@@ -4,9 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+// https://www.linuxjournal.com/article/2151
+
 public class Jafs {
-    private static int CACHE_BLOCK_MAX = 1000;
-    private static int CACHE_DIR_MAX = 10000;
+    private static int CACHE_BLOCK_MAX_MB = 50;
+    private static int CACHE_DIR_MAX   = 10*1000*1000;
 
 	private JafsBlockCache cache;
 	private JafsDirEntryCache dirCache;
@@ -183,7 +185,7 @@ public class Jafs {
 			superBlock.flush();
 			inodePool = new JafsInodePool(this);
 			dirPool = new JafsDirPool(this);
-			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
+			cache = new JafsBlockCache(this, (CACHE_BLOCK_MAX_MB*1024*1024)/superBlock.getBlockSize());
 			dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
@@ -196,7 +198,7 @@ public class Jafs {
 			superBlock.read();
             inodePool = new JafsInodePool(this);
 			dirPool = new JafsDirPool(this);
-			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
+			cache = new JafsBlockCache(this, (CACHE_BLOCK_MAX_MB*1024*1024)/superBlock.getBlockSize());
             dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
@@ -223,5 +225,42 @@ public class Jafs {
         sb.append("dirPool:\n"+dirPool.stats());
         sb.append("dirCache:\n"+dirCache.stats());
         return sb.toString();
+    }
+
+    private void adviceBlockSizeScan(Fsize fsize, JafsFile f) throws JafsException, IOException {
+        JafsFile l[] = f.listFiles();
+        for (JafsFile g : l) {
+            if (g.isFile()) {
+                long size = g.length();
+                for (int n=0; n<fsize.sizes.length; n++) {
+                    long bs = fsize.sizes[n];
+                    long mod = (size % bs);
+                    if (mod == 0) {
+                        fsize.onDisk[n] += (size / bs) * bs;
+                    } else {
+                        fsize.onDisk[n] += (size / bs) * bs + bs;
+                    }
+                    fsize.lost[n] += bs - mod;
+                }
+            }
+            else {
+                adviceBlockSizeScan(fsize, g);
+            }
+        }
+    }
+
+    public void adviceBlockSize() throws JafsException, IOException {
+        Fsize fsize = new Fsize();
+        JafsFile f = getFile("/");
+        adviceBlockSizeScan(fsize, f);
+        for (int n=0; n<fsize.sizes.length; n++) {
+            System.err.println("blockSize " + fsize.sizes[n]+": " + fsize.onDisk[n] + " (on disk), " + fsize.lost[n] + " (lost), " + ((fsize.lost[n] * 100.f) / fsize.onDisk[n]) + "%");
+        }
+    }
+
+    class Fsize {
+        long sizes[] = {64, 128, 256, 512, 1024, 2048, 4096};
+        long onDisk[] = new long[sizes.length];
+        long lost[] = new long[sizes.length];
     }
 }

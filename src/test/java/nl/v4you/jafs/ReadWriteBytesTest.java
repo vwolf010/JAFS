@@ -109,6 +109,14 @@ public class ReadWriteBytesTest {
 
     @Ignore
     @Test
+    public void adviceBlockSize() throws JafsException, IOException {
+        Jafs jafs = new Jafs("C:\\data\\ggc\\ggc_testset_1024_128_10MB_new.jafs");
+        jafs.adviceBlockSize();
+        jafs.close();
+    }
+
+        @Ignore
+    @Test
     public void writeReadBytesUsingMaxFileSize() throws JafsException, IOException {
         int blockSize = 128;
         int inodeSize = 64;
@@ -156,7 +164,6 @@ public class ReadWriteBytesTest {
 
         System.err.println("blocksUsed: "+jafs.getSuper().getBlocksUsed());
 
-        System.err.println(jafs.stats());
         jafs.close();
         System.err.println(len+" bytes written");
     }

@@ -23,6 +23,7 @@ public class JafsInodePool {
             busy.add(inode);
         }
         return inode;
+//        return new JafsInode(vfs);
     }
 
     void free(JafsInode inode) {

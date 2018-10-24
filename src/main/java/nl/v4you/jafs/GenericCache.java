@@ -117,11 +117,14 @@ class GenericCache<K, V> {
 
     String stats() {
         StringBuilder sb = new StringBuilder();
+        int used = (int) Math.round((cache.size()*100.0)/cacheMaxSize);
+        sb.append("   size    : "+cache.size()+" ("+used+"%)\n");
         sb.append("   added   : "+cntAdded+"\n");
         sb.append("   evicted : "+cntEvicted+"\n");
         sb.append("   removed : "+cntRemoved+"\n");
-        sb.append("   hit     : "+cntHit+"\n");
-        sb.append("   miss    : "+cntMiss+"\n");
+        int hit = (int)Math.round((cntHit*100.0)/(cntHit+cntMiss));
+        sb.append("   hit     : "+cntHit+" ("+hit+"%)\n");
+        sb.append("   miss    : "+cntMiss+" ("+(100-hit)+"%)\n");
         return sb.toString();
     }
 }

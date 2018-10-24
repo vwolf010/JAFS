@@ -1,7 +1,6 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
-import java.util.LinkedList;
 
 class JafsBlockCache {
 
@@ -9,8 +8,7 @@ class JafsBlockCache {
 
 	private GenericCache<Long, JafsBlock> gcache;
 
-    private LinkedList<JafsBlock> free = new LinkedList<>();
-    private LinkedList<JafsBlock> busy = new LinkedList<>();
+    private JafsBlock free = null;
 
     public int cacheMaxSize = 100;
 
@@ -30,25 +28,20 @@ class JafsBlockCache {
 			throw new JafsException("bpos ("+bpos+") >= blocks total ("+vfs.getSuper().getBlocksTotal()+")");
 		}
 
-//        JafsBlock blk = new JafsBlock(vfs, bpos);
-//        blk.readFromDisk();
-
         JafsBlock blk = gcache.get(bpos);
         if (blk==null) {
-            if (free.size()==0) {
+            if (free==null) {
                 blk = new JafsBlock(vfs, bpos);
-                busy.add(blk);
             }
             else {
-                blk = free.removeFirst();
+                blk = free;
+                free = null;
                 blk.setBpos(bpos);
-                busy.add(blk);
             }
             blk.readFromDisk();
             JafsBlock evicted = gcache.add(bpos, blk);
             if (evicted!=null) {
-                busy.remove(evicted);
-                free.add(evicted);
+                free=evicted;
             }
         }
 
@@ -56,6 +49,6 @@ class JafsBlockCache {
 	}
 
 	String stats() {
-        return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n" + gcache.stats();
+        return gcache.stats();
     }
 }
