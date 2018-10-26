@@ -7,8 +7,8 @@ import java.io.RandomAccessFile;
 // https://www.linuxjournal.com/article/2151
 
 public class Jafs {
-    private static int CACHE_BLOCK_MAX_MB = 50;
-    private static int CACHE_DIR_MAX   = 10*1000*1000;
+    private static int CACHE_BLOCK_MAX = 10*1000;
+    private static int CACHE_DIR_MAX   = 100*1000;
 
 	private JafsBlockCache cache;
 	private JafsDirEntryCache dirCache;
@@ -185,7 +185,7 @@ public class Jafs {
 			superBlock.flush();
 			inodePool = new JafsInodePool(this);
 			dirPool = new JafsDirPool(this);
-			cache = new JafsBlockCache(this, (CACHE_BLOCK_MAX_MB*1024*1024)/superBlock.getBlockSize());
+			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
 			dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
@@ -198,7 +198,7 @@ public class Jafs {
 			superBlock.read();
             inodePool = new JafsInodePool(this);
 			dirPool = new JafsDirPool(this);
-			cache = new JafsBlockCache(this, (CACHE_BLOCK_MAX_MB*1024*1024)/superBlock.getBlockSize());
+			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
             dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 			um = new JafsUnusedMap(this);
 			ctx = new JafsInodeContext(this, superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
