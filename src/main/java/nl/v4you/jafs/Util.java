@@ -80,8 +80,9 @@ public class Util {
                     break;
                 }
             }
-            else {
+            else if (b!=0){
                 b=0;
+                a--;
             }
         }
         return found;

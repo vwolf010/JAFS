@@ -110,7 +110,7 @@ public class ReadWriteBytesTest {
     @Ignore
     @Test
     public void adviceBlockSize() throws JafsException, IOException {
-        Jafs jafs = new Jafs("C:\\data\\ggc\\ggc_testset_1024_128_10MB_new.jafs");
+        Jafs jafs = new Jafs("C:\\data\\ggc\\ggc_1024_128_10MB.jafs");
         jafs.adviceBlockSize();
         jafs.close();
     }
