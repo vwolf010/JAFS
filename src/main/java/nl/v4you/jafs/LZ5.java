@@ -14,7 +14,7 @@ public class LZ5 {
 
     byte bb[] = new byte[100];
 
-    public byte[] decompress(byte in[], int matchLenMin) {
+    public byte[] decompress(byte in[]) {
 
         int pIn=0;
 
@@ -28,14 +28,10 @@ public class LZ5 {
 
         byte out[] = new byte[flen];
 
-        int dsize=0; // decompressed size
+        int bytesLeft=flen; // decompressed size
         int pOut=0;
-        while (true) {
+        while (bytesLeft>0) {
             int token = in[pIn++] & 0xff;
-            if (token==0) {
-                matchLenMin=0;
-                continue;
-            }
             int copyLen = token>>>4;
             if (copyLen==0xf) {
                 int cpyMore = in[pIn++] & 0xff;
@@ -46,16 +42,16 @@ public class LZ5 {
                 }
             }
             if (copyLen!=0) {
-                dsize+=copyLen;
+                bytesLeft-=copyLen;
                 System.arraycopy(in, pIn, out, pOut, copyLen);
                 pIn+=copyLen;
                 pOut+=copyLen;
             }
 
             int offset = in[pIn++] & 0xff;
-            if ((offset&0x80)!=0) {
+            if ((offset & 0x80)!=0) {
                 offset &= 0x7f;
-                offset += (in[pIn++] & 0xff) << 7;
+                offset |= (in[pIn++] & 0xff) << 7;
             }
             int matchLen = token & 0xf;
             if (matchLen==0xf) {
@@ -66,8 +62,11 @@ public class LZ5 {
                     matchLen += cpyMore;
                 }
             }
-            matchLen += matchLenMin;
-            //System.err.println(copyLen+", "+offset+", "+matchLen);
+            matchLen += MATCH_LEN_MIN;
+            if (matchLen>bytesLeft) {
+                matchLen=bytesLeft;
+            }
+            bytesLeft -= matchLen;
             while (matchLen>0) {
                 int cStart = pOut - offset;
                 int len=matchLen;
@@ -77,13 +76,8 @@ public class LZ5 {
                 System.arraycopy(out, cStart, out, pOut, len);
                 pOut += len;
                 matchLen -= len;
-                dsize += len;
-            }
-            if (matchLenMin==0) {
-                break;
             }
         }
-        //System.err.println("dsize="+dsize);
         return out;
     }
 
@@ -128,17 +122,16 @@ public class LZ5 {
 //    }
 
     void compressLZ4(byte strAsBytes[], int litStart, int litLen, int offset, int repLen, ByteArrayOutputStream bos) {
-        //System.err.println("compress(["+new String(Arrays.copyOfRange(strAsBytes, litStart, litStart+litLen))+"], "+offset+", "+repLen+")");
         int token = litLen>=0xf ? 0xf0 : (litLen<<4);
         token |= repLen>=0xf ? 0xf : repLen;
         bos.write(token);
         if ((litLen-0xf)>=0) {
-            int left=litLen-0xf;
-            while (left>=0xff) {
+            int bytesLeft=litLen-0xf;
+            while (bytesLeft>=0xff) {
                 bos.write(0xff);
-                left-=0xff;
+                bytesLeft-=0xff;
             }
-            bos.write(left);
+            bos.write(bytesLeft);
         }
         bos.write(strAsBytes, litStart, litLen);
         if (offset>0x7f) {
@@ -148,13 +141,13 @@ public class LZ5 {
         else {
             bos.write(offset & 0x7f);
         }
-        if ((repLen-0xf)>=0) {
-            int left=repLen-0xf;
-            while (left>=0xff) {
+        int bytesLeft=repLen-0xf;
+        if (bytesLeft>=0) {
+            while (bytesLeft>=0xff) {
                 bos.write(0xff);
-                left-=0xff;
+                bytesLeft-=0xff;
             }
-            bos.write(left);
+            bos.write(bytesLeft);
         }
     }
 
@@ -267,7 +260,7 @@ public class LZ5 {
                     litLen++;
                     prefixLen=0;
                 }
-                else if (prefixLen<=MATCH_LEN_MIN) {
+                else if (prefixLen<MATCH_LEN_MIN) {
                     litLen+=prefixLen;
                     prefixLen=0;
                     ptr--; // retry byte we could not find earlier
@@ -283,13 +276,16 @@ public class LZ5 {
             }
             ptr++;
         }
-        bos.write(0); // signal last sequence coming up
         if (prefixLen==0) {
             compressLZ4(strAsBytes, ptr-prefixLen-litLen, litLen, 0, 0, bos);
         }
         else {
             int back = ptr-prefixLen-lastIndexOfPrefix;
-            compressLZ4(strAsBytes, ptr-prefixLen-litLen, litLen, back, prefixLen, bos);
+            int prefixLenNormalized=prefixLen-MATCH_LEN_MIN;
+            if (prefixLenNormalized<0) {
+                prefixLenNormalized=0;
+            }
+            compressLZ4(strAsBytes, ptr-prefixLen-litLen, litLen, back, prefixLenNormalized, bos);
         }
         return bos.toByteArray();
     }
@@ -297,7 +293,7 @@ public class LZ5 {
     public static void main(String[] args) throws IOException {
         LZ5 lz4 = new LZ5();
 
-        File f = new File("c:/data/ggc/263692965.xml");
+        File f = new File("c:/data/ggc/801042437.xml");
         FileInputStream fis = new FileInputStream(f);
         byte b[] = new byte[(int)f.length()];
         fis.read(b);
@@ -307,16 +303,19 @@ public class LZ5 {
         //byte original[] = "hallo a hallo b hallo c hallo d hallo e hallo".getBytes();
         //byte original[] = " hallo aaaaa hallo hallo".getBytes();
         //byte original[] = " aaaaa bbbbb bbbbb bbbbbc".getBytes();
-        //byte original[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
-        byte original[] = b;
+        byte original[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
+        //byte original[] = b;
 
         //lz4.compressLZ4("a".getBytes(), 1, 39);
         //lz4.compressLZ4("abcbla".getBytes(), 3, 6);
 
         byte compressed[] = lz4.LZ77(original);
+//        FileOutputStream fos = new FileOutputStream(new File("c:/data/out.bin"));
+//        fos.write(compressed);
+//        fos.close();
         System.err.println(original.length+" : "+compressed.length);
-        byte fDecompressed[] = lz4.decompress(compressed, MATCH_LEN_MIN);
-        //System.err.println(new String(fDecompressed, "UTF-8"));
+        byte fDecompressed[] = lz4.decompress(compressed);
+        System.err.println(new String(fDecompressed, "UTF-8"));
 
         System.err.println(Arrays.equals(original, fDecompressed));
 
