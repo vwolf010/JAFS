@@ -245,12 +245,18 @@ public class LZ5 {
                 winStart=0;
             }
             int winLen=ptr-winStart;
-            int lastIndexOf = byteArrayLastIndexOf (
-                    strAsBytes,
-                    winStart,
-                    winLen,
-                    ptr-prefixLen,
-                    prefixLen+1);
+            int lastIndexOf;
+            if (lastIndexOfPrefix!=-1 && strAsBytes[ptr]==strAsBytes[lastIndexOfPrefix+prefixLen]) {
+                lastIndexOf=lastIndexOfPrefix;
+            }
+            else {
+                lastIndexOf = byteArrayLastIndexOf(
+                        strAsBytes,
+                        winStart,
+                        winLen,
+                        ptr - prefixLen,
+                        prefixLen + 1);
+            }
             if (lastIndexOf!=-1) {
                 prefixLen++;
                 lastIndexOfPrefix = lastIndexOf;
@@ -300,10 +306,10 @@ public class LZ5 {
         fis.close();
 
         //byte original[] = "hallo hallo hallo hallo hallo hallo".getBytes();
-        //byte original[] = "hallo a hallo b hallo c hallo d hallo e hallo".getBytes();
+        byte original[] = "hallo a hallo b hallo c hallo d hallo e hallo".getBytes();
         //byte original[] = " hallo aaaaa hallo hallo".getBytes();
         //byte original[] = " aaaaa bbbbb bbbbb bbbbbc".getBytes();
-        byte original[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
+        //byte original[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
         //byte original[] = b;
 
         //lz4.compressLZ4("a".getBytes(), 1, 39);
