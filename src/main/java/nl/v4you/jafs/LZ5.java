@@ -206,19 +206,38 @@ public class LZ5 {
         }
     }
 
-    int byteArrayLastIndexOf(byte a[], int aStart, int aLen, int bStart, int bLen) {
-        int p=0;
-        int bEnd = bStart+bLen-1;
-        for (int n=aStart+aLen-1; n>=aStart; n--) {
-            if (a[n]==a[bEnd-p]) {
-                p++;
-                if (p==bLen) {
-                    return n;
-                }
+    int byteArrayLastIndexOf(byte str[], int strStart, int strLen, int prefixStart, int prefixLen) {
+
+        if (strLen==0) {
+            return -1;
+        }
+        strStart--;
+
+        int matchLen=1;
+        int lastByte = prefixStart+prefixLen-1;
+        int n=strLen;
+
+        startSearchForLastByte:
+        while (true) {
+            // find last byte
+            while (n!=0 && str[strStart + n] != str[lastByte]) {
+                n--;
             }
-            else if (p!=0){
-                p=0;
-                n++;
+            if (n==0)
+                break;
+            n--;
+            // will the rest match?
+            while (n!=0 && matchLen!=prefixLen) {
+                if (str[strStart + n] != str[lastByte - matchLen]) {
+                    n+=matchLen-1;
+                    matchLen=1;
+                    continue startSearchForLastByte;
+                }
+                matchLen++;
+                n--;
+            }
+            if (matchLen == prefixLen) {
+                return strStart + n + 1;
             }
         }
         return -1;
@@ -310,10 +329,11 @@ public class LZ5 {
     }
 
     public static void main(String[] args) throws IOException {
+
         LZ5 lz4 = new LZ5();
 
         //File f = new File("c:/data/ggc/801042437.xml");
-        File f = new File("c:/data/ggc/clustering.txt");
+        File f = new File("c:/data/ggc/clustering.log");
         FileInputStream fis = new FileInputStream(f);
         byte b[] = new byte[(int)f.length()];
         fis.read(b);
@@ -329,7 +349,9 @@ public class LZ5 {
         //lz4.compressLZ4("a".getBytes(), 1, 39);
         //lz4.compressLZ4("abcbla".getBytes(), 3, 6);
 
+        long t1 = System.currentTimeMillis();
         byte compressed[] = lz4.LZ77(original);
+        System.err.println(System.currentTimeMillis()-t1);
 //        FileOutputStream fos = new FileOutputStream(new File("c:/data/out.bin"));
 //        fos.write(compressed);
 //        fos.close();

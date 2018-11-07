@@ -60,31 +60,38 @@ public class Util {
         return i;
     }
 
-    // str2 inside str1 ?
-    static boolean contains(byte str1[], byte str2[]) {
-        int len1 = str1.length;
-        int len2 = str2.length;
-        if (len2==0) {
-            return true;
+    static int byteArrayIndexOf(byte[] source, byte[] target) {
+
+        if (target.length == 0) {
+            return 0;
         }
-        else if (len2>len1) {
-            return false;
-        }
-        boolean found = false;
-        int b=0;
-        for (int a=0; a<len1; a++) {
-            if (str1[a]==str2[b]) {
-                b++;
-                if (b==len2) {
-                    found=true;
-                    break;
+
+        byte first = target[0];
+        int max = (source.length - target.length);
+
+        for (int i = 0; i <= max; i++) {
+            /* Look for first character. */
+            if (source[i] != first) {
+                while (++i <= max && source[i] != first);
+            }
+
+            /* Found first character, now look at the rest of v2 */
+            if (i <= max) {
+                int j = i + 1;
+                int end = j + target.length - 1;
+                for (int k = 1; j < end && source[j]
+                        == target[k]; j++, k++);
+
+                if (j == end) {
+                    /* Found whole string. */
+                    return i;
                 }
             }
-            else if (b!=0){
-                b=0;
-                a--;
-            }
         }
-        return found;
+        return -1;
+    }
+
+    static boolean contains(byte str[], byte subStr[]) {
+        return byteArrayIndexOf(str, subStr) != -1;
     }
 }
