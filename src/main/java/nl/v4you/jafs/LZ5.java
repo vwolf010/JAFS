@@ -240,20 +240,33 @@ public class LZ5 {
 
         int lastIndexOfPrefix=-1;
         while (ptr<strAsBytes.length) {
-            int winStart = ptr-winMax;
-            if (winStart<0) {
-                winStart=0;
-            }
-            int winLen=ptr-winStart;
             int lastIndexOf;
-            if (lastIndexOfPrefix!=-1 && strAsBytes[ptr]==strAsBytes[lastIndexOfPrefix+prefixLen]) {
-                lastIndexOf=lastIndexOfPrefix;
+            if (lastIndexOfPrefix!=-1) {
+                if (strAsBytes[ptr]==strAsBytes[lastIndexOfPrefix+prefixLen]) {
+                    lastIndexOf = lastIndexOfPrefix;
+                }
+                else {
+                    int winStart = ptr-winMax;
+                    if (winStart<0) {
+                        winStart=0;
+                    }
+                    lastIndexOf = byteArrayLastIndexOf(
+                            strAsBytes,
+                            winStart,
+                            (lastIndexOfPrefix + prefixLen + 1) - winStart,
+                            ptr - prefixLen,
+                            prefixLen + 1);
+                }
             }
             else {
+                int winStart = ptr-winMax;
+                if (winStart<0) {
+                    winStart=0;
+                }
                 lastIndexOf = byteArrayLastIndexOf(
                         strAsBytes,
                         winStart,
-                        winLen,
+                        ptr-winStart,
                         ptr - prefixLen,
                         prefixLen + 1);
             }
@@ -299,18 +312,19 @@ public class LZ5 {
     public static void main(String[] args) throws IOException {
         LZ5 lz4 = new LZ5();
 
-        File f = new File("c:/data/ggc/801042437.xml");
+        //File f = new File("c:/data/ggc/801042437.xml");
+        File f = new File("c:/data/ggc/clustering.txt");
         FileInputStream fis = new FileInputStream(f);
         byte b[] = new byte[(int)f.length()];
         fis.read(b);
         fis.close();
 
         //byte original[] = "hallo hallo hallo hallo hallo hallo".getBytes();
-        byte original[] = "hallo a hallo b hallo c hallo d hallo e hallo".getBytes();
+        //byte original[] = "hallo a hallo b hallo c hallo d hallo e hallo".getBytes();
         //byte original[] = " hallo aaaaa hallo hallo".getBytes();
         //byte original[] = " aaaaa bbbbb bbbbb bbbbbc".getBytes();
         //byte original[] = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes();
-        //byte original[] = b;
+        byte original[] = b;
 
         //lz4.compressLZ4("a".getBytes(), 1, 39);
         //lz4.compressLZ4("abcbla".getBytes(), 3, 6);
@@ -321,8 +335,7 @@ public class LZ5 {
 //        fos.close();
         System.err.println(original.length+" : "+compressed.length);
         byte fDecompressed[] = lz4.decompress(compressed);
-        System.err.println(new String(fDecompressed, "UTF-8"));
-
+        //System.err.println(new String(fDecompressed, "UTF-8"));
         System.err.println(Arrays.equals(original, fDecompressed));
 
         //System.out.println(new String(Arrays.copyOf(back, len), Util.UTF8));
