@@ -24,11 +24,11 @@ class GenericCache<K, V> {
     private long cntMiss = 0;
     private long cntRemoved = 0;
 
-    GenericCache(int size) throws JafsException {
+    GenericCache(int size) {
         mostLeft = null;
         mostRight = null;
         if (size<3) {
-            throw new JafsException("Cache size minimum 3");
+            throw new IllegalStateException("Cache size minimum is 3");
         }
         cacheMaxSize = size;
     }
@@ -62,7 +62,7 @@ class GenericCache<K, V> {
     }
 
     V get(K key) {
-        GenericCacheEntry ce = null;
+        GenericCacheEntry ce;
 
         // Check if this block is already in cache
         ce = cache.get(key);

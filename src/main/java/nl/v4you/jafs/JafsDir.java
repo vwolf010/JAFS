@@ -132,7 +132,7 @@ class JafsDir {
 		while (entrySize!=0) {
 			long startPos = inode.getFpos();
 			int len = inode.readByte();
-			if (len>0) {
+			if (len!=0) {
 				return true;
 			}
 			inode.seekSet(startPos+entrySize);
@@ -291,7 +291,7 @@ class JafsDir {
 		while (entrySize!=0) {
 			long startPos = inode.getFpos();
 			int len = inode.readByte();
-			if (len>0) {
+			if (len!=0) {
 				inode.seekCur(1+4+2);
 				byte name[] = new byte[len];
 				inode.readBytes(name, 0, len);

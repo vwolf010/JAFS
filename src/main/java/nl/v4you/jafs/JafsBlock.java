@@ -115,17 +115,4 @@ class JafsBlock {
 		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
 		buf[byteIdx++] = (byte)(l & 0xffL);
 	}
-
-//	long readLong() {
-//		long l = 0;
-//		l |= (buf[byteIdx++] & 0xffL)<<56;
-//		l |= (buf[byteIdx++] & 0xffL)<<48;
-//		l |= (buf[byteIdx++] & 0xffL)<<40;
-//		l |= (buf[byteIdx++] & 0xffL)<<32;
-//		l |= (buf[byteIdx++] & 0xffL)<<24;
-//		l |= (buf[byteIdx++] & 0xffL)<<16;
-//		l |= (buf[byteIdx++] & 0xffL)<< 8;
-//		l |= (buf[byteIdx++] & 0xffL);
-//		return l;
-//	}
 }

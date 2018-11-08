@@ -73,7 +73,8 @@ class JafsInode {
         Util.longToArray(bb1, len, size);
         len += 8;
         if (!isInlined()) {
-            for (int n=0; n<ctx.getPtrsPerInode(); n++) {
+        	int ptrsPerInode = ctx.getPtrsPerInode();
+            for (int n=0; n<ptrsPerInode; n++) {
                 Util.intToArray(bb1, len, ptrs[n]);
                 len += 4;
             }
@@ -92,7 +93,8 @@ class JafsInode {
 		size = Util.arrayToLong(bb1, 1);
 		if (!isInlined()) {
 			iblock.readBytes(bb1, 0, ctx.getPtrsPerInode()<<2);
-            for (int off=0, n=0; n<ctx.getPtrsPerInode(); n++) {
+            int ptrsPerInode = ctx.getPtrsPerInode();
+            for (int off=0, n=0; n<ptrsPerInode; n++) {
                 ptrs[n] = Util.arrayToInt(bb1, off);
                 off+=4;
             }
@@ -112,7 +114,8 @@ class JafsInode {
             bpos = vfs.getUnusedMap().getUnusedINodeBpos();
             if (bpos != 0) {
                 iblock = vfs.getCacheBlock(bpos);
-            } else {
+            }
+            else {
                 // no block could be found, we need to create a new one
                 bpos = vfs.appendNewBlockToArchive();
                 iblock = vfs.getCacheBlock(bpos);
@@ -154,7 +157,7 @@ class JafsInode {
                     vfs.getSuper().incBlocksUsedAndFlush();
                 }
                 if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
-                    // vfs.getINodeContext().getInodesPerBlock() can be 1 so check that first
+                    // vfs.getINodeContext().getInodesPerBlock() could be 1 so check that first
                     vfs.getUnusedMap().setAvailableForNeither(bpos);
                 }
                 else if (inodeCnt==1) {
