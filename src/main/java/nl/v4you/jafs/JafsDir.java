@@ -5,7 +5,7 @@ import java.util.LinkedList;
 
 /*
  * <ushort: entry size>
- * <byte: filename length>
+ * <byte: filename length> if bit 0x80 is set, the next byte contains 8 more bits
  * <byte: type> (f=file, d=directory)
  * <uint: inode block> (must be 0 if not used)
  * <ushort: inode ipos>
@@ -20,7 +20,9 @@ class JafsDir {
 	Jafs vfs;
 	JafsInode inode;
 
-	private byte bb[] = new byte[512];
+	private static int BB_LEN = 512;
+	private static int MAX_FILE_NAME_LENGTH = 0x7FFF;
+	private byte bb[] = new byte[BB_LEN];
 	
 	static void createRootDir(Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().get();
@@ -60,17 +62,23 @@ class JafsDir {
 		while (entrySize!=0) {
 			long startPos = inode.getFpos();
 			int curLen = inode.readByte();
-			if (curLen==nameLen) {
-				inode.seekCur(1+4+2);
-                inode.readBytes(bb, 0, curLen);
-				int n=0;
-				while ((n<nameLen) && (bb[n]==name[n])) {
-					n++;
-				}
-				if (n==nameLen) {
-					return startPos;
-				}
-			}
+			if (curLen!=0) {
+			    if ((curLen & 0x80) != 0) {
+			        curLen &= 0x7f;
+			        curLen |= inode.readByte() << 7;
+                }
+                if (curLen == nameLen) {
+                    inode.seekCur(1 + 4 + 2);
+                    inode.readBytes(bb, 0, curLen);
+                    int n = 0;
+                    while ((n < nameLen) && (bb[n] == name[n])) {
+                        n++;
+                    }
+                    if (n == nameLen) {
+                        return startPos;
+                    }
+                }
+            }
 			inode.seekSet(startPos+entrySize);
 			entrySize = inode.readShort();
 		}
@@ -166,17 +174,23 @@ class JafsDir {
 			long startPos = inode.getFpos();
 
 			int curLength = inode.readByte();
-			if (curLength==nameLen) {
-				inode.seekCur(1+4+2);
-				inode.readBytes(bb, 0, curLength);
-				int n=0;
-				while ((n<curLength) && (bb[n]==nameBuf[n])) {
-					n++;
-				}
-				if (n==curLength) {
-					throw new JafsException("Name ["+entry.name+"] already exists");
-				}
-			}
+			if (curLength!=0) {
+			    if ((curLength & 0x80) != 0) {
+			        curLength &= 0x7f;
+			        curLength |= inode.readByte() << 7;
+                }
+                if (curLength == nameLen) {
+                    inode.seekCur(1 + 4 + 2);
+                    inode.readBytes(bb, 0, curLength);
+                    int n = 0;
+                    while ((n < curLength) && (bb[n] == nameBuf[n])) {
+                        n++;
+                    }
+                    if (n == curLength) {
+                        throw new JafsException("Name [" + entry.name + "] already exists");
+                    }
+                }
+            }
 
 			int spaceForName = entrySize-1-1-4-2;
 			if ((curLength==0) && nameLen<=spaceForName && spaceForName<newEntrySpaceForName) {
@@ -209,14 +223,27 @@ class JafsDir {
             Util.shortToArray(bb, tLen, 1+1+4+2+nameBuf.length);
             tLen+=2;
 		}
-		bb[tLen++] = (byte)nameBuf.length;
+		if (nameBuf.length<0x80) {
+            bb[tLen++] = (byte)nameBuf.length;
+        }
+        else {
+            bb[tLen++] = (byte)(0x80 | (nameBuf.length & 0x7f));
+            bb[tLen++] = (byte)((nameBuf.length>>>7) & 0xff);
+        }
 		bb[tLen++] = (byte)entry.type;
         Util.intToArray(bb, tLen, (int)entry.bpos);
 		tLen+=4;
         Util.shortToArray(bb, tLen, entry.ipos);
         tLen+=2;
-        System.arraycopy(nameBuf, 0, bb, tLen, nameBuf.length);
-        tLen += nameBuf.length;
+        if (nameBuf.length<256) {
+            System.arraycopy(nameBuf, 0, bb, tLen, nameBuf.length);
+            tLen += nameBuf.length;
+        }
+        else {
+            inode.writeBytes(bb, 0, tLen);
+            tLen=0;
+            inode.writeBytes(nameBuf, 0, nameBuf.length);
+        }
 		if (newEntryStartPos==0) {
 			Util.shortToArray(bb, tLen, 0);
 			tLen+=2;
@@ -232,6 +259,9 @@ class JafsDir {
 	void createNewEntry(String canonicalPath, byte name[], int type, long bpos, int ipos) throws JafsException, IOException {
 	    if (name==null || name.length==0) {
 	        throw new JafsException("Name not suppied");
+        }
+        if (name.length>MAX_FILE_NAME_LENGTH) {
+	        throw new JafsException("File name cannot be longer than "+MAX_FILE_NAME_LENGTH+" bytes in UTF-8");
         }
         if (name[0]=='.') {
 	        if (name.length==1) {

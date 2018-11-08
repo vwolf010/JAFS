@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
@@ -111,6 +112,20 @@ public class DirectoriesTest {
         assertTrue(f.length()==5);
         f.delete();
         assertTrue(f.length()==0);
+        vfs.close();
+    }
+
+    @Test
+    public void veryLongDirectoryNameSupported() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        byte longFileName[] = new byte[512];
+        Arrays.fill(longFileName, (byte)65);
+
+        JafsFile f = vfs.getFile("/"+new String(longFileName));
+        JafsOutputStream jos = vfs.getOutputStream(f);
+        jos.write("12345".getBytes());
+        jos.close();
+        assertTrue(f.length()==5);
         vfs.close();
     }
 
