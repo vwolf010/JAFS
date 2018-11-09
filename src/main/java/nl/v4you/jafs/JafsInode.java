@@ -25,6 +25,7 @@ class JafsInode {
 	private long fpos=0; // Position of the file pointer
 	long ptrs[];
 
+    long superMaxFileSize;
 	int superBlockSize;
 	int superBlockSizeMask;
 	int superInodeSize;
@@ -46,6 +47,7 @@ class JafsInode {
 
 	JafsInode(Jafs vfs) {
         this.vfs = vfs;
+        superMaxFileSize = vfs.getSuper().getMaxFileSize();
         superBlockSize = vfs.getSuper().getBlockSize();
         superBlockSizeMask = superBlockSize-1;
         superInodeSize = vfs.getSuper().getInodeSize();
@@ -214,6 +216,9 @@ class JafsInode {
 	}
 
 	void writeByte(int b) throws JafsException, IOException {
+	    if ((fpos+1)>=superMaxFileSize) {
+	        throw new IllegalStateException("exceeding maximum file size");
+        }
 		checkInlinedOverflow(1);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
@@ -239,7 +244,10 @@ class JafsInode {
         if (len == 0) {
             return;
         }
-		checkInlinedOverflow(len);
+        if ((fpos+len)>=superMaxFileSize) {
+            throw new IllegalStateException("exceeding maximum file size");
+        }
+        checkInlinedOverflow(len);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));

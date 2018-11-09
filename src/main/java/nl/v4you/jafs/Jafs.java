@@ -42,7 +42,7 @@ public class Jafs {
     }
 	
 	public Jafs(String fname, int blockSize, int inodeSize, long maxFileSize) throws JafsException, IOException {
-		if (!isSupportedSize(blockSize, 128, 8192)) {
+		if (!isSupportedSize(blockSize, 64, 8192)) {
 			throw new JafsException("block size "+blockSize+" not supported");
 		}
         if (!isSupportedSize(inodeSize, 32, 8192)) {
@@ -55,7 +55,6 @@ public class Jafs {
 			maxFileSize = 0;
 		}
 		if (maxFileSize>JafsInodeContext.MAX_FILE_SIZE) {
-			//TODO: maxFileSize should not apply to files that are directories
 			maxFileSize = JafsInodeContext.MAX_FILE_SIZE;
 		}
 		init(fname, blockSize, inodeSize, maxFileSize);

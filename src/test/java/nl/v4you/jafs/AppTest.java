@@ -30,6 +30,8 @@ public class AppTest {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
+                { 64, 32, 32*1024 },
+                { 64, 32, 32*1024 },
                 { 128, 128, 1024*1024*1024 },
                 { 128, 64, 1024*1024*1024 },
                 { 256, 256, 1024*1024*1024 },
