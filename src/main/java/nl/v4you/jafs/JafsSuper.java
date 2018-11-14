@@ -95,7 +95,7 @@ class JafsSuper {
 	void setMaxFileSize(long maxFileSize) {
 		this.maxFileSize = maxFileSize;
 	}
-		
+
 	void read() throws JafsException, IOException {
 		rootBlock.seekSet(0);
 		rootBlock.readFromDisk();

@@ -5,8 +5,8 @@ import java.util.Arrays;
 
 /*
  * An inode header is structured as follows:
- * 1  type + hidden + link + inlined
- * 8  long file size, is 0 for directories
+ * 1 byte  : type | hidden | link | inlined
+ * 8 bytes : long file size, is 0 for directories
  */
 class JafsInode {
 	static final int INODE_HEADER_SIZE = 1+8; // type + size
@@ -25,7 +25,7 @@ class JafsInode {
 	private long fpos=0; // Position of the file pointer
 	long ptrs[];
 
-    long superMaxFileSize;
+    long maxFileSizeReal;
 	int superBlockSize;
 	int superBlockSizeMask;
 	int superInodeSize;
@@ -47,11 +47,11 @@ class JafsInode {
 
 	JafsInode(Jafs vfs) {
         this.vfs = vfs;
-        superMaxFileSize = vfs.getSuper().getMaxFileSize();
         superBlockSize = vfs.getSuper().getBlockSize();
         superBlockSizeMask = superBlockSize-1;
         superInodeSize = vfs.getSuper().getInodeSize();
         ctx = vfs.getINodeContext();
+        maxFileSizeReal = ctx.maxFileSizeReal;
         ptrs = new long[ctx.getPtrsPerInode()];
         maxInlinedSize = superInodeSize-INODE_HEADER_SIZE;
         bb1 = new byte[superInodeSize];
@@ -216,7 +216,7 @@ class JafsInode {
 	}
 
 	void writeByte(int b) throws JafsException, IOException {
-	    if ((fpos+1)>=superMaxFileSize) {
+	    if ((fpos+1)>=maxFileSizeReal) {
 	        throw new IllegalStateException("exceeding maximum file size");
         }
 		checkInlinedOverflow(1);
@@ -244,7 +244,7 @@ class JafsInode {
         if (len == 0) {
             return;
         }
-        if ((fpos+len)>=superMaxFileSize) {
+        if ((fpos+len)>=maxFileSizeReal) {
             throw new IllegalStateException("exceeding maximum file size");
         }
         checkInlinedOverflow(len);

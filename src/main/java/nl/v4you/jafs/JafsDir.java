@@ -166,7 +166,7 @@ class JafsDir {
 		 * Find smallest space to store entry
 		 */
 		long newEntryStartPos = 0;
-		int newEntrySpaceForName = 1000; // way above maximum dir entry name length of 255
+		int newEntrySpaceForName = Integer.MAX_VALUE;
 
 		inode.seekSet(0);
 		int entrySize = inode.readShort();

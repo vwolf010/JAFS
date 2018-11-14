@@ -7,6 +7,7 @@ import java.io.RandomAccessFile;
 // https://www.linuxjournal.com/article/2151
 
 public class Jafs {
+
     private static int CACHE_BLOCK_MAX = 10*1000;
     private static int CACHE_DIR_MAX   = 100*1000;
 
@@ -45,7 +46,7 @@ public class Jafs {
 		if (!isSupportedSize(blockSize, 64, 8192)) {
 			throw new JafsException("block size "+blockSize+" not supported");
 		}
-        if (!isSupportedSize(inodeSize, 32, 8192)) {
+        if (!isSupportedSize(inodeSize, 16, 8192)) {
             throw new JafsException("inode size "+inodeSize+" not supported");
         }
 		if (inodeSize>blockSize) {
