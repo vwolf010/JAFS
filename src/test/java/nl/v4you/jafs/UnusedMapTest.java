@@ -85,6 +85,7 @@ public class UnusedMapTest {
 
     @Test
     public void fileSizeStable() throws JafsException, IOException {
+
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 64, 1024 * 1024);
         byte content[] = new byte[blockSize];

@@ -142,9 +142,6 @@ class JafsInodeContext {
 				free(inode.ptrs[n], ptrs[n].level);
 			}
 		}
-
-        // persist the blocksUsed counter
-		vfs.getSuper().flush();
 	}
 
 	JafsInodeContext(Jafs vfs, int blockSize, int iNodeSize, long maxFileSize) {

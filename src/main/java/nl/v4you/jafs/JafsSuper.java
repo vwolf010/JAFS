@@ -17,6 +17,8 @@ class JafsSuper {
 
 	byte buf[] = new byte[64];
 
+	boolean needsPersist = false;
+
 	JafsSuper(Jafs vfs, int blockSize) throws JafsException {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
@@ -53,7 +55,8 @@ class JafsSuper {
 	
 	void incBlocksTotalAndFlush() throws JafsException, IOException {
 		blocksTotal++;
-		flush();
+		//flushIfNeeded();
+		needsPersist=true;
 	}
 
 	void incBlocksUsedAndFlush() throws JafsException, IOException {
@@ -61,7 +64,8 @@ class JafsSuper {
 		if (blocksUsed>blocksTotal) {
 			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
 		}
-		flush();
+		//flushIfNeeded();
+		needsPersist=true;
 	}
 
 	void decBlocksUsed() {
@@ -73,7 +77,8 @@ class JafsSuper {
 
 	void decBlocksUsedAndFlush() throws JafsException, IOException {
 		decBlocksUsed();
-		flush();
+		//flushIfNeeded();
+		needsPersist=true;
 	}
 			
 	int getBlockSize() {
@@ -109,21 +114,24 @@ class JafsSuper {
 		blocksUsed =  Util.arrayToInt(buf, 30);
 	}
 	
-	void flush() throws JafsException, IOException {
-		rootBlock.seekSet(0);
-		buf[0]='J';
-		buf[1]='A';
-		buf[2]='F';
-		buf[3]='S';
-		Util.shortToArray(buf, 4, VERSION);
-		Util.intToArray(buf,  6, blockSize);
-		Util.intToArray(buf, 10, inodeSize);
-		Util.intToArray(buf, 14, maxFileSize);
-		Util.intToArray(buf, 18, rootDirBPos);
-		Util.intToArray(buf, 22, rootDirIdx);
-		Util.intToArray(buf, 26, blocksTotal);
-		Util.intToArray(buf, 30, blocksUsed);
-		rootBlock.writeBytes(buf, 0, 34);
-		rootBlock.writeToDisk();
+	void flushIfNeeded() throws JafsException, IOException {
+		if (needsPersist) {
+			rootBlock.seekSet(0);
+			buf[0] = 'J';
+			buf[1] = 'A';
+			buf[2] = 'F';
+			buf[3] = 'S';
+			Util.shortToArray(buf, 4, VERSION);
+			Util.intToArray(buf, 6, blockSize);
+			Util.intToArray(buf, 10, inodeSize);
+			Util.intToArray(buf, 14, maxFileSize);
+			Util.intToArray(buf, 18, rootDirBPos);
+			Util.intToArray(buf, 22, rootDirIdx);
+			Util.intToArray(buf, 26, blocksTotal);
+			Util.intToArray(buf, 30, blocksUsed);
+			rootBlock.writeBytes(buf, 0, 34);
+			rootBlock.writeToDisk();
+		}
+		needsPersist = false;
 	}
 }

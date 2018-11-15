@@ -94,7 +94,9 @@ public class Jafs {
 		if (!append && f.exists() && !f.delete()) {
 			throw new JafsException("getOutputStream(): deleting ["+f.getAbsolutePath()+"] failed");
 		}
-		return new JafsOutputStream(this, f, append);
+		JafsOutputStream jos = new JafsOutputStream(this, f, append);
+		superBlock.flushIfNeeded();
+		return jos;
 	}
 
 	public void close() throws IOException {
@@ -102,8 +104,8 @@ public class Jafs {
 	}
 
 	/*
-	 * Default
-	 */	
+	 * Package private
+	 */
 	JafsInodeContext getINodeContext() {
 		return ctx;
 	}
@@ -147,9 +149,6 @@ public class Jafs {
 		return bpos;
 	}
 
-	/*
-	 * Package private
-	 */
     JafsDirEntry getRootEntry() {
         if (rootEntry != null) {
             return rootEntry;
@@ -182,7 +181,8 @@ public class Jafs {
 			superBlock = new JafsSuper(this, blockSize);
 			superBlock.setInodeSize(inodeSize);
 			superBlock.setMaxFileSize(maxFileSize);
-			superBlock.flush();
+			superBlock.needsPersist=true;
+			superBlock.flushIfNeeded();
 			inodePool = new JafsInodePool(this);
 			dirPool = new JafsDirPool(this);
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);

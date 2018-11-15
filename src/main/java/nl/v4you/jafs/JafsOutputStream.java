@@ -64,6 +64,7 @@ public class JafsOutputStream extends OutputStream {
 		try {
 			createInodeIfNeeded();
 			inode.writeByte(arg0);
+			vfs.getSuper().flushIfNeeded();
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
@@ -75,6 +76,7 @@ public class JafsOutputStream extends OutputStream {
 		try {
 			createInodeIfNeeded();
 			inode.writeBytes(buf, start, len);
+			vfs.getSuper().flushIfNeeded();
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());

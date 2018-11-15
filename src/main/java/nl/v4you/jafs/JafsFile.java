@@ -135,6 +135,7 @@ public class JafsFile {
 			    return false;
             }
             finally {
+				vfs.getSuper().flushIfNeeded();
                 vfs.getInodePool().free(inode);
                 vfs.getDirPool().free(dir);
             }
@@ -143,12 +144,16 @@ public class JafsFile {
 	}
 
 	public boolean mkdir() throws JafsException, IOException {
-		return mkdir(canonicalPath);
+		boolean b = mkdir(canonicalPath);
+		vfs.getSuper().flushIfNeeded();
+		return b;
 	}
 
 	public boolean mkdirs() throws JafsException, IOException {
 		mkParentDirs(getParent(canonicalPath));
-		return mkdir(canonicalPath);
+		boolean b = mkdir(canonicalPath);
+		vfs.getSuper().flushIfNeeded();
+		return b;
 	}
 		
 	public String[] list() throws JafsException, IOException {
@@ -210,6 +215,7 @@ public class JafsFile {
 				}
             }
             finally {
+				vfs.getSuper().flushIfNeeded();
                 vfs.getInodePool().free(inode);
                 vfs.getDirPool().free(parentDir);
             }
@@ -270,6 +276,7 @@ public class JafsFile {
                                 target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
                     }
                     finally {
+						vfs.getSuper().flushIfNeeded();
 					    vfs.getInodePool().free(inodeSrc);
 					    vfs.getInodePool().free(inodeDst);
                         vfs.getDirPool().free(srcDir);
