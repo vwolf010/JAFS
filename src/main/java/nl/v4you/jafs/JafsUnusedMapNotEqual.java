@@ -97,17 +97,27 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 				curBpos += blocksPerUnusedMap;
 			}
 			else {
-				curBpos++; // skip the Bpos of the unused map itself
-				for (int bitMask = p0mask >>> 2; bitMask != 0; bitMask >>>= 2) {
-					if (((b & bitMask) == 0)) {
-						if (isInode && ((b & (bitMask >>> 1)) == 0) && (curBpos < blocksTotal)) {
-							JafsBlock tmp = vfs.getCacheBlock(curBpos);
-							tmp.initZeros();
-							tmp.writeToDisk();
+				if ((b & grpMask) == grpMask) {
+					curBpos += BLOCKS_PER_BYTE;
+				}
+				else {
+					curBpos++; // skip the Bpos of the unused map itself
+					for (int bitMask = p0mask >>> 2; bitMask != 0; bitMask >>>= 2) {
+						if (((b & bitMask) == 0)) {
+							if (curBpos<blocksTotal) {
+								if (isInode && ((b & (bitMask >>> 1)) == 0)) {
+									JafsBlock tmp = vfs.getCacheBlock(curBpos);
+									tmp.initZeros();
+									tmp.writeToDisk();
+								}
+								return curBpos;
+							}
+							else {
+								return 0;
+							}
 						}
-						return curBpos;
+						curBpos++;
 					}
-					curBpos++;
 				}
 				for (int m = 1; m < blockSize; m++) {
 					b = block.readByte();
@@ -117,12 +127,17 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 					else {
 						for (int bitMask = p0mask; bitMask != 0; bitMask >>>= 2) {
 							if (((b & bitMask) == 0)) {
-								if (isInode && ((b & (bitMask >>> 1)) == 0) && (curBpos < blocksTotal)) {
-									JafsBlock tmp = vfs.getCacheBlock(curBpos);
-									tmp.initZeros();
-									tmp.writeToDisk();
+								if (curBpos < blocksTotal) {
+									if (isInode && ((b & (bitMask >>> 1)) == 0)) {
+										JafsBlock tmp = vfs.getCacheBlock(curBpos);
+										tmp.initZeros();
+										tmp.writeToDisk();
+									}
+									return curBpos;
 								}
-								return curBpos;
+								else {
+									return 0;
+								}
 							}
 							curBpos++;
 						}
@@ -145,21 +160,11 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 	}
 
 	public long getUnusedINodeBpos() throws JafsException, IOException {
-		long blocksTotal = superBlock.getBlocksTotal();
-		long unusedBpos = getUnusedBpos(true);
-		if (unusedBpos>=blocksTotal) {
-			return 0;
-		}
-		return unusedBpos;
+		return getUnusedBpos(true);
 	}
 
 	public long getUnusedDataBpos() throws JafsException, IOException {
-		long blocksTotal = superBlock.getBlocksTotal();
-		long unusedBpos = getUnusedBpos(false);
-		if (unusedBpos>=blocksTotal) {
-			return 0;
-		}
-		return unusedBpos;
+		return getUnusedBpos(false);
 	}
 
 	int getUnusedByte(JafsBlock block, long bpos) {

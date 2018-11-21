@@ -53,30 +53,46 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                 curBpos += blocksPerUnusedMap;
             }
             else {
-                curBpos++; // skip the Bpos of the unused map itself
-                for (int bitMask = 0x40; bitMask != 0; bitMask >>>= 1) {
-                    if ((b & bitMask) == 0) {
-                        if (isInode && curBpos<blocksTotal) {
-                            JafsBlock tmp = vfs.getCacheBlock(curBpos);
-                            tmp.initZeros();
-                            tmp.writeToDisk();
+                if ((b & 0xff) == 0xff) {
+                    curBpos += BLOCKS_PER_BYTE;
+                }
+                else {
+                    curBpos++; // skip the Bpos of the unused map itself
+                    for (int bitMask = 0x40; bitMask != 0; bitMask >>>= 1) {
+                        if ((b & bitMask) == 0) {
+                            if (curBpos < blocksTotal) {
+                                if (isInode) {
+                                    JafsBlock tmp = vfs.getCacheBlock(curBpos);
+                                    tmp.initZeros();
+                                    tmp.writeToDisk();
+                                }
+                                return curBpos;
+                            }
+                            else {
+                                return 0;
+                            }
                         }
-                        return curBpos;
+                        curBpos++;
                     }
-                    curBpos++;
                 }
                 for (int m = 1; m < blockSize; m++) {
                     b = block.readByte();
                     if ((b & 0xff) == 0xff) {
                         curBpos += BLOCKS_PER_BYTE;
-                    } else {
+                    }
+                    else {
                         for (int bitMask = 0x80; bitMask != 0; bitMask >>>= 1) {
                             if ((b & bitMask) == 0) {
-                                if (isInode && curBpos<blocksTotal) {
-                                    JafsBlock tmp = vfs.getCacheBlock(curBpos);
-                                    tmp.initZeros();
-                                    tmp.writeToDisk();
+                                if (curBpos<blocksTotal) {
+                                    if (isInode) {
+                                        JafsBlock tmp = vfs.getCacheBlock(curBpos);
+                                        tmp.initZeros();
+                                        tmp.writeToDisk();
+                                    }
                                     return curBpos;
+                                }
+                                else {
+                                    return 0;
                                 }
                             }
                             curBpos++;
@@ -95,21 +111,11 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
     }
 
     public long getUnusedINodeBpos() throws JafsException, IOException {
-        long blocksTotal = superBlock.getBlocksTotal();
-        long unusedBpos = getUnusedBpos(true);
-        if (unusedBpos>=blocksTotal) {
-            return 0;
-        }
-        return unusedBpos;
+        return getUnusedBpos(true);
     }
 
     public long getUnusedDataBpos() throws JafsException, IOException {
-        long blocksTotal = superBlock.getBlocksTotal();
-        long unusedBpos = getUnusedBpos(false);
-        if (unusedBpos>=blocksTotal) {
-            return 0;
-        }
-        return unusedBpos;
+        return getUnusedBpos(false);
     }
 
     private int getUnusedByte(JafsBlock block, long bpos) {

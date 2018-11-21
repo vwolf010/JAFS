@@ -6,12 +6,11 @@ import java.util.LinkedList;
 /*
  * <ushort: entry size>
  * <byte: filename length> if bit 0x80 is set, the next byte contains 8 more bits
+ * <byte: filename checksum> 1-byte filename checksum
  * <byte: type> (f=file, d=directory)
  * <uint: inode block> (must be 0 if not used)
  * <ushort: inode ipos>
  * <string: filename>
- *
- * TODO: since . and .. are not stored anymore, a directory does not need an inode anymore if it is empty
  *
  */
 class JafsDir {
@@ -23,6 +22,15 @@ class JafsDir {
 	private static int BB_LEN = 512;
 	private static int MAX_FILE_NAME_LENGTH = 0x7FFF;
 	private byte bb[] = new byte[BB_LEN];
+
+	int bsdChecksum(byte[] input) {
+		int check = 0;
+		for (byte b: input) {
+			check = (check >>> 1) | ((check & 0x1) << 7);
+			check += b & 0xff;
+		}
+		return check & 0xff;
+	}
 	
 	static void createRootDir(Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().get();
@@ -56,6 +64,7 @@ class JafsDir {
 
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int nameLen = name.length;
+		int nameChecksum = bsdChecksum(name);
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
@@ -66,16 +75,16 @@ class JafsDir {
 			        curLen &= 0x7f;
 			        curLen |= inode.readByte() << 7;
                 }
-                if (curLen == nameLen) {
-                    inode.seekCur(1 + 4 + 2);
-                    inode.readBytes(bb, 0, curLen);
-                    int n = 0;
-                    while ((n < nameLen) && (bb[n] == name[n])) {
-                        n++;
-                    }
-                    if (n == nameLen) {
-                        return startPos;
-                    }
+                if (curLen==nameLen && nameChecksum==inode.readByte()) {
+					inode.seekCur(1+4+2);
+					inode.readBytes(bb, 0, curLen);
+					int n = 0;
+					while ((n < nameLen) && (bb[n] == name[n])) {
+						n++;
+					}
+					if (n == nameLen) {
+						return startPos;
+					}
                 }
             }
 			inode.seekSet(startPos+entrySize);
@@ -102,8 +111,15 @@ class JafsDir {
 			entry.parentBpos = inode.getBpos();
 			entry.parentIpos = inode.getIpos();
 
-			inode.seekSet(startPos+1);
-			entry.type = (byte)inode.readByte();
+			// skip length + checksum
+			if (name.length<0x80) {
+				inode.seekSet(startPos+1+1);
+			}
+			else {
+				inode.seekSet(startPos+2+1);
+			}
+			// then read data
+			entry.type = inode.readByte();
 			entry.bpos = inode.readInt();
 			entry.ipos = inode.readShort();
 			return entry;
@@ -160,6 +176,14 @@ class JafsDir {
 
 		byte nameBuf[] = entry.name;
 		int nameLen = nameBuf.length;
+		int nameChecksum = bsdChecksum(entry.name);
+		int overhead;
+		if (nameLen<0x80) {
+			overhead = 1+1+1+4+2; // length + checksum + type + bpos + ipos
+		}
+		else {
+			overhead = 2+1+1+4+2; // length + checksum + type + bpos + ipos
+		}
 
 		/*
 		 * Find smallest space to store entry
@@ -178,20 +202,20 @@ class JafsDir {
 			        curLength &= 0x7f;
 			        curLength |= inode.readByte() << 7;
                 }
-                if (curLength == nameLen) {
-                    inode.seekCur(1 + 4 + 2);
-                    inode.readBytes(bb, 0, curLength);
-                    int n = 0;
-                    while ((n < curLength) && (bb[n] == nameBuf[n])) {
-                        n++;
-                    }
-                    if (n == curLength) {
-                        throw new JafsException("Name [" + entry.name + "] already exists");
-                    }
+                if (curLength == nameLen && nameChecksum == inode.readByte()) {
+					inode.seekCur(1 + 4 + 2);
+					inode.readBytes(bb, 0, curLength);
+					int n = 0;
+					while ((n < curLength) && (bb[n] == nameBuf[n])) {
+						n++;
+					}
+					if (n == curLength) {
+						throw new JafsException("Name [" + entry.name + "] already exists");
+					}
                 }
             }
 
-			int spaceForName = entrySize-1-1-4-2;
+			int spaceForName = entrySize-overhead;
 			if ((curLength==0) && nameLen<=spaceForName && spaceForName<newEntrySpaceForName) {
 				newEntryStartPos = startPos;
 				newEntrySpaceForName = spaceForName;
@@ -219,7 +243,7 @@ class JafsDir {
 //			}
 			inode.seekCur(-2);
 			entry.startPos = inode.getFpos()+2;
-            Util.shortToArray(bb, tLen, 1+1+4+2+nameBuf.length);
+            Util.shortToArray(bb, tLen, overhead+nameBuf.length);
             tLen+=2;
 		}
 		if (nameBuf.length<0x80) {
@@ -229,6 +253,7 @@ class JafsDir {
             bb[tLen++] = (byte)(0x80 | (nameBuf.length & 0x7f));
             bb[tLen++] = (byte)((nameBuf.length>>>7) & 0xff);
         }
+        bb[tLen++] = (byte)nameChecksum;
 		bb[tLen++] = (byte)entry.type;
         Util.intToArray(bb, tLen, (int)entry.bpos);
 		tLen+=4;
@@ -306,7 +331,13 @@ class JafsDir {
                 vfs.getDirPool().free(dir);
             }
 
-            inode.seekSet(entry.startPos+1+1);
+            if (entry.name.length<0x80) {
+				inode.seekSet(entry.startPos+1+1+1);
+			}
+			else {
+				inode.seekSet(entry.startPos+2+1+1);
+			}
+
             Util.intToArray(bb, 0, (int)entry.bpos);
             Util.shortToArray(bb, 4, entry.ipos);
             inode.writeBytes(bb, 0, 6);
@@ -321,7 +352,11 @@ class JafsDir {
 			long startPos = inode.getFpos();
 			int len = inode.readByte();
 			if (len!=0) {
-				inode.seekCur(1+4+2);
+				if ((len & 0x80) != 0) {
+					len &= 0x7f;
+					len |= inode.readByte() << 7;
+				}
+				inode.seekCur(1+1+4+2);
 				byte name[] = new byte[len];
 				inode.readBytes(name, 0, len);
 				l.add(new String(name, Util.UTF8));
