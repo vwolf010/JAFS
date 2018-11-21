@@ -75,6 +75,14 @@ public class DirectoriesTest {
     }
 
     @Test
+    public void bbb() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 32, 8*1024);
+        JafsFile f = vfs.getFile("/dateStamp/2018/11/10/04/42/05.000Z");
+        f.mkdirs();
+        vfs.close();
+    }
+
+    @Test
     public void aaa() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
         JafsFile f = vfs.getFile("/11/11/11/11");

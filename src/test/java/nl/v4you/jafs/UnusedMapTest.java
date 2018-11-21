@@ -122,7 +122,7 @@ public class UnusedMapTest {
 
     @Test
     public void setUnused() throws JafsException, IOException {
-        Jafs jafs = new Jafs(TEST_ARCHIVE, 128, 128, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, 128, 64, 1024 * 1024);
         JafsBlock block = jafs.getCacheBlock(0);
         int x;
 

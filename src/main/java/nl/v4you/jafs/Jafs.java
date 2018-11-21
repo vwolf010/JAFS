@@ -187,7 +187,12 @@ public class Jafs {
 			dirPool = new JafsDirPool(this);
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
 			dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
-			um = new JafsUnusedMap(this);
+			if (blockSize==inodeSize) {
+				um = new JafsUnusedMapEqual(this);
+			}
+			else {
+				um = new JafsUnusedMapNotEqual(this);
+			}
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
 			JafsDir.createRootDir(this);
 		}
@@ -200,7 +205,12 @@ public class Jafs {
 			dirPool = new JafsDirPool(this);
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
             dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
-			um = new JafsUnusedMap(this);
+			if (superBlock.getBlockSize()==superBlock.getInodeSize()) {
+				um = new JafsUnusedMapEqual(this);
+			}
+			else {
+				um = new JafsUnusedMapNotEqual(this);
+			}
 			ctx = new JafsInodeContext(this, superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
 		}
 	}
