@@ -102,12 +102,35 @@ public class DirectoriesTest {
     public void parentDirIndicatorWorks() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
         JafsFile f = vfs.getFile("/a");
-        f.mkdir();
+        assertTrue(f.mkdir());
         f = vfs.getFile("/a/b.txt");
-        f.createNewFile();
+        assertTrue(f.createNewFile());
         f = vfs.getFile("/a/../a/b.txt");
         assertTrue(f.exists());
         vfs.close();
+    }
+
+    @Test
+    public void reusingDirEntryWorks() throws JafsException, IOException {
+        String fileName = "/aaaaaaaaaaaaaaaaaaaaaaaaa";
+
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile(fileName);
+        assertTrue(f.mkdir());
+        vfs.close();
+
+        File a = new File(TEST_ARCHIVE);
+        long fLen = a.length();
+
+        vfs = new Jafs(TEST_ARCHIVE);
+        f = vfs.getFile(fileName);
+        for (int i=0; i<20; i++) {
+            assertTrue(f.delete());
+            assertTrue(f.mkdir());
+        }
+        vfs.close();
+
+        assertEquals(fLen, a.length());
     }
 
     @Test

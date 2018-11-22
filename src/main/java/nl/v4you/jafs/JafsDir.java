@@ -23,15 +23,6 @@ class JafsDir {
 	private static int MAX_FILE_NAME_LENGTH = 0x7FFF;
 	private byte bb[] = new byte[BB_LEN];
 
-	int bsdChecksum(byte[] input) {
-		int check = 0;
-		for (byte b: input) {
-			check = (check >>> 1) | ((check & 0x1) << 7);
-			check += b & 0xff;
-		}
-		return check & 0xff;
-	}
-	
 	static void createRootDir(Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().get();
         JafsDir dir = vfs.getDirPool().get();
@@ -64,7 +55,7 @@ class JafsDir {
 
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int nameLen = name.length;
-		int nameChecksum = bsdChecksum(name);
+		int nameChecksum = JenkinsHash.calcHash(name) & 0xff;
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
@@ -176,7 +167,7 @@ class JafsDir {
 
 		byte nameBuf[] = entry.name;
 		int nameLen = nameBuf.length;
-		int nameChecksum = bsdChecksum(entry.name);
+		int nameChecksum = JenkinsHash.calcHash(entry.name) & 0xff;
 		int overhead;
 		if (nameLen<0x80) {
 			overhead = 1+1+1+4+2; // length + checksum + type + bpos + ipos
