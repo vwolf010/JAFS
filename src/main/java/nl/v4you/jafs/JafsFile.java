@@ -2,25 +2,6 @@ package nl.v4you.jafs;
 
 import java.io.IOException;
 
-/*
-File f = new File("/");
-System.out.println(f.getName());            <empty string>
-System.out.println(f.getParent());          null
-System.out.println(f.getPath());            /
-System.out.println(f.getAbsolutePath());    /
-System.out.println(f.getCanonicalPath());   /
-
-File f = new File("data/../data/test.vfs");
-System.out.println(f.getName());            test.vfs
-System.out.println(f.getParent());          data\..\data
-System.out.println(f.getPath());            data\..\data\test.vfs
-System.out.println(f.getAbsolutePath());    C:\data\dsp_dev\DspApplet_dev\sandbox\data\..\data\test.vfs
-System.out.println(f.getCanonicalPath());   C:\data\dsp_dev\DspApplet_dev\sandbox\data\test.vfs
-
-File f = new File("/does_not_exist/..");
-System.out.println("exists: "+f.exists());  true (because it's CanonicalPath is /)
-*/
-
 public class JafsFile {
 	Jafs vfs;
 	String path;

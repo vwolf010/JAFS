@@ -70,15 +70,15 @@ public class Jafs {
 		}
 	}
 	
-	public JafsFile getFile(String name) throws JafsException, IOException {
+	public JafsFile getFile(String name) {
 		return new JafsFile(this, name);
 	}
 	
-	public JafsFile getFile(String parent, String name) throws JafsException, IOException {
+	public JafsFile getFile(String parent, String name) {
 		return new JafsFile(this, parent, name);
 	}
 
-	public JafsFile getFile(JafsFile parent, String name) throws JafsException, IOException {
+	public JafsFile getFile(JafsFile parent, String name) {
 		return new JafsFile(this, parent, name);
 	}
 
@@ -230,6 +230,9 @@ public class Jafs {
 
 	public String stats() {
         StringBuilder sb = new StringBuilder();
+        sb.append("blocksUsed         : "+superBlock.getBlocksUsed()+"\n");
+        sb.append("blocksTotal        : "+superBlock.getBlocksTotal()+"\n\n");
+        sb.append(ctx.toString()+"\n");
         sb.append("blockCache:\n"+cache.stats());
         sb.append("inodePool:\n"+inodePool.stats());
         sb.append("dirPool:\n"+dirPool.stats());

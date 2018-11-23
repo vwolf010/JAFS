@@ -199,6 +199,7 @@ class JafsInodeContext {
 		sb.append("Max file size      : "+vfs.getSuper().getMaxFileSize()+"\n");
 		sb.append("Max file size real : "+maxFileSizeReal+"\n");
 		sb.append("Inodes per block   : "+iNodesPerBlock+"\n");
+		sb.append("Pointers per iNode : "+getPtrsPerInode()+"\n");
 		sb.append("Pointers per block : "+this.ptrsPerPtrBlock+"\n");
 		for (int n=0; n<ptrsPerInode; n++) {
 			sb.append(n+": level="+ptrs[n].level+" size="+ptrs[n].level+" start="+ptrs[n].fPosStart+" end="+ptrs[n].fPosEnd +"\n");

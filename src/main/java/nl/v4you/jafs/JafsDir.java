@@ -67,7 +67,7 @@ class JafsDir {
 			        curLen |= inode.readByte() << 7;
                 }
                 if (curLen==nameLen && nameChecksum==inode.readByte()) {
-					inode.seekCur(1+4+2);
+					inode.seekCur(1 + 4 + 2); // skip type + bpos + ipos
 					inode.readBytes(bb, 0, curLen);
 					int n = 0;
 					while ((n < nameLen) && (bb[n] == name[n])) {
@@ -103,12 +103,11 @@ class JafsDir {
 			entry.parentIpos = inode.getIpos();
 
 			// skip length + checksum
-			if (name.length<0x80) {
-				inode.seekSet(startPos+1+1);
-			}
-			else {
-				inode.seekSet(startPos+2+1);
-			}
+            if (name.length < 0x80) {
+                inode.seekSet(startPos + 1 + 1);
+            } else {
+                inode.seekSet(startPos + 2 + 1);
+            }
 			// then read data
 			entry.type = inode.readByte();
 			entry.bpos = inode.readInt();
@@ -169,12 +168,11 @@ class JafsDir {
 		int nameLen = nameBuf.length;
 		int nameChecksum = JenkinsHash.calcHash(entry.name) & 0xff;
 		int overhead;
-		if (nameLen<0x80) {
-			overhead = 1+1+1+4+2; // length + checksum + type + bpos + ipos
-		}
-		else {
-			overhead = 2+1+1+4+2; // length + checksum + type + bpos + ipos
-		}
+        if (nameLen < 0x80) {
+            overhead = 1 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos
+        } else {
+            overhead = 2 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos
+        }
 
 		/*
 		 * Find smallest space to store entry
@@ -194,7 +192,7 @@ class JafsDir {
 			        curLength |= inode.readByte() << 7;
                 }
                 if (curLength == nameLen && nameChecksum == inode.readByte()) {
-					inode.seekCur(1 + 4 + 2);
+					inode.seekCur(1 + 4 + 2); // skip type + bpos + ipos
 					inode.readBytes(bb, 0, curLength);
 					int n = 0;
 					while ((n < curLength) && (bb[n] == nameBuf[n])) {
@@ -244,7 +242,7 @@ class JafsDir {
             bb[tLen++] = (byte)(0x80 | (nameBuf.length & 0x7f));
             bb[tLen++] = (byte)((nameBuf.length>>>7) & 0xff);
         }
-        bb[tLen++] = (byte)nameChecksum;
+        bb[tLen++] = (byte) nameChecksum;
 		bb[tLen++] = (byte)entry.type;
         Util.intToArray(bb, tLen, (int)entry.bpos);
 		tLen+=4;
@@ -322,12 +320,11 @@ class JafsDir {
                 vfs.getDirPool().free(dir);
             }
 
-            if (entry.name.length<0x80) {
-				inode.seekSet(entry.startPos+1+1+1);
-			}
-			else {
-				inode.seekSet(entry.startPos+2+1+1);
-			}
+            if (entry.name.length < 0x80) {
+                inode.seekSet(entry.startPos + 1 + 1 + 1); // skip len + checksum + type
+            } else {
+                inode.seekSet(entry.startPos + 2 + 1 + 1); // skip len + checksum + type
+            }
 
             Util.intToArray(bb, 0, (int)entry.bpos);
             Util.shortToArray(bb, 4, entry.ipos);
@@ -347,7 +344,7 @@ class JafsDir {
 					len &= 0x7f;
 					len |= inode.readByte() << 7;
 				}
-				inode.seekCur(1+1+4+2);
+                inode.seekCur(1 + 1 + 4 + 2); // skip checksum + type + bpos + ipos
 				byte name[] = new byte[len];
 				inode.readBytes(name, 0, len);
 				l.add(new String(name, Util.UTF8));

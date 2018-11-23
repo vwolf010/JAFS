@@ -115,7 +115,7 @@ public class ReadWriteBytesTest {
         jafs.close();
     }
 
-        @Ignore
+    @Ignore
     @Test
     public void writeReadBytesUsingMaxFileSize() throws JafsException, IOException {
         int blockSize = 128;
@@ -171,13 +171,8 @@ public class ReadWriteBytesTest {
     @Ignore
     @Test
     public void x() throws JafsException, IOException {
-        int blockSize = 256;
-        Jafs jafs = new Jafs("c:/data/ggc/ggc_1024_128_10MB.jafs");
-        JafsFile f = jafs.getFile("/e3/ff/b9/e3/419540539.xml");
-        byte content[] = new byte[256];
-        JafsOutputStream jos = jafs.getOutputStream(f);
-        jos.write(content);
-        jos.close();
+        Jafs jafs = new Jafs("c:/data/ggc/ggc_512_128_10MB_compressed.jafs");
+        System.err.println(jafs.stats());
         jafs.close();
     }
 
