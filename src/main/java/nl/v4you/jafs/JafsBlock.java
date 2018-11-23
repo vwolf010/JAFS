@@ -10,6 +10,7 @@ class JafsBlock {
 	public long bpos = -1;
 	private RandomAccessFile raf;
 	public int byteIdx = 0;
+	boolean needsFlush = false;
 
 	int bytesLeft() {
 		return blockSize-byteIdx;
@@ -37,6 +38,7 @@ class JafsBlock {
 
 	void initZeros() {
 		Arrays.fill(buf, (byte)0);
+        needsFlush=true;
 	}
 	
 	void seekSet(int b) {
@@ -48,6 +50,7 @@ class JafsBlock {
 		raf.seek(start);
 		raf.read(buf);
 		byteIdx = 0;
+		needsFlush=false;
 	}
 	
 	void writeToDisk() throws IOException, JafsException {
@@ -58,7 +61,15 @@ class JafsBlock {
 		}
 		raf.seek(start);
 		raf.write(buf);
+		needsFlush=false;
 	}
+
+	void writeToDiskIfNeeded() throws IOException, JafsException {
+	    if (needsFlush) {
+	        writeToDisk();
+	        needsFlush=false;
+        }
+    }
 
 //	void dumpBlock(File f) {
 //		try {
@@ -82,6 +93,7 @@ class JafsBlock {
 
 	void writeByte(int b) {
 		buf[byteIdx++] = (byte)(b & 0xff);
+		needsFlush=true;
 	}
 
 	void readBytes(byte b[], int off, int len) {
@@ -98,6 +110,7 @@ class JafsBlock {
 		}
 		System.arraycopy(b, off, buf, byteIdx, len);
 		byteIdx+=len;
+		needsFlush=true;
 	}
 		
 	long readInt() {
@@ -114,5 +127,6 @@ class JafsBlock {
 		buf[byteIdx++] = (byte)((l >> 16) & 0xffL);
 		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
 		buf[byteIdx++] = (byte)(l & 0xffL);
+		needsFlush=true;
 	}
 }

@@ -42,6 +42,7 @@ class JafsBlockCache {
             blk.readFromDisk();
             JafsBlock evicted = gcache.add(bpos, blk);
             if (evicted!=null) {
+                evicted.writeToDiskIfNeeded();
                 free=evicted;
             }
         }
