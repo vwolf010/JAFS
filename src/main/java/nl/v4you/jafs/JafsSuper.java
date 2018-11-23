@@ -7,7 +7,7 @@ class JafsSuper {
 
 	private Jafs vfs;
 	private JafsBlock rootBlock;
-	private int blockSize = 256;
+	private int blockSize;
 	private int inodeSize = 64;
 	private long maxFileSize = 4L*1024L*1024L*1024L;
 	private long blocksTotal = 0;
@@ -19,7 +19,7 @@ class JafsSuper {
 
 	boolean needsPersist = false;
 
-	JafsSuper(Jafs vfs, int blockSize) throws JafsException {
+	JafsSuper(Jafs vfs, int blockSize) {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
 		rootBlock = new JafsBlock(vfs, -1, blockSize);
@@ -53,18 +53,16 @@ class JafsSuper {
 		blocksTotal++;
 	}
 	
-	void incBlocksTotalAndFlush() throws JafsException, IOException {
+	void incBlocksTotalAndFlush() {
 		blocksTotal++;
-		//flushIfNeeded();
 		needsPersist=true;
 	}
 
-	void incBlocksUsedAndFlush() throws JafsException, IOException {
+	void incBlocksUsedAndFlush() {
 		blocksUsed++;
 		if (blocksUsed>blocksTotal) {
 			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
 		}
-		//flushIfNeeded();
 		needsPersist=true;
 	}
 
@@ -75,9 +73,8 @@ class JafsSuper {
 		}
 	}
 
-	void decBlocksUsedAndFlush() throws JafsException, IOException {
+	void decBlocksUsedAndFlush() {
 		decBlocksUsed();
-		//flushIfNeeded();
 		needsPersist=true;
 	}
 			
@@ -101,7 +98,7 @@ class JafsSuper {
 		this.maxFileSize = maxFileSize;
 	}
 
-	void read() throws JafsException, IOException {
+	void read() throws IOException {
 		rootBlock.seekSet(0);
 		rootBlock.readFromDisk();
 		rootBlock.readBytes(buf, 0, 34);

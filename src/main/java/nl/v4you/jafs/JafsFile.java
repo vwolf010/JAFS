@@ -1,6 +1,8 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class JafsFile {
 	Jafs vfs;
@@ -89,6 +91,7 @@ public class JafsFile {
 	public boolean createNewFile() throws JafsException, IOException {
 		String parentPath = getParent(canonicalPath);
 		JafsDirEntry parent = getEntry(parentPath);
+		Set<Long> blockList = new TreeSet<>();
 		if (parent!=null) {
 			if (parent.bpos==0) {
 				// Parent exists but has no inode yet, let's create it
@@ -97,7 +100,7 @@ public class JafsFile {
                 try {
                     inode.openInode(parent.parentBpos, parent.parentIpos);
                     dir.setInode(inode);
-                    dir.mkinode(parent, JafsInode.INODE_DIR);
+                    dir.mkinode(blockList, parent, JafsInode.INODE_DIR);
                 }
                 finally {
                     vfs.getInodePool().free(inode);
@@ -109,7 +112,8 @@ public class JafsFile {
 			try {
                 inode.openInode(parent);
                 dir.setInode(inode);
-                dir.createNewEntry(canonicalPath, getName().getBytes(Util.UTF8), JafsInode.INODE_FILE, 0, 0);
+                dir.createNewEntry(blockList, canonicalPath, getName().getBytes(Util.UTF8), JafsInode.INODE_FILE, 0, 0);
+                vfs.getBlockCache().flushBlocks(blockList);
                 return true;
             }
             catch (Throwable t) {
@@ -187,7 +191,11 @@ public class JafsFile {
 			    // first remove the entry from the directory
                 inode.openInode(entry.parentBpos, entry.parentIpos);
                 parentDir.setInode(inode);
-                parentDir.deleteEntry(getCanonicalPath(), entry);
+				{
+					Set<Long> blockList = new TreeSet<>();
+					parentDir.deleteEntry(blockList, getCanonicalPath(), entry);
+					vfs.getBlockCache().flushBlocks(blockList);
+				}
 
                 // then free the inode, pointerblocks and datablocks
 				if (entry.bpos>0) {
@@ -250,11 +258,14 @@ public class JafsFile {
                         inodeDst.openInode(getEntry(target.getParent()));
                         srcDir.setInode(inodeSrc);
                         dstDir.setInode(inodeDst);
-                        srcDir.deleteEntry(canonicalPath, entry);
+                        Set<Long> blockList = new TreeSet<>();
+                        srcDir.deleteEntry(blockList, canonicalPath, entry);
                         entry.name = target.getName().getBytes(Util.UTF8);
                         dstDir.createNewEntry(
+                        		blockList,
                                 target.canonicalPath,
                                 target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
+                        vfs.getBlockCache().flushBlocks(blockList);
                     }
                     finally {
 						vfs.getSuper().flushIfNeeded();
@@ -443,6 +454,7 @@ public class JafsFile {
 	private boolean mkdir(String path) throws JafsException, IOException {
 		String parent = getParent(path);
 		JafsDirEntry entry = getEntry(parent);
+		Set<Long> blockList = new TreeSet<>();
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
@@ -451,7 +463,7 @@ public class JafsFile {
                 try {
                     inode.openInode(entry.parentBpos, entry.parentIpos);
                     dir.setInode(inode);
-                    dir.mkinode(entry, JafsInode.INODE_DIR);
+                    dir.mkinode(blockList, entry, JafsInode.INODE_DIR);
                 }
                 finally {
                     vfs.getInodePool().free(inode);
@@ -464,11 +476,13 @@ public class JafsFile {
                 inode.openInode(entry);
                 dir.setInode(inode);
                 dir.createNewEntry(
+                		blockList,
                         getCanonicalPath(path),
                         getName(path).getBytes(Util.UTF8),
                         JafsInode.INODE_DIR,
                         0,
                         0);
+                vfs.getBlockCache().flushBlocks(blockList);
                 return true;
 			}
 			catch (JafsException e) {

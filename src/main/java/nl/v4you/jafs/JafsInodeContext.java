@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.Set;
 
 class JafsInodeContext {
 
@@ -32,7 +33,7 @@ class JafsInodeContext {
 		return iNodesPerBlock;
 	}
 
-	void createNewBlock(JafsInode inode, int n, boolean init) throws JafsException, IOException {
+	void createNewBlock(Set<Long> blockList, JafsInode inode, int n, boolean init) throws JafsException, IOException {
 		JafsBlock block;
 		long ptr = vfs.getUnusedMap().getUnusedDataBpos();
 		if (ptr!=0) {
@@ -46,9 +47,10 @@ class JafsInodeContext {
 		if (init) {
 			block.initZeros();
 		}
-		block.writeToDisk();
+		//block.writeToDisk();
+		blockList.add(ptr);
 		inode.ptrs[n] = ptr;
-		inode.flushInode();
+		inode.flushInode(blockList);
 		vfs.getUnusedMap().setAvailableForNeither(ptr);
 	}
 
@@ -85,7 +87,7 @@ class JafsInodeContext {
 		}
 	}
 
-	long getBlkPos(JafsInode inode, long fpos) throws JafsException, IOException {
+	long getBlkPos(Set<Long> blockList, JafsInode inode, long fpos) throws JafsException, IOException {
 		if (fpos<0) {
 			throw new JafsException("file position cannot be negative, got: "+fpos);
 		}
@@ -99,14 +101,14 @@ class JafsInodeContext {
 				if (ptrs[n].level==0) {
 					if (inode.ptrs[n]==0) {
 						// Create new data block
-                        createNewBlock(inode, n, false);
+                        createNewBlock(blockList, inode, n, false);
 					}
 					return inode.ptrs[n];
 				}
 				else {
 					if (inode.ptrs[n]==0) {
 						// Create new ptr block
-                        createNewBlock(inode, n, true);
+                        createNewBlock(blockList, inode, n, true);
 					}
                     return getBlkPos(inode.ptrs[n], ptrs[n].fPosStart, ptrs[n].fPosEnd-ptrs[n].fPosStart, fpos);
 				}

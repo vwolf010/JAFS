@@ -2,6 +2,8 @@ package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.Set;
+import java.util.TreeSet;
 
 /*
  * <ushort: entry size>
@@ -23,14 +25,14 @@ class JafsDir {
 	private static int MAX_FILE_NAME_LENGTH = 0x7FFF;
 	private byte bb[] = new byte[BB_LEN];
 
-	static void createRootDir(Jafs vfs) throws JafsException, IOException {
+	static void createRootDir(Set<Long> blockList, Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().get();
         JafsDir dir = vfs.getDirPool().get();
         try {
-            rootInode.createInode(JafsInode.INODE_DIR);
-            rootInode.flushInode();
+            rootInode.createInode(blockList, JafsInode.INODE_DIR);
+            rootInode.flushInode(blockList);
             dir.setInode(rootInode);
-            dir.initDir();
+            dir.initDir(blockList);
             vfs.getSuper().setRootDirBpos(rootInode.getBpos());
             vfs.getSuper().setRootDirIpos(rootInode.getIpos());
         }
@@ -116,7 +118,7 @@ class JafsDir {
 		}
 	}
 
-	void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
+	void deleteEntry(Set<Long> blockList, String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
 		// Test the next entry to see if we can merge with it
 		// in an attempt to avoid fragmentation of the directory list
 //		inode.seekSet(entry.startPos-2);
@@ -136,7 +138,7 @@ class JafsDir {
 		// Update the deleted entry
         vfs.getDirCache().remove(canonicalPath);
         inode.seekSet(entry.startPos);
-		inode.writeByte(0); // name length
+		inode.writeByte(blockList,0); // name length
 	}
 	
 	boolean hasActiveEntries() throws JafsException, IOException {
@@ -154,7 +156,7 @@ class JafsDir {
 		return false;
 	}
 
-	private void createEntry(JafsDirEntry entry) throws JafsException, IOException {
+	private void createEntry(Set<Long> blockList, JafsDirEntry entry) throws JafsException, IOException {
 		if (Util.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
 				throw new JafsException("Directory name ["+entry.name+"] should not contain a slash (/)");
@@ -253,23 +255,23 @@ class JafsDir {
             tLen += nameBuf.length;
         }
         else {
-            inode.writeBytes(bb, 0, tLen);
+            inode.writeBytes(blockList, bb, 0, tLen);
             tLen=0;
-            inode.writeBytes(nameBuf, 0, nameBuf.length);
+            inode.writeBytes(blockList, nameBuf, 0, nameBuf.length);
         }
 		if (newEntryStartPos==0) {
 			Util.shortToArray(bb, tLen, 0);
 			tLen+=2;
 		}
-		inode.writeBytes(bb, 0, tLen);
+		inode.writeBytes(blockList, bb, 0, tLen);
 	}
 
-	private void initDir() throws JafsException, IOException {
+	private void initDir(Set<Long> blockList) throws JafsException, IOException {
 		inode.seekSet(0);
-		inode.writeShort(0);
+		inode.writeShort(blockList,0);
 	}
 	
-	void createNewEntry(String canonicalPath, byte name[], int type, long bpos, int ipos) throws JafsException, IOException {
+	void createNewEntry(Set<Long> blockList, String canonicalPath, byte name[], int type, long bpos, int ipos) throws JafsException, IOException {
 	    if (name==null || name.length==0) {
 	        throw new JafsException("Name not suppied");
         }
@@ -295,11 +297,11 @@ class JafsDir {
 		entry.ipos = ipos;
 		entry.type = type;
 		entry.name = name;
-		createEntry(entry);
+		createEntry(blockList, entry);
 		vfs.getDirCache().add(canonicalPath, entry);
 	}
 
-    void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
+    void mkinode(Set<Long> blockList, JafsDirEntry entry, int type) throws JafsException, IOException {
         if (entry==null) {
             throw new JafsException("entry cannot be null");
         }
@@ -307,10 +309,10 @@ class JafsDir {
             JafsInode newInode = vfs.getInodePool().get();
             JafsDir dir = vfs.getDirPool().get();
             try {
-                newInode.createInode(type);
+                newInode.createInode(blockList, type);
                 if ((type & JafsInode.INODE_DIR) != 0) {
                     dir.setInode(newInode);
-                    dir.initDir();
+                    dir.initDir(blockList);
                 }
                 entry.bpos = newInode.getBpos();
                 entry.ipos = newInode.getIpos();
@@ -328,7 +330,7 @@ class JafsDir {
 
             Util.intToArray(bb, 0, (int)entry.bpos);
             Util.shortToArray(bb, 4, entry.ipos);
-            inode.writeBytes(bb, 0, 6);
+            inode.writeBytes(blockList, bb, 0, 6);
         }
     }
 

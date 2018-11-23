@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.Set;
 
 class JafsBlockCache {
 
@@ -10,9 +11,9 @@ class JafsBlockCache {
 
     private JafsBlock free = null;
 
-    public int cacheMaxSize = 100;
+    public int cacheMaxSize;
 
-	JafsBlockCache(Jafs vfs, int size) throws JafsException {
+	JafsBlockCache(Jafs vfs, int size) {
 	    this.vfs = vfs;
 	    cacheMaxSize = size;
 	    gcache = new GenericCache<>(size);
@@ -47,6 +48,13 @@ class JafsBlockCache {
 
 		return blk;
 	}
+
+	void flushBlocks(Set<Long> bl) throws JafsException, IOException {
+	    for (long bpos : bl) {
+            JafsBlock block = get(bpos);
+            block.writeToDisk();
+        }
+    }
 
 	String stats() {
         return gcache.stats();
