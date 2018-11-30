@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.Set;
 
 class JafsUnusedMapEqual implements JafsUnusedMap {
 
@@ -31,7 +32,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         return n*blocksPerUnusedMap;
     }
 
-    private long getUnusedBpos(boolean isInode) throws JafsException, IOException {
+    private long getUnusedBpos(Set<Long> blockList, boolean isInode) throws JafsException, IOException {
         long blocksTotal = superBlock.getBlocksTotal();
 
         if (vfs.getSuper().getBlocksUsed()==blocksTotal) {
@@ -64,7 +65,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                                 if (isInode) {
                                     JafsBlock tmp = vfs.getCacheBlock(curBpos);
                                     tmp.initZeros();
-                                    tmp.writeToDisk();
+                                    blockList.add(curBpos);
                                 }
                                 return curBpos;
                             }
@@ -87,7 +88,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                                     if (isInode) {
                                         JafsBlock tmp = vfs.getCacheBlock(curBpos);
                                         tmp.initZeros();
-                                        tmp.writeToDisk();
+                                        blockList.add(curBpos);
                                     }
                                     return curBpos;
                                 }
@@ -104,18 +105,18 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                 b = block.readByte() | SKIP_MAP;
                 block.seekSet(SKIP_MAP_POSITION);
                 block.writeByte(b);
-                block.writeToDisk();
+                blockList.add(block.bpos);
             }
         }
         return 0;
     }
 
-    public long getUnusedINodeBpos() throws JafsException, IOException {
-        return getUnusedBpos(true);
+    public long getUnusedINodeBpos(Set<Long> blockList) throws JafsException, IOException {
+        return getUnusedBpos(blockList,true);
     }
 
-    public long getUnusedDataBpos() throws JafsException, IOException {
-        return getUnusedBpos(false);
+    public long getUnusedDataBpos(Set<Long> blockList) throws JafsException, IOException {
+        return getUnusedBpos(blockList, false);
     }
 
     private int getUnusedByte(JafsBlock block, long bpos) {
@@ -137,7 +138,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         }
     }
 
-    public void setAvailableForBoth(long bpos) throws JafsException, IOException {
+    public void setAvailableForBoth(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 0
         int b = getUnusedByte(block, bpos);
@@ -149,24 +150,24 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         b = block.readByte();
         block.seekSet(SKIP_MAP_POSITION);
         block.writeByte(b & 0b01111111);
-        block.writeToDisk();
+        blockList.add(block.bpos);
     }
 
-    public void setAvailableForNeither(long bpos) throws JafsException, IOException {
+    public void setAvailableForNeither(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 1b
         int b = getUnusedByte(block, bpos);
         b |= 0b10000000 >> (bpos & 0x7); // set block data bit to used (1)
         block.writeByte(b);
-        block.writeToDisk();
+        blockList.add(block.bpos);
     }
 
-    public void setAvailableForInodeOnly(long bpos) {
+    public void setAvailableForInodeOnly(Set<Long> blockList, long bpos) {
         //setAvailableForBoth(bpos);
         throw new IllegalStateException("this method thould never be called when iNodeSize==blockSize");
     }
 
-    public void createNewUnusedMap(long bpos) throws JafsException, IOException {
+    public void createNewUnusedMap(Set<Long> blockList, long bpos) throws JafsException, IOException {
         if (bpos!=getUnusedMapBpos(bpos)) {
             throw new JafsException("supplied bpos is not an unused map bpos");
         }
@@ -178,7 +179,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         vfs.getRaf().setLength((1+superBlock.getBlocksTotal())*superBlock.getBlockSize());
         JafsBlock block = vfs.getCacheBlock(bpos);
         block.initZeros();
-        block.writeToDisk();
+        blockList.add(block.bpos);
     }
 
 //	void dumpLastVisited() {

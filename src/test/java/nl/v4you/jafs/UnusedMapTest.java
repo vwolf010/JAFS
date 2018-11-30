@@ -9,6 +9,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static junit.framework.TestCase.assertTrue;
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
@@ -126,6 +128,8 @@ public class UnusedMapTest {
         JafsBlock block = jafs.getCacheBlock(0);
         int x;
 
+        Set<Long> blockList = new TreeSet();
+
         for (int n = 0; n < 4; n++) {
             int mask = 0b11000000>>(n*2);
             int invMask = mask ^ 0xff;
@@ -133,8 +137,10 @@ public class UnusedMapTest {
             int old = 0;
             block.seekSet(1);
             block.writeByte(old);
-            block.writeToDisk();
-            jafs.getUnusedMap().setAvailableForBoth(4+n);
+            block.writeToDiskIfNeeded();
+            jafs.getUnusedMap().setAvailableForBoth(blockList, 4+n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
@@ -144,8 +150,10 @@ public class UnusedMapTest {
             old = 0b11111111;
             block.seekSet(1);
             block.writeByte(old);
-            block.writeToDisk();
-            jafs.getUnusedMap().setAvailableForBoth(4+n);
+            block.writeToDiskIfNeeded();
+            jafs.getUnusedMap().setAvailableForBoth(blockList, 4+n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
@@ -155,8 +163,10 @@ public class UnusedMapTest {
             old = 0;
             block.seekSet(1);
             block.writeByte(old);
-            block.writeToDisk();
-            jafs.getUnusedMap().setAvailableForInodeOnly(4+n);
+            block.writeToDiskIfNeeded();
+            jafs.getUnusedMap().setAvailableForInodeOnly(blockList, 4+n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
@@ -166,8 +176,10 @@ public class UnusedMapTest {
             old = 0b11111111;
             block.seekSet(1);
             block.writeByte(old);
-            block.writeToDisk();
-            jafs.getUnusedMap().setAvailableForInodeOnly(4+n);
+            block.writeToDiskIfNeeded();
+            jafs.getUnusedMap().setAvailableForInodeOnly(blockList, 4+n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
@@ -177,8 +189,10 @@ public class UnusedMapTest {
             old = 0;
             block.seekSet(1);
             block.writeByte(old);
-            block.writeToDisk();
-            jafs.getUnusedMap().setAvailableForNeither(4+n);
+            block.writeToDiskIfNeeded();
+            jafs.getUnusedMap().setAvailableForNeither(blockList, 4+n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();
@@ -188,8 +202,10 @@ public class UnusedMapTest {
             old = 0b11111111;
             block.seekSet(1);
             block.writeByte(old);
-            block.writeToDisk();
-            jafs.getUnusedMap().setAvailableForNeither(4+n);
+            block.writeToDiskIfNeeded();
+            jafs.getUnusedMap().setAvailableForNeither(blockList, 4+n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
             x = block.readByte();

@@ -127,7 +127,7 @@ class JafsSuper {
 			Util.intToArray(buf, 26, blocksTotal);
 			Util.intToArray(buf, 30, blocksUsed);
 			rootBlock.writeBytes(buf, 0, 34);
-			rootBlock.writeToDisk();
+			rootBlock.writeToDiskIfNeeded();
 		}
 		needsPersist = false;
 	}

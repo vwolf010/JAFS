@@ -53,7 +53,7 @@ class JafsBlockCache {
 	void flushBlocks(Set<Long> bl) throws JafsException, IOException {
 	    for (long bpos : bl) {
             JafsBlock block = get(bpos);
-            block.writeToDisk();
+            block.writeToDiskIfNeeded();
         }
     }
 

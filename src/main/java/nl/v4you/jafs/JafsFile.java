@@ -203,7 +203,7 @@ public class JafsFile {
                 // then free the inode, pointerblocks and datablocks
 				if (entry.bpos>0) {
 					inode.openInode(entry);
-					inode.free();
+					inode.free(blockList);
 				}
             }
             finally {

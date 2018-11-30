@@ -35,26 +35,25 @@ class JafsInodeContext {
 
 	void createNewBlock(Set<Long> blockList, JafsInode inode, int n, boolean init) throws JafsException, IOException {
 		JafsBlock block;
-		long ptr = vfs.getUnusedMap().getUnusedDataBpos();
+		long ptr = vfs.getUnusedMap().getUnusedDataBpos(blockList);
 		if (ptr!=0) {
 			block = vfs.getCacheBlock(ptr);
 		}
 		else {
-			ptr = vfs.appendNewBlockToArchive();
+			ptr = vfs.appendNewBlockToArchive(blockList);
 			block = vfs.getCacheBlock(ptr);
 		}
 		vfs.getSuper().incBlocksUsedAndFlush();
 		if (init) {
 			block.initZeros();
 		}
-		//block.writeToDisk();
 		blockList.add(ptr);
 		inode.ptrs[n] = ptr;
 		inode.flushInode(blockList);
-		vfs.getUnusedMap().setAvailableForNeither(ptr);
+		vfs.getUnusedMap().setAvailableForNeither(blockList, ptr);
 	}
 
-	private long getBlkPos(long bpos, long off, long len, long fpos) throws JafsException, IOException {
+	private long getBlkPos(Set<Long> blockList, long bpos, long off, long len, long fpos) throws JafsException, IOException {
 		JafsBlock block = vfs.getCacheBlock(bpos);
 		if (len>vfs.getSuper().getBlockSize()) {
 			long nextLen = len/ptrsPerPtrBlock;
@@ -64,9 +63,9 @@ class JafsInodeContext {
 			if (ptr==0) {
 				// Create a new block. Could be a ptr block or a data block.
 				JafsBlock dum;
-				ptr = vfs.getUnusedMap().getUnusedDataBpos();
+				ptr = vfs.getUnusedMap().getUnusedDataBpos(blockList);
 				if (ptr==0) {
-					ptr = vfs.appendNewBlockToArchive();
+					ptr = vfs.appendNewBlockToArchive(blockList);
 					dum = vfs.getCacheBlock(ptr);
 				}
 				else {
@@ -74,13 +73,14 @@ class JafsInodeContext {
 				}
                 dum.initZeros();
 				vfs.getSuper().incBlocksUsedAndFlush();
-				dum.writeToDisk();
+				blockList.add(dum.bpos);
 				block.seekSet(idx<<2);
 				block.writeInt(ptr);
-				block.writeToDisk();
-				vfs.getUnusedMap().setAvailableForNeither(ptr);
+				blockList.add(block.bpos);
+
+				vfs.getUnusedMap().setAvailableForNeither(blockList, ptr);
 			}
-			return getBlkPos(ptr, off+idx*nextLen, nextLen, fpos);
+			return getBlkPos(blockList, ptr, off+idx*nextLen, nextLen, fpos);
 		}
 		else {
 			return bpos;
@@ -110,14 +110,14 @@ class JafsInodeContext {
 						// Create new ptr block
                         createNewBlock(blockList, inode, n, true);
 					}
-                    return getBlkPos(inode.ptrs[n], ptrs[n].fPosStart, ptrs[n].fPosEnd-ptrs[n].fPosStart, fpos);
+                    return getBlkPos(blockList, inode.ptrs[n], ptrs[n].fPosStart, ptrs[n].fPosEnd-ptrs[n].fPosStart, fpos);
 				}
 			}
 		}
 		return 0;
 	}
 	
-	void free(long bpos, int level) throws JafsException, IOException {
+	void free(Set<Long> blockList, long bpos, int level) throws JafsException, IOException {
 		if (level!=0) {
 		    // this is a pointer block, free all it's entries
 			JafsBlock dum = vfs.getCacheBlock(bpos);
@@ -125,23 +125,23 @@ class JafsInodeContext {
 			for (int n=0; n<ptrsPerPtrBlock; n++) {
 				long ptr = dum.readInt();
 				if (ptr!=0) {
-					free(ptr, level-1);
+					free(blockList, ptr, level-1);
 				}
 			}
 		}
 
         // level == 0 : free the space of this data block
 		// level != 0 : free the space of this pointer block
-		vfs.getUnusedMap().setAvailableForBoth(bpos);
+		vfs.getUnusedMap().setAvailableForBoth(blockList, bpos);
         vfs.getUnusedMap().setStartAtData(bpos);
         vfs.getUnusedMap().setStartAtInode(bpos);
 		vfs.getSuper().decBlocksUsed();
 	}
 	
-	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
+	void freeDataAndPtrBlocks(Set<Long> blockList, JafsInode inode) throws JafsException, IOException {
 		for (int n=0; n<ptrsPerInode; n++) {
 			if (inode.ptrs[n]!=0) {
-				free(inode.ptrs[n], ptrs[n].level);
+				free(blockList, inode.ptrs[n], ptrs[n].level);
 			}
 		}
 	}

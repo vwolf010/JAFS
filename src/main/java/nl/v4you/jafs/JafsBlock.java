@@ -53,7 +53,7 @@ class JafsBlock {
 		needsFlush=false;
 	}
 	
-	void writeToDisk() throws IOException, JafsException {
+	private void writeToDisk() throws IOException, JafsException {
 		long start = (1+bpos) * blockSize;
 		long end = start + blockSize;
 		if (end>raf.length()) {

@@ -1,15 +1,16 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.Set;
 
 public interface JafsUnusedMap {
     long getUnusedMapBpos(long bpos);
-    void createNewUnusedMap(long bpos) throws JafsException, IOException;
-    long getUnusedINodeBpos() throws JafsException, IOException;
-    void setAvailableForNeither(long bpos) throws JafsException, IOException;
-    void setAvailableForInodeOnly(long bpos) throws JafsException, IOException;
-    void setAvailableForBoth(long bpos) throws JafsException, IOException;
+    void createNewUnusedMap(Set<Long> blockList, long bpos) throws JafsException, IOException;
+    long getUnusedINodeBpos(Set<Long> blockList) throws JafsException, IOException;
+    void setAvailableForNeither(Set<Long> blockList, long bpos) throws JafsException, IOException;
+    void setAvailableForInodeOnly(Set<Long> blockList, long bpos) throws JafsException, IOException;
+    void setAvailableForBoth(Set<Long> blockList, long bpos) throws JafsException, IOException;
     void setStartAtInode(long bpos);
     void setStartAtData(long bpos);
-    long getUnusedDataBpos() throws JafsException, IOException;
+    long getUnusedDataBpos(Set<Long> blockList) throws JafsException, IOException;
 }

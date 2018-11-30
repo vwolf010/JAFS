@@ -148,10 +148,10 @@ public class Jafs {
         return dirCache;
     }
 
-    long appendNewBlockToArchive() throws JafsException, IOException {
+    long appendNewBlockToArchive(Set<Long> blockList) throws JafsException, IOException {
 		long bpos = superBlock.getBlocksTotal();
 		if (bpos==um.getUnusedMapBpos(bpos)) {
-			um.createNewUnusedMap(bpos);
+			um.createNewUnusedMap(blockList, bpos);
 			bpos = superBlock.getBlocksTotal();
 		}
 		superBlock.incBlocksTotalAndFlush();
