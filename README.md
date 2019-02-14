@@ -1,8 +1,6 @@
 #### JAFS (Java Application File System)
 JAFS is a java library that will allow you to create a filesystem in a filesystem. The main purpose it to store loads of small files inside it but using a smaller blocksize. So it works like an archive (without compression) and it is optimized for speed.
 
-There is no stable release yet, but I have a working happy flow now.
-
 #### Why JAFS?
 * It hides the files your application uses
 * It is optimizable for lot's of small files by offering:
@@ -38,7 +36,4 @@ The inode supports inlined data. This means that inode area that contains the po
 I will create a kind of manual in the future, for the moment just look at the Main class that I created.
 
 #### To do
-* Remove unnecessary checks in the code (for example checking if a dir or file name contains a slash is now in 2 places)
-* Check if all actions are performed in a robust order when doing writes to disk (for example, mark an inode as unused before adjusting the unused map)
 * Add journaling so JAFS has some kind of transaction block mechanism
-* Replace the current directory mechanism with another one that can hold lots of files and still perform fast
