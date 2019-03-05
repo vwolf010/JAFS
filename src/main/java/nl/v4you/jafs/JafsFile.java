@@ -369,7 +369,7 @@ public class JafsFile {
 	 */	
 	private static String normalizePath(String path) {
 		path = path.trim();
-		path = path.replaceAll("//*/", "/"); // replace // with /
+		path = path.replaceAll("/+/", "/"); /* replace // and /// and //// etc. with / */
 		if (path.length()>1) {
 			// Remove trailing slash except when it is the root slash
 			path = path.replaceAll("/$", ""); // remove trailing /
@@ -389,12 +389,12 @@ public class JafsFile {
 	private String getParent(String path) {
 		boolean hasRoot = false;
 		path = normalizePath(path);
+		if (path.length()==1 && path.charAt(0)=='/') {
+		    return null;
+        }
 		if (path.startsWith("/")) {
 			hasRoot = true;
 			path = path.substring(1);
-		}
-		if (path.length()==0) {
-			return null;
 		}
 		if (!path.contains("/")) {
 			if (hasRoot) {

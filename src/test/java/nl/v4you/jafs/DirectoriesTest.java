@@ -11,6 +11,7 @@ import java.util.LinkedList;
 
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class DirectoriesTest {
@@ -157,6 +158,24 @@ public class DirectoriesTest {
         jos.write("12345".getBytes());
         jos.close();
         assertTrue(f.length()==5);
+        vfs.close();
+    }
+
+    @Test
+    public void getParentTests() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        byte longFileName[] = new byte[512];
+        Arrays.fill(longFileName, (byte)65);
+
+        JafsFile f = vfs.getFile("/");
+        assertNull(f.getParent());
+
+        f = vfs.getFile("/abc");
+        assertEquals("/", f.getParent());
+
+        f = vfs.getFile("/abc/def");
+        assertEquals("/abc", f.getParent());
+
         vfs.close();
     }
 
