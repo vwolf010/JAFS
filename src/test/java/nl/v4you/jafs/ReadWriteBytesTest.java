@@ -195,4 +195,16 @@ public class ReadWriteBytesTest {
 
         jafs.close();
     }
+
+    @Test
+    public void initialCreationIsCorrect() throws JafsException, IOException {
+        int blockSize = 128;
+        int inodeSize = 64;
+        long maxFileSize = 4*1024*1024;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize,  maxFileSize);
+        jafs.close();
+        jafs = new Jafs(TEST_ARCHIVE);
+        JafsOutputStream jos = jafs.getOutputStream(jafs.getFile("/a.txt"));
+        jafs.close();
+    }
 }
