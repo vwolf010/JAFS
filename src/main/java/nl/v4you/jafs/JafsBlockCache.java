@@ -55,6 +55,7 @@ class JafsBlockCache {
             JafsBlock block = get(bpos);
             block.writeToDiskIfNeeded();
         }
+        bl.clear();
     }
 
 	String stats() {

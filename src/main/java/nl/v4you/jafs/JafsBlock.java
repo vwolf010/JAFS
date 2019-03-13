@@ -5,6 +5,8 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 
 class JafsBlock {
+	private static final int SUPERBLOCK_SIZE = 1;
+
 	private int blockSize = -1;
 	private byte[] buf;
 	public long bpos = -1;
@@ -46,7 +48,7 @@ class JafsBlock {
 	}
 		
 	void readFromDisk() throws IOException {
-		long start = (1+bpos) * blockSize;
+		long start = (SUPERBLOCK_SIZE+bpos) * blockSize;
 		raf.seek(start);
 		raf.read(buf);
 		byteIdx = 0;
@@ -54,7 +56,7 @@ class JafsBlock {
 	}
 	
 	private void writeToDisk() throws IOException, JafsException {
-		long start = (1+bpos) * blockSize;
+		long start = (SUPERBLOCK_SIZE+bpos) * blockSize;
 		long end = start + blockSize;
 		if (end>raf.length()) {
 			throw new JafsException("Trying to write beyond filesize");

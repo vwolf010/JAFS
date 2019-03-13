@@ -28,9 +28,7 @@ public class Jafs {
 	 * Public
 	 */
 	public Jafs(String fname) throws IOException, JafsException {
-	    Set<Long> blockList = new TreeSet<>();
-		init(blockList, fname, -1, -1, -1);
-		cache.flushBlocks(blockList);
+		init(fname, -1, -1, -1);
 	}
 
 	boolean isSupportedSize(int size, int sizeMin, int sizeMax) {
@@ -54,7 +52,7 @@ public class Jafs {
             throw new JafsException("inode size "+inodeSize+" not supported");
         }
 		if (inodeSize>blockSize) {
-			throw new JafsException("inode size "+inodeSize+" should be smaller or equal to block size "+blockSize);
+			throw new JafsException("inode size "+inodeSize+" must be smaller than or equal to block size "+blockSize);
 		}
 		if (maxFileSize<0) {
 			maxFileSize = 0;
@@ -62,9 +60,7 @@ public class Jafs {
 		if (maxFileSize>JafsInodeContext.MAX_FILE_SIZE) {
 			maxFileSize = JafsInodeContext.MAX_FILE_SIZE;
 		}
-		Set<Long> blockList = new TreeSet<>();
-		init(blockList, fname, blockSize, inodeSize, maxFileSize);
-		cache.flushBlocks(blockList);
+		init(fname, blockSize, inodeSize, maxFileSize);
 		if (blockSize!=superBlock.getBlockSize()) {
 			throw new JafsException("Supplied block size ["+blockSize+"] does not match header block size ["+superBlock.getBlockSize()+"]");
 		}
@@ -177,7 +173,7 @@ public class Jafs {
     /*
 	 * Private
 	 */
-    private void open(Set<Long> blockList, int blockSize, int inodeSize, long maxFileSize) throws IOException, JafsException {
+    private void open(int blockSize, int inodeSize, long maxFileSize) throws IOException, JafsException {
 		File f = new File(fname);
 		if (!f.exists() && blockSize<0) {
 			throw new JafsException("["+fname+"] does not exist");
@@ -192,7 +188,6 @@ public class Jafs {
 			superBlock.setInodeSize(inodeSize);
 			superBlock.setMaxFileSize(maxFileSize);
 			superBlock.needsPersist=true;
-			superBlock.flushIfNeeded();
 			inodePool = new JafsInodePool(this);
 			dirPool = new JafsDirPool(this);
 			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
@@ -204,7 +199,10 @@ public class Jafs {
 				um = new JafsUnusedMapNotEqual(this);
 			}
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
+			Set<Long> blockList = new TreeSet<>();
 			JafsDir.createRootDir(blockList, this);
+			cache.flushBlocks(blockList);
+			superBlock.flushIfNeeded();
 		}
 		else {
 			superBlock = new JafsSuper(this, 64);
@@ -225,9 +223,9 @@ public class Jafs {
 		}
 	}
 	
-	private void init(Set<Long> blockList, String fname, int blockSize, int inodeSize, long maxFileSize) throws JafsException, IOException {
+	private void init(String fname, int blockSize, int inodeSize, long maxFileSize) throws JafsException, IOException {
 		this.fname = fname;
-		open(blockList, blockSize, inodeSize, maxFileSize);
+		open(blockSize, inodeSize, maxFileSize);
 	}
 
 	JafsInodePool getInodePool() {
