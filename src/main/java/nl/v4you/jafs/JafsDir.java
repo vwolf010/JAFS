@@ -1,5 +1,7 @@
 package nl.v4you.jafs;
 
+import nl.v4you.hash.OneAtATimeHash;
+
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Set;
@@ -57,7 +59,7 @@ class JafsDir {
 
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int nameLen = name.length;
-		int nameChecksum = JenkinsHash.calcHash(name) & 0xff;
+		int nameChecksum = OneAtATimeHash.calcHash(name) & 0xff;
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
@@ -168,7 +170,7 @@ class JafsDir {
 
 		byte nameBuf[] = entry.name;
 		int nameLen = nameBuf.length;
-		int nameChecksum = JenkinsHash.calcHash(entry.name) & 0xff;
+		int nameChecksum = OneAtATimeHash.calcHash(entry.name) & 0xff;
 		int overhead;
         if (nameLen < 0x80) {
             overhead = 1 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos

@@ -7,12 +7,23 @@
   <version>1.0.1</version>
   <name>JAFS</name>
   <url>http://maven.apache.org</url>
+  <repositories>
+    <repository>
+      <id>v4you</id>
+      <url>http://v4you.nl/maven</url>
+    </repository>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.12</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>nl.v4you</groupId>
+      <artifactId>utils</artifactId>
+      <version>1.0</version>
     </dependency>
   </dependencies>
   <build>
