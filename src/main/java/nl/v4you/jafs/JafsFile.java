@@ -31,7 +31,7 @@ public class JafsFile {
 		this.vfs = vfs;
 		this.dc = vfs.getDirCache();
 		this.path = normalizePath(path);
-		this.canonicalPath = getCanonicalPath(path);
+		this.canonicalPath = getCanonicalPath(this.path);
     }
 
     JafsFile(Jafs vfs, JafsFile parent, String child) throws JafsException {
@@ -297,7 +297,7 @@ public class JafsFile {
 	 * default 
 	 */
 	JafsDirEntry getEntry(String path) throws JafsException, IOException {
-	    String normPath = getCanonicalPath(path);
+	    String normPath = getCanonicalPath(normalizePath(path));
 
         if (normPath.equals("/")) {
             return vfs.getRootEntry();
@@ -436,6 +436,7 @@ public class JafsFile {
 	}
 		
 	private static String getCanonicalPath(String path) throws JafsException {
+	    // only call this method with a normalized path!
 	    if (path.charAt(path.length()-1)!='/') {
 	        path = path + "/";
         }
@@ -489,7 +490,7 @@ public class JafsFile {
                 dir.setInode(inode);
                 dir.createNewEntry(
                 		blockList,
-                        getCanonicalPath(path),
+                        getCanonicalPath(normalizePath(path)),
                         getName(path).getBytes(Util.UTF8),
                         JafsInode.INODE_DIR,
                         0,
