@@ -2,7 +2,9 @@ package nl.v4you.jafs;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +17,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class DirectoriesTest {
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
+
     @Before
     public void doBefore() {
         File f = new File(TEST_ARCHIVE);
@@ -109,6 +114,53 @@ public class DirectoriesTest {
         f = vfs.getFile("/a/../a/b.txt");
         assertTrue(f.exists());
         vfs.close();
+    }
+
+    @Test
+    public void currentDirIndicator() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/.");
+        assertEquals("/", f.getCanonicalPath());
+        vfs.close();
+    }
+
+    @Test
+    public void parentDirIndicatorMustNotGoBeyondRoot1() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        try {
+            JafsFile f = vfs.getFile("/..");
+            assertTrue("must not reach this line", false);
+        }
+        catch (JafsException je) {}
+        finally {
+            vfs.close();
+        }
+    }
+
+    @Test
+    public void parentDirIndicatorMustNotGoBeyondRoot2() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        try {
+            JafsFile f = vfs.getFile("/abc/../..");
+            assertTrue("must not reach this line", false);
+        }
+        catch (JafsException je) {}
+        finally {
+            vfs.close();
+        }
+    }
+
+    @Test
+    public void rootSlashMandatory() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        try {
+            JafsFile f = vfs.getFile("abc");
+            assertTrue("should not reach this line", false);
+        }
+        catch (JafsException je) {}
+        finally {
+            vfs.close();
+        }
     }
 
     @Test

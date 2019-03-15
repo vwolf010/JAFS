@@ -72,15 +72,15 @@ public class Jafs {
 		}
 	}
 	
-	public JafsFile getFile(String name) {
+	public JafsFile getFile(String name) throws JafsException {
 		return new JafsFile(this, name);
 	}
 	
-	public JafsFile getFile(String parent, String name) {
+	public JafsFile getFile(String parent, String name) throws JafsException {
 		return new JafsFile(this, parent, name);
 	}
 
-	public JafsFile getFile(JafsFile parent, String name) {
+	public JafsFile getFile(JafsFile parent, String name) throws JafsException {
 		return new JafsFile(this, parent, name);
 	}
 

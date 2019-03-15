@@ -10,7 +10,7 @@ public class JafsInputStream extends InputStream {
 	
 	JafsInputStream(Jafs vfs, JafsFile f) throws JafsException, IOException {
 		this.vfs = vfs;
-		path = f.path;
+		path = f.getPath();
 		JafsDirEntry entry = f.getEntry(path);
 		if (entry.bpos>0) {
 			inode = new JafsInode(vfs);
@@ -24,7 +24,7 @@ public class JafsInputStream extends InputStream {
 		try {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
-				JafsDirEntry entry = f.getEntry(f.path);
+				JafsDirEntry entry = f.getEntry(f.getPath());
 				if (entry.bpos>0) {
 					inode = new JafsInode(vfs);
 					inode.openInode(entry);
@@ -45,7 +45,7 @@ public class JafsInputStream extends InputStream {
 		try {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
-				JafsDirEntry entry = f.getEntry(f.path);
+				JafsDirEntry entry = f.getEntry(f.getPath());
 				if (entry.bpos>0) {
 					inode = new JafsInode(vfs);
 					inode.openInode(entry);

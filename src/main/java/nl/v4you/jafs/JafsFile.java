@@ -3,35 +3,42 @@ package nl.v4you.jafs;
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 public class JafsFile {
-	Jafs vfs;
-	String path;
-	String canonicalPath;
-    JafsDirEntryCache dc;
-
     public static final String separator = "/";
 
-	JafsFile(Jafs vfs, String path) {
+    private Jafs vfs;
+	private String path;
+	private String canonicalPath;
+    private JafsDirEntryCache dc;
+
+    private static final Pattern SLASH = Pattern.compile("/");
+    private static final Pattern MULTIPLE_SLASH = Pattern.compile("/+/");
+    private static final Pattern FILENAME_IN_PATH = Pattern.compile("/[^/]*$");
+    private static final Pattern SLASH_DOT_SLASH = Pattern.compile("/[.]/");
+	private static final Pattern ROOT_SLASH_DOT_DOT_SLASH = Pattern.compile("^/[.][.]/");
+	private static final Pattern FILE_CANCELS_ITSELF = Pattern.compile("[^/]+/[.][.]/");
+
+	JafsFile(Jafs vfs, String path) throws JafsException {
 		if (path==null) {
 			throw new NullPointerException("path cannot be null");
 		}
 		path = path.trim();
 		if (!path.startsWith("/")) {
-			// the working directory is always root
-			path = "/" + path;
+		    throw new JafsException("Path must always start with /");
 		}
 		this.vfs = vfs;
 		this.dc = vfs.getDirCache();
 		this.path = normalizePath(path);
-		this.canonicalPath = JafsFile.getCanonicalPath(path);
+		this.canonicalPath = getCanonicalPath(path);
     }
 
-    JafsFile(Jafs vfs, JafsFile parent, String child) {
+    JafsFile(Jafs vfs, JafsFile parent, String child) throws JafsException {
         this(vfs, parent.getCanonicalPath()+JafsFile.separator +child);
     }
 
-    JafsFile(Jafs vfs, String parent, String child) {
+    JafsFile(Jafs vfs, String parent, String child) throws JafsException {
         this(vfs, parent+JafsFile.separator +child);
     }
 
@@ -180,7 +187,7 @@ public class JafsFile {
                         inode.openInode(entry);
                         dir.setInode(inode);
                         if (dir.hasActiveEntries()) {
-                            throw new JafsException("directory " + getCanonicalPath() + " not empty");
+                            throw new JafsException("directory " + canonicalPath + " not empty");
                         }
                     }
                     finally {
@@ -197,7 +204,7 @@ public class JafsFile {
                 inode.openInode(entry.parentBpos, entry.parentIpos);
                 parentDir.setInode(inode);
 				{
-					parentDir.deleteEntry(blockList, getCanonicalPath(), entry);
+					parentDir.deleteEntry(blockList, canonicalPath, entry);
 				}
 
                 // then free the inode, pointerblocks and datablocks
@@ -218,7 +225,7 @@ public class JafsFile {
 	}
 	
 	public JafsFile[] listFiles() throws JafsException, IOException {
-		String parent = getCanonicalPath();
+		String parent = canonicalPath;
 		JafsDirEntry entry = getEntry(canonicalPath);
 		if (entry!=null) {
 			if (entry.bpos==0) {
@@ -293,7 +300,7 @@ public class JafsFile {
             return vfs.getRootEntry();
         }
 
-        String parts[] = normPath.split("/"); // first entry is always empty
+        String parts[] = SLASH.split(normPath);// first entry is always empty
         int n=parts.length;
 
         JafsDirEntry entry=null;
@@ -369,10 +376,13 @@ public class JafsFile {
 	 */	
 	private static String normalizePath(String path) {
 		path = path.trim();
-		path = path.replaceAll("/+/", "/"); /* replace // and /// and //// etc. with / */
-		if (path.length()>1) {
+		path = MULTIPLE_SLASH.matcher(path).replaceAll("/");
+		int len = path.length();
+		if (len>1) {
 			// Remove trailing slash except when it is the root slash
-			path = path.replaceAll("/$", ""); // remove trailing /
+            if (path.charAt(len-1)=='/') {
+                path = path.substring(0, len-1);
+            }
 		}
 		return path;
 	}
@@ -382,7 +392,7 @@ public class JafsFile {
 		if (path.length()==1 && path.charAt(0)=='/') {
 			return "";
 		}
-		String names[] = path.split("/");
+		String names[] = SLASH.split(path);
 		return names[names.length-1];
 	}
 	
@@ -405,10 +415,11 @@ public class JafsFile {
 			}
 		}
 		if (hasRoot) {
-			return "/" + path.replaceAll("/[^/]*$", "");
+			return "/" + FILENAME_IN_PATH.matcher(path).replaceAll("");
 		}
 		else {
-			return path.replaceAll("/[^/]*$", "");
+
+			return FILENAME_IN_PATH.matcher(path).replaceAll("");
 		}
 	}
 
@@ -421,34 +432,29 @@ public class JafsFile {
 		return path;
 	}
 		
-	public static String getCanonicalPath(String path) {
-		int len;
-		
-		path = normalizePath(path);
-		if (!path.startsWith("/")) {
-			path = "/" + path;
-		}
-		path = path + "/";
-
-		len = 0;
+	private static String getCanonicalPath(String path) throws JafsException {
+	    if (path.charAt(path.length()-1)!='/') {
+	        path = path + "/";
+        }
+		int len = 0;
 		while (len!=path.length()) {
 			len = path.length();
-			path = path.replaceAll("/\\./", "/");
+			path = SLASH_DOT_SLASH.matcher(path).replaceAll("/");
 		}
 		len = 0;
 		while (len!=path.length()) {
 			len = path.length();
-			int l=0; 
-			while (l!=path.length()) {
-				l = path.length();
-				path = path.replaceAll("^/\\.\\./", "/");
-			}
-			path = path.replaceAll("[^/]+/\\.\\./", "");
+			path = FILE_CANCELS_ITSELF.matcher(path).replaceAll("");
 		}
-		if (path.length()==1 && path.charAt(0)=='/') {
-			return "/";
-		}
-		return path.substring(0, path.length()-1);		
+		if (ROOT_SLASH_DOT_DOT_SLASH.matcher(path).find()) {
+		    throw new JafsException("Parent directory (..) must not go beyond root");
+        }
+        if (path.equals("/")) {
+		    return path;
+        }
+        else {
+            return path.substring(0, path.length() - 1);
+        }
 	}
 		
 	private boolean exists(String path) throws JafsException, IOException {
