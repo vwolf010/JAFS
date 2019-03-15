@@ -226,6 +226,9 @@ public class JafsFile {
 	
 	public JafsFile[] listFiles() throws JafsException, IOException {
 		String parent = canonicalPath;
+		if (!parent.endsWith("/")) {
+		    parent += "/";
+        }
 		JafsDirEntry entry = getEntry(canonicalPath);
 		if (entry!=null) {
 			if (entry.bpos==0) {
@@ -241,7 +244,7 @@ public class JafsFile {
                     l = dir.list();
                     JafsFile fl[] = new JafsFile[l.length];
                     for (int n=0; n<fl.length; n++) {
-                        fl[n] = new JafsFile(vfs, parent + "/" + l[n]);
+                        fl[n] = new JafsFile(vfs, parent + l[n]);
                     }
                     return fl;
                 }

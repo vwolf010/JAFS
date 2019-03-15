@@ -138,6 +138,18 @@ public class DirectoriesTest {
     }
 
     @Test
+    public void getCanonicalPath() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
+        JafsFile f = vfs.getFile("/6d");
+        f.createNewFile();
+        f = vfs.getFile("/");
+        for (JafsFile jf : f.listFiles()) {
+            assertEquals("/6d", jf.getCanonicalPath());
+        }
+        vfs.close();
+    }
+
+    @Test
     public void parentDirIndicatorMustNotGoBeyondRoot2() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
         try {
