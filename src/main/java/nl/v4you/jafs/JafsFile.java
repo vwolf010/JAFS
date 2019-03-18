@@ -17,7 +17,6 @@ public class JafsFile {
     private static final Pattern MULTIPLE_SLASH = Pattern.compile("/+/");
     private static final Pattern FILENAME_IN_PATH = Pattern.compile("/[^/]*$");
     private static final Pattern SLASH_DOT_SLASH = Pattern.compile("/[.]/");
-	private static final Pattern ROOT_SLASH_DOT_DOT_SLASH = Pattern.compile("^/[.][.]/");
 	private static final Pattern FILE_CANCELS_ITSELF = Pattern.compile("[^/]+/[.][.]/");
 
 	JafsFile(Jafs vfs, String path) throws JafsException {
@@ -450,7 +449,7 @@ public class JafsFile {
 			len = path.length();
 			path = FILE_CANCELS_ITSELF.matcher(path).replaceAll("");
 		}
-		if (ROOT_SLASH_DOT_DOT_SLASH.matcher(path).find()) {
+		if (path.startsWith("/../")) {
 		    throw new JafsException("Parent directory (..) must not go beyond root");
         }
         if (path.equals("/")) {
