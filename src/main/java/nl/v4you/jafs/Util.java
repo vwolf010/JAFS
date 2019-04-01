@@ -9,7 +9,7 @@ public class Util {
     static final Charset UTF8 =Charset.forName("UTF-8");
 
     static void shortToArray(byte b[], int off, int i) {
-        b[off] = (byte)((i>>8) & 0xff);
+        b[off] = (byte)((i>>>8) & 0xff);
         b[off+1] = (byte)(i & 0xff);
     }
 
@@ -21,9 +21,9 @@ public class Util {
     }
 
     static void intToArray(byte b[], int off, long i) {
-        b[off] = (byte)((i>>24) & 0xffL);
-        b[off+1] = (byte)((i>>16) & 0xffL);
-        b[off+2] = (byte)((i>>8) & 0xffL);
+        b[off] = (byte)((i>>>24) & 0xffL);
+        b[off+1] = (byte)((i>>>16) & 0xffL);
+        b[off+2] = (byte)((i>>>8) & 0xffL);
         b[off+3] = (byte)(i & 0xffL);
     }
 
@@ -37,13 +37,13 @@ public class Util {
     }
 
     static void longToArray(byte b[], int off, long i) {
-        b[off] = (byte)((i>>56) & 0xffL);
-        b[off+1] = (byte)((i>>48) & 0xffL);
-        b[off+2] = (byte)((i>>40) & 0xffL);
-        b[off+3] = (byte)((i>>32) & 0xffL);
-        b[off+4] = (byte)((i>>24) & 0xffL);
-        b[off+5] = (byte)((i>>16) & 0xffL);
-        b[off+6] = (byte)((i>>8) & 0xffL);
+        b[off] = (byte)((i>>>56) & 0xffL);
+        b[off+1] = (byte)((i>>>48) & 0xffL);
+        b[off+2] = (byte)((i>>>40) & 0xffL);
+        b[off+3] = (byte)((i>>>32) & 0xffL);
+        b[off+4] = (byte)((i>>>24) & 0xffL);
+        b[off+5] = (byte)((i>>>16) & 0xffL);
+        b[off+6] = (byte)((i>>>8) & 0xffL);
         b[off+7] = (byte)(i & 0xffL);
     }
 

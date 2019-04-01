@@ -224,14 +224,14 @@ class JafsInode {
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
-			iblock.writeByte(b);
+			iblock.writeByte(b & 0xff);
 			fpos++;
             blockList.add(iblock.bpos);
 		}
 		else {
 			JafsBlock dum = vfs.getCacheBlock(ctx.getBlkPos(blockList, this, fpos));
 			dum.seekSet((int)(fpos & superBlockSizeMask));
-			dum.writeByte(b);
+			dum.writeByte(b & 0xff);
 			fpos++;
             blockList.add(dum.bpos);
 		}
@@ -286,13 +286,13 @@ class JafsInode {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(ipos *superInodeSize+INODE_HEADER_SIZE+fpos));
 			fpos++;
-			return iblock.readByte();
+			return iblock.readByte() & 0xff;
 		}
 		else {
 			JafsBlock block = vfs.getCacheBlock(ctx.getBlkPos(null, this, fpos));
 			block.seekSet((int)(fpos & superBlockSizeMask));
 			fpos++;
-			return block.readByte();
+			return block.readByte() & 0xff;
 		}
 	}
 	
@@ -368,7 +368,7 @@ class JafsInode {
         JafsBlock iblock = vfs.getCacheBlock(bpos);
         iblock.seekSet(ipos * superInodeSize);
         type=0;
-        iblock.writeByte(type);
+        iblock.writeByte(0);
         blockList.add(iblock.bpos);
 
 		// update the unusedMap

@@ -90,11 +90,11 @@ class JafsBlock {
 //	}
 
 	int readByte() {
-		return buf[byteIdx++] & 0xff;
+		return buf[byteIdx++];
 	}
 
 	void writeByte(int b) {
-		buf[byteIdx++] = (byte)(b & 0xff);
+		buf[byteIdx++] = (byte)(b);
 		needsFlush=true;
 	}
 
@@ -125,9 +125,9 @@ class JafsBlock {
 	}
 
 	void writeInt(long l) {
-		buf[byteIdx++] = (byte)((l >> 24) & 0xffL);
-		buf[byteIdx++] = (byte)((l >> 16) & 0xffL);
-		buf[byteIdx++] = (byte)((l >>  8) & 0xffL);
+		buf[byteIdx++] = (byte)((l >>> 24) & 0xffL);
+		buf[byteIdx++] = (byte)((l >>> 16) & 0xffL);
+		buf[byteIdx++] = (byte)((l >>>  8) & 0xffL);
 		buf[byteIdx++] = (byte)(l & 0xffL);
 		needsFlush=true;
 	}

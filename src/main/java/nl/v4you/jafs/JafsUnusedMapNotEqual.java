@@ -93,7 +93,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
             }
 			JafsBlock block = vfs.getCacheBlock(unusedMap * blocksPerUnusedMap);
 			block.seekSet(0);
-			int b = block.readByte();
+			int b = block.readByte() & 0xff;
 			if ((b & SKIP_MAP) != 0) {
 				curBpos += blocksPerUnusedMap;
 			}
@@ -121,7 +121,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 					}
 				}
 				for (int m = 1; m < blockSize; m++) {
-					b = block.readByte();
+					b = block.readByte() & 0xff;
 					if ((b & grpMask) == grpMask) {
 						curBpos += BLOCKS_PER_BYTE;
 					}
@@ -148,12 +148,12 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 				// but not for the last unusedMap since we need to come back
 				// to that one in order to find partially used inode blocks
 				block.seekSet(SKIP_MAP_POSITION);
-				b = block.readByte() | SKIP_DATA;
+				b = (block.readByte() & 0xff) | SKIP_DATA;
 				if (isInode) {
 					b |= SKIP_INODE;
 				}
 				block.seekSet(SKIP_MAP_POSITION);
-				block.writeByte(b);
+				block.writeByte(b & 0xff);
 				blockList.add(block.bpos);
 			}
 		}
@@ -169,9 +169,9 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 	}
 
 	int getUnusedByte(JafsBlock block, long bpos) {
-		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>2);
+		int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>>2);
 		block.seekSet(unusedIdx);
-		int b = block.readByte();
+		int b = block.readByte() & 0xff;
 		block.seekSet(unusedIdx);
 		return b;
 	}
@@ -194,8 +194,8 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 00
         int b = getUnusedByte(block, bpos);
-        b &= ~(0b11000000 >> ((bpos & 0x3)<<1)); // set block data bit to unused (00)
-        block.writeByte(b);
+        b &= ~(0b11000000 >>> ((bpos & 0x3)<<1)); // set block data bit to unused (00)
+        block.writeByte(b & 0xff);
 
         // don't skip this map next time we look for a free block
         block.seekSet(SKIP_MAP_POSITION);
@@ -209,8 +209,8 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 		JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
 		// Set to 11b
 		int b = getUnusedByte(block, bpos);
-		b |= 0b11000000 >> ((bpos & 0x3)<<1); // set block data bit to used (11)
-		block.writeByte(b);
+		b |= 0b11000000 >>> ((bpos & 0x3)<<1); // set block data bit to used (11)
+		block.writeByte(b & 0xff);
 		blockList.add(block.bpos);
 	}
 
@@ -218,11 +218,11 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 		JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
 		// Set to 01, meaning: available for inode (=0) but not for data (=1)
 		int b = getUnusedByte(block, bpos);
-		int bitPos = 0x80 >> ((bpos & 0x3)<<1);
-        if (((b & bitPos) != 0) || ((b & (bitPos>>1)) != 1)) {
+		int bitPos = 0x80 >>> ((bpos & 0x3)<<1);
+        if (((b & bitPos) != 0) || ((b & (bitPos>>>1)) != 1)) {
             b &= ~bitPos; // set inode bit to unused (0)
-            b |= (bitPos >> 1); // set data bit to used (1)
-            block.writeByte(b);
+            b |= (bitPos >>> 1); // set data bit to used (1)
+            block.writeByte(b & 0xff);
 
             // don't skip this map next time we look for a free inode block
             block.seekSet(SKIP_MAP_POSITION);

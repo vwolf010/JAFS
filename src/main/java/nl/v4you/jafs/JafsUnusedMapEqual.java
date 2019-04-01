@@ -49,7 +49,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
             startAt = unusedMap;
             JafsBlock block = vfs.getCacheBlock(unusedMap * blocksPerUnusedMap);
             block.seekSet(0);
-            int b = block.readByte();
+            int b = block.readByte() & 0xff;
             if ((b & SKIP_MAP) != 0) {
                 curBpos += blocksPerUnusedMap;
             }
@@ -77,7 +77,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                     }
                 }
                 for (int m = 1; m < blockSize; m++) {
-                    b = block.readByte();
+                    b = block.readByte() & 0xff;
                     if ((b & 0xff) == 0xff) {
                         curBpos += BLOCKS_PER_BYTE;
                     }
@@ -102,9 +102,9 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                 }
                 // nothing found? skip this unusedMap next time it gets visited
                 block.seekSet(SKIP_MAP_POSITION);
-                b = block.readByte() | SKIP_MAP;
+                b = (block.readByte() & 0xff) | SKIP_MAP;
                 block.seekSet(SKIP_MAP_POSITION);
-                block.writeByte(b);
+                block.writeByte(b & 0xff);
                 blockList.add(block.bpos);
             }
         }
@@ -120,9 +120,9 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
     }
 
     private int getUnusedByte(JafsBlock block, long bpos) {
-        int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>3);
+        int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>>3);
         block.seekSet(unusedIdx);
-        int b = block.readByte();
+        int b = block.readByte() & 0xff;
         block.seekSet(unusedIdx);
         return b;
     }
@@ -142,8 +142,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 0
         int b = getUnusedByte(block, bpos);
-        b &= ~(0b10000000 >> (bpos & 0x7)); // set block data bit to unused (0)
-        block.writeByte(b);
+        b &= ~(0b10000000 >>> (bpos & 0x7)); // set block data bit to unused (0)
+        block.writeByte(b & 0xff);
 
         // don't skip this map next time we look for a free block
         block.seekSet(SKIP_MAP_POSITION);
@@ -157,8 +157,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 1b
         int b = getUnusedByte(block, bpos);
-        b |= 0b10000000 >> (bpos & 0x7); // set block data bit to used (1)
-        block.writeByte(b);
+        b |= 0b10000000 >>> (bpos & 0x7); // set block data bit to used (1)
+        block.writeByte(b & 0xff);
         blockList.add(block.bpos);
     }
 
