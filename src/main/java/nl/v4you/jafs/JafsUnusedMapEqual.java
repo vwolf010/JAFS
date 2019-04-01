@@ -101,10 +101,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                     }
                 }
                 // nothing found? skip this unusedMap next time it gets visited
-                block.seekSet(SKIP_MAP_POSITION);
-                b = (block.readByte() & 0xff) | SKIP_MAP;
-                block.seekSet(SKIP_MAP_POSITION);
-                block.writeByte(b & 0xff);
+                b = (block.peek(SKIP_MAP_POSITION) & 0xff) | SKIP_MAP;
+                block.poke(SKIP_MAP_POSITION, b & 0xff);
                 blockList.add(block.bpos);
             }
         }
@@ -146,10 +144,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         block.writeByte(b & 0xff);
 
         // don't skip this map next time we look for a free block
-        block.seekSet(SKIP_MAP_POSITION);
-        b = block.readByte();
-        block.seekSet(SKIP_MAP_POSITION);
-        block.writeByte(b & 0b01111111);
+        b = block.peek(SKIP_MAP_POSITION);
+        block.poke(SKIP_MAP_POSITION, b & 0b01111111);
         blockList.add(block.bpos);
     }
 

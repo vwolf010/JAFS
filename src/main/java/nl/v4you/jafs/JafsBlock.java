@@ -94,7 +94,16 @@ class JafsBlock {
 	}
 
 	void writeByte(int b) {
-		buf[byteIdx++] = (byte)(b);
+		buf[byteIdx++] = (byte)b;
+		needsFlush=true;
+	}
+
+	int peek(int idx) {
+		return buf[idx];
+	}
+
+	void poke(int idx, int b) {
+		buf[idx] = (byte)b;
 		needsFlush=true;
 	}
 

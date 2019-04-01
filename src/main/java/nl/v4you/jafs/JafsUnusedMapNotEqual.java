@@ -147,13 +147,11 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 				// nothing found? skip this unusedMap next time it gets visited
 				// but not for the last unusedMap since we need to come back
 				// to that one in order to find partially used inode blocks
-				block.seekSet(SKIP_MAP_POSITION);
-				b = (block.readByte() & 0xff) | SKIP_DATA;
+				b = (block.peek(SKIP_MAP_POSITION) & 0xff) | SKIP_DATA;
 				if (isInode) {
 					b |= SKIP_INODE;
 				}
-				block.seekSet(SKIP_MAP_POSITION);
-				block.writeByte(b & 0xff);
+				block.poke(SKIP_MAP_POSITION, b & 0xff);
 				blockList.add(block.bpos);
 			}
 		}
@@ -198,10 +196,8 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
         block.writeByte(b & 0xff);
 
         // don't skip this map next time we look for a free block
-        block.seekSet(SKIP_MAP_POSITION);
-        b = block.readByte();
-        block.seekSet(SKIP_MAP_POSITION);
-        block.writeByte(b & 0b00111111);
+        b = block.peek(SKIP_MAP_POSITION);
+        block.poke(SKIP_MAP_POSITION, b & 0b00111111);
         blockList.add(block.bpos);
     }
 
@@ -225,10 +221,8 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
             block.writeByte(b & 0xff);
 
             // don't skip this map next time we look for a free inode block
-            block.seekSet(SKIP_MAP_POSITION);
-            b = block.readByte();
-            block.seekSet(SKIP_MAP_POSITION);
-            block.writeByte(b & 0b01111111);
+            b = block.peek(SKIP_MAP_POSITION);
+            block.poke(SKIP_MAP_POSITION, b & 0b01111111);
             blockList.add(block.bpos);
         }
 	}
