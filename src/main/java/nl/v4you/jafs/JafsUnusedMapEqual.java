@@ -100,8 +100,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                     }
                 }
                 // nothing found? skip this unusedMap next time it gets visited
-                b = (block.readSkipMapByte() & 0xff) | SKIP_MAP;
-                block.writeSkipMapByte(b);
+                b = (block.peekSkipMapByte() & 0xff) | SKIP_MAP;
+                block.pokeSkipMapByte(b);
                 blockList.add(block.bpos);
             }
         }
@@ -116,12 +116,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         return getUnusedBpos(blockList, false);
     }
 
-    private int getUnusedByte(JafsBlock block, long bpos) {
-        int unusedIdx = (int)((bpos & (blocksPerUnusedMap-1))>>>3);
-        block.seekSet(unusedIdx);
-        int b = block.readByte() & 0xff;
-        block.seekSet(unusedIdx);
-        return b;
+    private int getUnusedIdx(long bpos) {
+        return (int)((bpos & (blocksPerUnusedMap-1))>>>3);
     }
 
     public void setStartAtInode(long bpos) {
@@ -138,22 +134,24 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
     public void setAvailableForBoth(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 0
-        int b = getUnusedByte(block, bpos);
+        int idx = getUnusedIdx(bpos);
+        int b = block.peekByte(idx) & 0xff;
         b &= ~(0b10000000 >>> (bpos & 0x7)); // set block data bit to unused (0)
-        block.writeByte(b & 0xff);
+        block.pokeByte(idx, b);
 
         // don't skip this map next time we look for a free block
-        b = block.readSkipMapByte();
-        block.writeSkipMapByte(b & 0b01111111);
+        b = block.peekSkipMapByte();
+        block.pokeSkipMapByte(b & 0b01111111);
         blockList.add(block.bpos);
     }
 
     public void setAvailableForNeither(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 1b
-        int b = getUnusedByte(block, bpos);
+        int idx = getUnusedIdx(bpos);
+        int b = block.peekByte(idx);
         b |= 0b10000000 >>> (bpos & 0x7); // set block data bit to used (1)
-        block.writeByte(b & 0xff);
+        block.pokeByte(idx, b);
         blockList.add(block.bpos);
     }
 
