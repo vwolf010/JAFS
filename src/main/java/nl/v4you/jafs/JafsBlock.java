@@ -89,21 +89,21 @@ class JafsBlock {
 //		dumpBlock(f);
 //	}
 
+	int readSkipMapByte() {
+		return buf[0];
+	}
+
+	void writeSkipMapByte(int b) {
+		buf[0] = (byte)b;
+		needsFlush=true;
+	}
+
 	int readByte() {
 		return buf[byteIdx++];
 	}
 
 	void writeByte(int b) {
 		buf[byteIdx++] = (byte)b;
-		needsFlush=true;
-	}
-
-	int peek(int idx) {
-		return buf[idx];
-	}
-
-	void poke(int idx, int b) {
-		buf[idx] = (byte)b;
 		needsFlush=true;
 	}
 

@@ -6,7 +6,6 @@ import java.util.Set;
 class JafsUnusedMapEqual implements JafsUnusedMap {
 
     static final int SKIP_MAP = 0x80;
-    static final int SKIP_MAP_POSITION = 0;
     static final int BLOCKS_PER_BYTE = 8;
 
     Jafs vfs;
@@ -101,8 +100,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
                     }
                 }
                 // nothing found? skip this unusedMap next time it gets visited
-                b = (block.peek(SKIP_MAP_POSITION) & 0xff) | SKIP_MAP;
-                block.poke(SKIP_MAP_POSITION, b & 0xff);
+                b = (block.readSkipMapByte() & 0xff) | SKIP_MAP;
+                block.writeSkipMapByte(b);
                 blockList.add(block.bpos);
             }
         }
@@ -144,8 +143,8 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         block.writeByte(b & 0xff);
 
         // don't skip this map next time we look for a free block
-        b = block.peek(SKIP_MAP_POSITION);
-        block.poke(SKIP_MAP_POSITION, b & 0b01111111);
+        b = block.readSkipMapByte();
+        block.writeSkipMapByte(b & 0b01111111);
         blockList.add(block.bpos);
     }
 
