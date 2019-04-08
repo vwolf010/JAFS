@@ -31,6 +31,23 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         return n*blocksPerUnusedMap;
     }
 
+    private long reserveBpos(long curBpos, long blocksTotal, boolean isInode, long unusedMap, Set<Long> blockList) throws JafsException, IOException {
+        if (curBpos < blocksTotal) {
+            if (isInode) {
+                JafsBlock tmp = vfs.getCacheBlock(curBpos);
+                tmp.initZeros();
+                blockList.add(curBpos);
+            }
+            startAt = unusedMap;
+            return curBpos;
+        }
+        else {
+            startAt = unusedMap;
+            return 0;
+        }
+
+    }
+
     private long getUnusedBpos(Set<Long> blockList, boolean isInode) throws JafsException, IOException {
         long blocksTotal = superBlock.getBlocksTotal();
 
@@ -41,70 +58,51 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
             return 0;
         }
 
-        //long lastUnusedMap = blocksTotal/blocksPerUnusedMap;
         long curBpos = startAt * blocksPerUnusedMap;
-        for (long unusedMap = startAt; curBpos<blocksTotal; unusedMap++) {
-            //lastVisitedMapForDump = unusedMap;
-            startAt = unusedMap;
+        long unusedMap = startAt;
+        for (; curBpos<blocksTotal; unusedMap++) {
             JafsBlock block = vfs.getCacheBlock(unusedMap * blocksPerUnusedMap);
-            block.seekSet(0);
-            int b = block.readByte() & 0xff;
+            int b = block.peekSkipMapByte() & 0xff;
             if ((b & SKIP_MAP) != 0) {
                 curBpos += blocksPerUnusedMap;
+                continue;
+            }
+            // first process the skip map byte
+            if ((b & 0x7f) == 0x7f) {
+                curBpos += BLOCKS_PER_BYTE;
             }
             else {
+                curBpos++; // skip the Bpos of the unused map itself
+                // and process the rest of the skip map byte:
+                for (int bitMask = 0x40; bitMask != 0; bitMask >>>= 1) {
+                    if ((b & bitMask) == 0) {
+                        reserveBpos(curBpos, blocksTotal, isInode, unusedMap, blockList);
+                    }
+                    curBpos++;
+                }
+            }
+            // then process the other bytes
+            block.seekSet(1);
+            for (int m = 1; m < blockSize; m++) {
+                b = block.readByte() & 0xff;
                 if ((b & 0xff) == 0xff) {
                     curBpos += BLOCKS_PER_BYTE;
                 }
                 else {
-                    curBpos++; // skip the Bpos of the unused map itself
-                    for (int bitMask = 0x40; bitMask != 0; bitMask >>>= 1) {
+                    for (int bitMask = 0x80; bitMask != 0; bitMask >>>= 1) {
                         if ((b & bitMask) == 0) {
-                            if (curBpos < blocksTotal) {
-                                if (isInode) {
-                                    JafsBlock tmp = vfs.getCacheBlock(curBpos);
-                                    tmp.initZeros();
-                                    blockList.add(curBpos);
-                                }
-                                return curBpos;
-                            }
-                            else {
-                                return 0;
-                            }
+                            reserveBpos(curBpos, blocksTotal, isInode, unusedMap, blockList);
                         }
                         curBpos++;
                     }
                 }
-                for (int m = 1; m < blockSize; m++) {
-                    b = block.readByte() & 0xff;
-                    if ((b & 0xff) == 0xff) {
-                        curBpos += BLOCKS_PER_BYTE;
-                    }
-                    else {
-                        for (int bitMask = 0x80; bitMask != 0; bitMask >>>= 1) {
-                            if ((b & bitMask) == 0) {
-                                if (curBpos<blocksTotal) {
-                                    if (isInode) {
-                                        JafsBlock tmp = vfs.getCacheBlock(curBpos);
-                                        tmp.initZeros();
-                                        blockList.add(curBpos);
-                                    }
-                                    return curBpos;
-                                }
-                                else {
-                                    return 0;
-                                }
-                            }
-                            curBpos++;
-                        }
-                    }
-                }
-                // nothing found? skip this unusedMap next time it gets visited
-                b = (block.peekSkipMapByte() & 0xff) | SKIP_MAP;
-                block.pokeSkipMapByte(b);
-                blockList.add(block.bpos);
             }
+            // nothing found? skip this unusedMap next time it gets visited
+            b = (block.peekSkipMapByte() & 0xff) | SKIP_MAP;
+            block.pokeSkipMapByte(b);
+            blockList.add(block.bpos);
         }
+        startAt = unusedMap;
         return 0;
     }
 
