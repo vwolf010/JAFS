@@ -107,6 +107,20 @@ public class ReadWriteBytesTest {
         jafs.close();
     }
 
+    @Test
+    public void writeSingleByte() throws JafsException, IOException {
+        int blockSize = 256;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize/2, 1024 * 1024);
+        JafsFile f = jafs.getFile("/abc.txt");
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        jos.write('A');
+        jos.close();
+        JafsInputStream jis = jafs.getInputStream(f);
+        int A = jis.read();
+        assertEquals('A', A);
+        jafs.close();
+    }
+
     @Ignore
     @Test
     public void adviceBlockSize() throws JafsException, IOException {

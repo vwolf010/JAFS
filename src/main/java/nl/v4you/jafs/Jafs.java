@@ -200,8 +200,7 @@ public class Jafs {
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
 			Set<Long> blockList = new TreeSet<>();
 			JafsDir.createRootDir(blockList, this);
-			superBlock.flushIfNeeded();
-			cache.flushBlocks(blockList);
+			flushChanges(blockList);
 		}
 		else {
 			superBlock = new JafsSuper(this, 64);
@@ -283,4 +282,9 @@ public class Jafs {
         long onDisk[] = new long[sizes.length];
         long lost[] = new long[sizes.length];
     }
+
+    void flushChanges(Set<Long> blockList) throws JafsException, IOException {
+    	superBlock.flushIfNeeded();
+    	cache.flushBlocks(blockList);
+	}
 }
