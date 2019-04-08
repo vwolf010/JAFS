@@ -157,7 +157,7 @@ class JafsInode {
                 // since we try to find at least 1 other used position
                 // we can do the inodeCnt==1 check here
                 if (inodeCnt==1) {
-                    vfs.getSuper().incBlocksUsedAndFlush();
+                    vfs.getSuper().incBlocksUsed();
                 }
                 if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
                     // vfs.getINodeContext().getInodesPerBlock() could be 1 so check that first

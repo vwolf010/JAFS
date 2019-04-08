@@ -230,9 +230,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 		if (bpos<vfs.getSuper().getBlocksTotal()) {
 			throw new JafsException("unused map should already exist");
 		}
-		superBlock.incBlocksTotal();
-		superBlock.incBlocksUsedAndFlush();
-		vfs.getRaf().setLength((1+superBlock.getBlocksTotal())*superBlock.getBlockSize());
+		superBlock.incBlocksTotalAndUsed();
 		JafsBlock block = vfs.getCacheBlock(bpos);
 		block.initZeros();
 		blockList.add(block.bpos);

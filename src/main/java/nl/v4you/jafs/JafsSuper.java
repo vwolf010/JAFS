@@ -49,16 +49,17 @@ class JafsSuper {
 		return blocksUsed;
 	}
 
-	void incBlocksTotal() {
+	void incBlocksTotalAndUsed() throws IOException {
 		blocksTotal++;
+		incBlocksUsed();
 	}
 	
-	void incBlocksTotalAndFlush() {
+	void incBlocksTotal() throws IOException {
 		blocksTotal++;
 		needsPersist=true;
 	}
 
-	void incBlocksUsedAndFlush() {
+	void incBlocksUsed() {
 		blocksUsed++;
 		if (blocksUsed>blocksTotal) {
 			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
@@ -113,6 +114,7 @@ class JafsSuper {
 	
 	void flushIfNeeded() throws JafsException, IOException {
 		if (needsPersist) {
+            vfs.getRaf().setLength((1+blocksTotal)*blockSize);
 			rootBlock.seekSet(0);
 			buf[0] = 'J';
 			buf[1] = 'A';

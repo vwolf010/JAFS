@@ -150,8 +150,7 @@ public class Jafs {
 			um.createNewUnusedMap(blockList, bpos);
 			bpos = superBlock.getBlocksTotal();
 		}
-		superBlock.incBlocksTotalAndFlush();
-		raf.setLength((1+superBlock.getBlocksTotal())*superBlock.getBlockSize());
+		superBlock.incBlocksTotal();
 		return bpos;
 	}
 
@@ -201,8 +200,8 @@ public class Jafs {
 			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
 			Set<Long> blockList = new TreeSet<>();
 			JafsDir.createRootDir(blockList, this);
-			cache.flushBlocks(blockList);
 			superBlock.flushIfNeeded();
+			cache.flushBlocks(blockList);
 		}
 		else {
 			superBlock = new JafsSuper(this, 64);

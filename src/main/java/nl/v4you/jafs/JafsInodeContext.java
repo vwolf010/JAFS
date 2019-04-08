@@ -43,7 +43,7 @@ class JafsInodeContext {
 			ptr = vfs.appendNewBlockToArchive(blockList);
 			block = vfs.getCacheBlock(ptr);
 		}
-		vfs.getSuper().incBlocksUsedAndFlush();
+		vfs.getSuper().incBlocksUsed();
 		if (init) {
 			block.initZeros();
 		}
@@ -72,7 +72,7 @@ class JafsInodeContext {
 					dum = vfs.getCacheBlock(ptr);
 				}
                 dum.initZeros();
-				vfs.getSuper().incBlocksUsedAndFlush();
+				vfs.getSuper().incBlocksUsed();
 				blockList.add(dum.bpos);
 				block.seekSet(idx<<2);
 				block.writeInt(ptr);

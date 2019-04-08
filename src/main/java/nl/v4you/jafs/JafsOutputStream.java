@@ -81,8 +81,8 @@ public class JafsOutputStream extends OutputStream {
 			Set<Long> blockList = new TreeSet<>();
 			createInodeIfNeeded(blockList);
 			inode.writeBytes(blockList, buf, start, len);
-			vfs.getBlockCache().flushBlocks(blockList);
 			vfs.getSuper().flushIfNeeded();
+			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
