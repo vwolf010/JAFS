@@ -82,8 +82,7 @@ class JafsInode {
                 len += 4;
             }
         }
-        iblock.writeBytes(bb1, 0, len);
-        blockList.add(bpos);
+        iblock.writeBytes(blockList, bb1, 0, len);
 	}
 
 	void openInode(long bpos, int ipos) throws JafsException, IOException {
@@ -124,7 +123,7 @@ class JafsInode {
                 iblock = vfs.getCacheBlock(bpos);
                 for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
                     iblock.seekSet((n-1) * superInodeSize);
-                    iblock.writeByte(0);
+                    iblock.writeByte(blockList,0);
                 }
             }
 
@@ -224,16 +223,14 @@ class JafsInode {
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
-			iblock.writeByte(b & 0xff);
+			iblock.writeByte(blockList, b & 0xff);
 			fpos++;
-            blockList.add(iblock.bpos);
 		}
 		else {
 			JafsBlock dum = vfs.getCacheBlock(ctx.getBlkPos(blockList, this, fpos));
 			dum.seekSet((int)(fpos & superBlockSizeMask));
-			dum.writeByte(b & 0xff);
+			dum.writeByte(blockList, b & 0xff);
 			fpos++;
-            blockList.add(dum.bpos);
 		}
 		if (fpos>size) {
 			size = fpos;
@@ -252,9 +249,8 @@ class JafsInode {
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
-            iblock.writeBytes(b, off, len);
+            iblock.writeBytes(blockList, b, off, len);
             fpos+=len;
-            blockList.add(iblock.bpos);
 		}
 		else {
             int todo = len;
@@ -265,8 +261,7 @@ class JafsInode {
                 if (todo<done) {
                     done=todo;
                 }
-                dum.writeBytes(b, off, done);
-                blockList.add(dum.bpos);
+                dum.writeBytes(blockList, b, off, done);
                 fpos += done;
                 off += done;
                 todo -= done;
@@ -368,8 +363,7 @@ class JafsInode {
         JafsBlock iblock = vfs.getCacheBlock(bpos);
         iblock.seekSet(ipos * superInodeSize);
         type=0;
-        iblock.writeByte(0);
-        blockList.add(iblock.bpos);
+        iblock.writeByte(blockList, 0);
 
 		// update the unusedMap
 		if (iNodesBlockIsUsed()) {

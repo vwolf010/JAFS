@@ -35,8 +35,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         if (curBpos < blocksTotal) {
             if (isInode) {
                 JafsBlock tmp = vfs.getCacheBlock(curBpos);
-                tmp.initZeros();
-                blockList.add(curBpos);
+                tmp.initZeros(blockList);
             }
             startAt = unusedMap;
             return curBpos;
@@ -99,8 +98,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
             }
             // nothing found? skip this unusedMap next time it gets visited
             b = (block.peekSkipMapByte() & 0xff) | SKIP_MAP;
-            block.pokeSkipMapByte(b);
-            blockList.add(block.bpos);
+            block.pokeSkipMapByte(blockList, b);
         }
         startAt = unusedMap;
         return 0;
@@ -135,12 +133,11 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx) & 0xff;
         b &= ~(0b10000000 >>> (bpos & 0x7)); // set block data bit to unused (0)
-        block.pokeByte(idx, b);
+        block.pokeByte(blockList, idx, b);
 
         // don't skip this map next time we look for a free block
         b = block.peekSkipMapByte();
-        block.pokeSkipMapByte(b & 0b01111111);
-        blockList.add(block.bpos);
+        block.pokeSkipMapByte(blockList, b & 0b01111111);
     }
 
     public void setAvailableForNeither(Set<Long> blockList, long bpos) throws JafsException, IOException {
@@ -149,8 +146,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
         b |= 0b10000000 >>> (bpos & 0x7); // set block data bit to used (1)
-        block.pokeByte(idx, b);
-        blockList.add(block.bpos);
+        block.pokeByte(blockList, idx, b);
     }
 
     public void setAvailableForInodeOnly(Set<Long> blockList, long bpos) {
@@ -167,8 +163,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         }
         superBlock.incBlocksTotalAndUsed();
         JafsBlock block = vfs.getCacheBlock(bpos);
-        block.initZeros();
-        blockList.add(block.bpos);
+        block.initZeros(blockList);
     }
 
 //	void dumpLastVisited() {

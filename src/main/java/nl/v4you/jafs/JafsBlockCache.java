@@ -20,9 +20,8 @@ class JafsBlockCache {
     }
 
 	JafsBlock get(long bpos) throws JafsException, IOException {
-		if (bpos<0) {
-			// SuperBlock bpos = -1 and is not cached
-			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
+		if (bpos<-1) {
+			throw new JafsException("bpos should be -1 or greater, got: "+bpos);
 		}
 
 		if (bpos>=vfs.getSuper().getBlocksTotal()) {

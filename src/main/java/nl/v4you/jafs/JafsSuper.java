@@ -1,6 +1,7 @@
 package nl.v4you.jafs;
 
 import java.io.IOException;
+import java.util.Set;
 
 class JafsSuper {
 	private static final int VERSION = 1;
@@ -112,9 +113,9 @@ class JafsSuper {
 		blocksUsed =  Util.arrayToInt(buf, 30);
 	}
 	
-	void flushIfNeeded() throws JafsException, IOException {
+	void flushIfNeeded(Set<Long> blockList) throws JafsException, IOException {
 		if (needsPersist) {
-            vfs.getRaf().setLength((1+blocksTotal)*blockSize);
+            setRafSize();
 			rootBlock.seekSet(0);
 			buf[0] = 'J';
 			buf[1] = 'A';
@@ -128,9 +129,13 @@ class JafsSuper {
 			Util.intToArray(buf, 22, rootDirIdx);
 			Util.intToArray(buf, 26, blocksTotal);
 			Util.intToArray(buf, 30, blocksUsed);
-			rootBlock.writeBytes(buf, 0, 34);
+			rootBlock.writeBytes(blockList, buf, 0, 34);
 			rootBlock.writeToDiskIfNeeded();
 		}
 		needsPersist = false;
+	}
+
+	void setRafSize() throws IOException {
+		vfs.getRaf().setLength((1+blocksTotal)*blockSize);
 	}
 }

@@ -68,6 +68,7 @@ public class JafsOutputStream extends OutputStream {
 			createInodeIfNeeded(blockList);
 			inode.writeByte(blockList, arg0);
 			vfs.flushChanges(blockList);
+			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
@@ -81,6 +82,7 @@ public class JafsOutputStream extends OutputStream {
 			createInodeIfNeeded(blockList);
 			inode.writeBytes(blockList, buf, start, len);
 			vfs.flushChanges(blockList);
+			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());

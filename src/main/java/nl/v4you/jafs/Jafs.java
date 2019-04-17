@@ -97,7 +97,10 @@ public class Jafs {
 			throw new JafsException("getOutputStream(): deleting ["+f.getAbsolutePath()+"] failed");
 		}
 		JafsOutputStream jos = new JafsOutputStream(this, f, append);
-		superBlock.flushIfNeeded();
+
+		Set<Long> blockList = new TreeSet();
+		superBlock.flushIfNeeded(blockList);
+		cache.flushBlocks(blockList);
 		return jos;
 	}
 
@@ -201,6 +204,7 @@ public class Jafs {
 			Set<Long> blockList = new TreeSet<>();
 			JafsDir.createRootDir(blockList, this);
 			flushChanges(blockList);
+			cache.flushBlocks(blockList);
 		}
 		else {
 			superBlock = new JafsSuper(this, 64);
@@ -284,7 +288,6 @@ public class Jafs {
     }
 
     void flushChanges(Set<Long> blockList) throws JafsException, IOException {
-    	superBlock.flushIfNeeded();
-    	cache.flushBlocks(blockList);
+    	superBlock.flushIfNeeded(blockList);
 	}
 }

@@ -45,7 +45,7 @@ class JafsInodeContext {
 		}
 		vfs.getSuper().incBlocksUsed();
 		if (init) {
-			block.initZeros();
+			block.initZeros(blockList);
 		}
 		blockList.add(ptr);
 		inode.ptrs[n] = ptr;
@@ -71,12 +71,10 @@ class JafsInodeContext {
 				else {
 					dum = vfs.getCacheBlock(ptr);
 				}
-                dum.initZeros();
+                dum.initZeros(blockList);
 				vfs.getSuper().incBlocksUsed();
-				blockList.add(dum.bpos);
 				block.seekSet(idx<<2);
-				block.writeInt(ptr);
-				blockList.add(block.bpos);
+				block.writeInt(blockList, ptr);
 
 				vfs.getUnusedMap().setAvailableForNeither(blockList, ptr);
 			}
