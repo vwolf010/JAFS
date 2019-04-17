@@ -99,7 +99,6 @@ public class Jafs {
 		JafsOutputStream jos = new JafsOutputStream(this, f, append);
 
 		Set<Long> blockList = new TreeSet();
-		superBlock.flushIfNeeded(blockList);
 		cache.flushBlocks(blockList);
 		return jos;
 	}
@@ -153,7 +152,7 @@ public class Jafs {
 			um.createNewUnusedMap(blockList, bpos);
 			bpos = superBlock.getBlocksTotal();
 		}
-		superBlock.incBlocksTotal();
+		superBlock.incBlocksTotal(blockList);
 		return bpos;
 	}
 
@@ -175,6 +174,17 @@ public class Jafs {
     /*
 	 * Private
 	 */
+    private void initInodeContext(int blockSize, int inodeSize, long maxFileSize) {
+		if (blockSize==inodeSize) {
+			um = new JafsUnusedMapEqual(this);
+		}
+		else {
+			um = new JafsUnusedMapNotEqual(this);
+		}
+		ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
+	}
+
+
     private void open(int blockSize, int inodeSize, long maxFileSize) throws IOException, JafsException {
 		File f = new File(fname);
 		if (!f.exists() && blockSize<0) {
@@ -184,26 +194,18 @@ public class Jafs {
 			throw new JafsException("["+fname+"] does not contain a header");
 		}
 		raf = new RandomAccessFile(f, "rw");
+		cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
+		dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
+		inodePool = new JafsInodePool(this);
+		dirPool = new JafsDirPool(this);
 		if (f.length()==0) {
 			raf.setLength(blockSize);
 			superBlock = new JafsSuper(this, blockSize);
-			superBlock.setInodeSize(inodeSize);
-			superBlock.setMaxFileSize(maxFileSize);
-			superBlock.needsPersist=true;
-			inodePool = new JafsInodePool(this);
-			dirPool = new JafsDirPool(this);
-			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
-			dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
-			if (blockSize==inodeSize) {
-				um = new JafsUnusedMapEqual(this);
-			}
-			else {
-				um = new JafsUnusedMapNotEqual(this);
-			}
-			ctx = new JafsInodeContext(this, blockSize, inodeSize, maxFileSize);
 			Set<Long> blockList = new TreeSet<>();
+			superBlock.setInodeSize(blockList, inodeSize);
+			superBlock.setMaxFileSize(blockList, maxFileSize);
+			initInodeContext(blockSize, inodeSize, maxFileSize);
 			JafsDir.createRootDir(blockList, this);
-			flushChanges(blockList);
 			cache.flushBlocks(blockList);
 		}
 		else {
@@ -211,17 +213,7 @@ public class Jafs {
 			superBlock.read();
 			superBlock = new JafsSuper(this, superBlock.getBlockSize()); // reconnect with correct blocksize
 			superBlock.read();
-            inodePool = new JafsInodePool(this);
-			dirPool = new JafsDirPool(this);
-			cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
-            dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
-			if (superBlock.getBlockSize()==superBlock.getInodeSize()) {
-				um = new JafsUnusedMapEqual(this);
-			}
-			else {
-				um = new JafsUnusedMapNotEqual(this);
-			}
-			ctx = new JafsInodeContext(this, superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
+			initInodeContext(superBlock.getBlockSize(), superBlock.getInodeSize(), superBlock.getMaxFileSize());
 		}
 	}
 	
@@ -286,8 +278,4 @@ public class Jafs {
         long onDisk[] = new long[sizes.length];
         long lost[] = new long[sizes.length];
     }
-
-    void flushChanges(Set<Long> blockList) throws JafsException, IOException {
-    	superBlock.flushIfNeeded(blockList);
-	}
 }

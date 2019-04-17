@@ -161,7 +161,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         if (bpos<vfs.getSuper().getBlocksTotal()) {
             throw new JafsException("unused map should already exist");
         }
-        superBlock.incBlocksTotalAndUsed();
+        superBlock.incBlocksTotalAndUsed(blockList);
         JafsBlock block = vfs.getCacheBlock(bpos);
         block.initZeros(blockList);
     }

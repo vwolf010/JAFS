@@ -67,7 +67,6 @@ public class JafsOutputStream extends OutputStream {
 			Set<Long> blockList = new TreeSet<>();
 			createInodeIfNeeded(blockList);
 			inode.writeByte(blockList, arg0);
-			vfs.flushChanges(blockList);
 			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			e.printStackTrace();
@@ -81,7 +80,6 @@ public class JafsOutputStream extends OutputStream {
 			Set<Long> blockList = new TreeSet<>();
 			createInodeIfNeeded(blockList);
 			inode.writeBytes(blockList, buf, start, len);
-			vfs.flushChanges(blockList);
 			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			e.printStackTrace();

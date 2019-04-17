@@ -2,6 +2,7 @@ package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.TreeSet;
 
 class JafsSuper {
 	private static final int VERSION = 1;
@@ -18,28 +19,35 @@ class JafsSuper {
 
 	byte buf[] = new byte[64];
 
-	boolean needsPersist = false;
-
 	JafsSuper(Jafs vfs, int blockSize) {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
 		rootBlock = new JafsBlock(vfs, -1, blockSize);
+		Set<Long> blockList = new TreeSet<>();
+		rootBlock.writeBytes(blockList, "JAFS".getBytes());
+		rootBlock.writeByte(blockList, 0);
+		rootBlock.writeByte(blockList, VERSION);
+		setBlockSize(blockList, blockSize);
 	}
 	
 	long getRootDirBpos() {
 		return rootDirBPos;
 	}
 	
-	void setRootDirBpos(long bpos) {
+	void setRootDirBpos(Set<Long> blockList, long bpos) {
 		this.rootDirBPos = bpos;
+		rootBlock.seekSet(18);
+		rootBlock.writeInt(blockList, bpos);
 	}
 
 	int getRootDirIpos() {
 		return rootDirIdx;
 	}
 	
-	void setRootDirIpos(int idx) {
-		this.rootDirIdx = idx;
+	void setRootDirIpos(Set<Long> blockList, int iPos) {
+		this.rootDirIdx = iPos;
+		rootBlock.seekSet(22);
+		rootBlock.writeInt(blockList, iPos);
 	}
 	
 	long getBlocksTotal() {
@@ -50,45 +58,58 @@ class JafsSuper {
 		return blocksUsed;
 	}
 
-	void incBlocksTotalAndUsed() throws IOException {
-		blocksTotal++;
-		incBlocksUsed();
+	void incBlocksTotalAndUsed(Set<Long> blockList) {
+		incBlocksTotal(blockList);
+		incBlocksUsed(blockList);
 	}
 	
-	void incBlocksTotal() throws IOException {
+	void incBlocksTotal(Set<Long> blockList) {
 		blocksTotal++;
-		needsPersist=true;
+		rootBlock.seekSet(26);
+		rootBlock.writeInt(blockList, blocksTotal);
 	}
 
-	void incBlocksUsed() {
+	void writeBlocksUsed(Set<Long> blockList) {
+		rootBlock.seekSet(30);
+		rootBlock.writeInt(blockList, blocksUsed);
+	}
+
+	void incBlocksUsed(Set<Long> blockList) {
 		blocksUsed++;
 		if (blocksUsed>blocksTotal) {
 			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
 		}
-		needsPersist=true;
+		writeBlocksUsed(blockList);
 	}
 
-	void decBlocksUsed() {
+	void decBlocksUsed(Set<Long> blockList) {
 		blocksUsed--;
 		if (blocksUsed<0) {
 			throw new RuntimeException("blocksUsed<0!!!");
 		}
+		writeBlocksUsed(blockList);
 	}
 
-	void decBlocksUsedAndFlush() {
-		decBlocksUsed();
-		needsPersist=true;
+	void decBlocksUsedAndFlush(Set<Long> blockList) {
+		decBlocksUsed(blockList);
 	}
 			
 	int getBlockSize() {
 		return blockSize;
 	}
-	
+
+	void setBlockSize(Set<Long> blockList, int blockSize) {
+		rootBlock.seekSet(6);
+		rootBlock.writeInt(blockList, blockSize);
+	}
+
 	int getInodeSize() {
 		return inodeSize;
 	}
 	
-	void setInodeSize(int inodeSize) {
+	void setInodeSize(Set<Long> blockList, int inodeSize) {
+		rootBlock.seekSet(10);
+		rootBlock.writeInt(blockList, inodeSize);
 		this.inodeSize = inodeSize;
 	}
 	
@@ -96,8 +117,10 @@ class JafsSuper {
 		return maxFileSize;
 	}
 	
-	void setMaxFileSize(long maxFileSize) {
+	void setMaxFileSize(Set<Long> blockList, long maxFileSize) {
 		this.maxFileSize = maxFileSize;
+		rootBlock.seekSet(14);
+		rootBlock.writeInt(blockList, maxFileSize);
 	}
 
 	void read() throws IOException {
@@ -112,29 +135,11 @@ class JafsSuper {
 		blocksTotal = Util.arrayToInt(buf, 26);
 		blocksUsed =  Util.arrayToInt(buf, 30);
 	}
-	
-	void flushIfNeeded(Set<Long> blockList) throws JafsException, IOException {
-		if (needsPersist) {
-            setRafSize();
-			rootBlock.seekSet(0);
-			buf[0] = 'J';
-			buf[1] = 'A';
-			buf[2] = 'F';
-			buf[3] = 'S';
-			Util.shortToArray(buf, 4, VERSION);
-			Util.intToArray(buf, 6, blockSize);
-			Util.intToArray(buf, 10, inodeSize);
-			Util.intToArray(buf, 14, maxFileSize);
-			Util.intToArray(buf, 18, rootDirBPos);
-			Util.intToArray(buf, 22, rootDirIdx);
-			Util.intToArray(buf, 26, blocksTotal);
-			Util.intToArray(buf, 30, blocksUsed);
-			rootBlock.writeBytes(blockList, buf, 0, 34);
-			rootBlock.writeToDiskIfNeeded();
-		}
-		needsPersist = false;
-	}
 
+	void writeToDisk() throws IOException, JafsException {
+		rootBlock.writeToDiskIfNeeded();
+	}
+	
 	void setRafSize() throws IOException {
 		vfs.getRaf().setLength((1+blocksTotal)*blockSize);
 	}

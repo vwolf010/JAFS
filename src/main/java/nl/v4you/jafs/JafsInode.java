@@ -156,7 +156,7 @@ class JafsInode {
                 // since we try to find at least 1 other used position
                 // we can do the inodeCnt==1 check here
                 if (inodeCnt==1) {
-                    vfs.getSuper().incBlocksUsed();
+                    vfs.getSuper().incBlocksUsed(blockList);
                 }
                 if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
                     // vfs.getINodeContext().getInodesPerBlock() could be 1 so check that first
@@ -372,7 +372,7 @@ class JafsInode {
         else {
             vfs.getUnusedMap().setAvailableForBoth(blockList, bpos);
             vfs.getUnusedMap().setStartAtData(bpos);
-            vfs.getSuper().decBlocksUsedAndFlush();
+            vfs.getSuper().decBlocksUsedAndFlush(blockList);
 		}
         vfs.getUnusedMap().setStartAtInode(bpos);
 	}

@@ -43,7 +43,7 @@ class JafsInodeContext {
 			ptr = vfs.appendNewBlockToArchive(blockList);
 			block = vfs.getCacheBlock(ptr);
 		}
-		vfs.getSuper().incBlocksUsed();
+		vfs.getSuper().incBlocksUsed(blockList);
 		if (init) {
 			block.initZeros(blockList);
 		}
@@ -72,7 +72,7 @@ class JafsInodeContext {
 					dum = vfs.getCacheBlock(ptr);
 				}
                 dum.initZeros(blockList);
-				vfs.getSuper().incBlocksUsed();
+				vfs.getSuper().incBlocksUsed(blockList);
 				block.seekSet(idx<<2);
 				block.writeInt(blockList, ptr);
 
@@ -133,7 +133,7 @@ class JafsInodeContext {
 		vfs.getUnusedMap().setAvailableForBoth(blockList, bpos);
         vfs.getUnusedMap().setStartAtData(bpos);
         vfs.getUnusedMap().setStartAtInode(bpos);
-		vfs.getSuper().decBlocksUsed();
+		vfs.getSuper().decBlocksUsed(blockList);
 	}
 	
 	void freeDataAndPtrBlocks(Set<Long> blockList, JafsInode inode) throws JafsException, IOException {

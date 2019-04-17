@@ -125,7 +125,6 @@ public class JafsFile {
 			    return false;
             }
             finally {
-			    vfs.flushChanges(blockList);
 			    vfs.getBlockCache().flushBlocks(blockList);
                 vfs.getInodePool().free(inode);
                 vfs.getDirPool().free(dir);
@@ -137,7 +136,6 @@ public class JafsFile {
 	public boolean mkdir() throws JafsException, IOException {
         Set<Long> blockList = new TreeSet<>();
         boolean b = mkdir(blockList, canonicalPath);
-        vfs.flushChanges(blockList);
         vfs.getBlockCache().flushBlocks(blockList);
 		return b;
 	}
@@ -146,7 +144,6 @@ public class JafsFile {
         Set<Long> blockList = new TreeSet<>();
         mkParentDirs(blockList, getParent(canonicalPath));
 		boolean b = mkdir(blockList, canonicalPath);
-		vfs.flushChanges(blockList);
 		vfs.getBlockCache().flushBlocks(blockList);
 		return b;
 	}
@@ -213,7 +210,6 @@ public class JafsFile {
 				}
             }
             finally {
-			    vfs.flushChanges(blockList);
 			    vfs.getBlockCache().flushBlocks(blockList);
                 vfs.getInodePool().free(inode);
                 vfs.getDirPool().free(parentDir);
@@ -280,7 +276,6 @@ public class JafsFile {
                                 target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
                     }
                     finally {
-					    vfs.flushChanges(blockList);
 					    vfs.getBlockCache().flushBlocks(blockList);
 					    vfs.getInodePool().free(inodeSrc);
 					    vfs.getInodePool().free(inodeDst);

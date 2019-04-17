@@ -139,6 +139,10 @@ class JafsBlock {
 		byteIdx += len;
 	}
 
+	void writeBytes(Set<Long> blockList, byte b[]) {
+		writeBytes(blockList, b, 0, b.length);
+	}
+
 	void writeBytes(Set<Long> blockList, byte b[], int off, int len) {
 		if (len == 0) {
 			return;
