@@ -4,7 +4,7 @@
   <groupId>nl.v4you</groupId>
   <artifactId>JAFS</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.7-SNAPSHOT</version>
+  <version>1.0.7</version>
   <name>JAFS</name>
   <url>http://maven.apache.org</url>
   <repositories>
