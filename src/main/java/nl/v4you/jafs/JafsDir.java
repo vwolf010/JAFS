@@ -5,19 +5,19 @@ import nl.v4you.hash.OneAtATimeHash;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Set;
-import java.util.TreeSet;
 
 /*
- * <ushort: entry size>
+ * <ushort: entry size> = filename length + filename checksum length + type length + inode bpos length + inode ipos length + filename length
  * <byte: filename length> if bit 0x80 is set, the next byte contains 8 more bits
  * <byte: filename checksum> 1-byte filename checksum
  * <byte: type> (f=file, d=directory)
- * <uint: inode block> (must be 0 if not used)
+ * <uint: inode bpos> (must be 0 if not present)
  * <ushort: inode ipos>
  * <string: filename>
  *
  */
 class JafsDir {
+	static final int STORE_ENTRY_SIZE_LENGTH = 2;
     static final byte SLASH[] = {'/'};
 
 	Jafs vfs;
@@ -123,19 +123,19 @@ class JafsDir {
 	void deleteEntry(Set<Long> blockList, String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
 		// Test the next entry to see if we can merge with it
 		// in an attempt to avoid fragmentation of the directory list
-//		inode.seekSet(entry.startPos-2);
-//		int entrySize = inode.readShort();
-//		inode.seekCur(entrySize);
-//		int entrySizeNextEntry = inode.readShort();
-//		if (entrySizeNextEntry!=0) {
-//			int len = inode.readByte();
-//			if (len==0) {
-//				// we can merge with this entry
-//				entrySize += entrySizeNextEntry;
-//				inode.seekSet(entry.startPos-2);
-//				inode.writeShort(entrySize);
-//			}
-//		}
+		inode.seekSet(entry.startPos-2);
+		int entrySize = inode.readShort();
+		inode.seekCur(entrySize);
+		int entrySizeNextEntry = inode.readShort();
+		if (entrySizeNextEntry!=0) {
+			int len = inode.readByte();
+			if (len==0) {
+				// we can merge with this entry
+				entrySize += STORE_ENTRY_SIZE_LENGTH + entrySizeNextEntry;
+				inode.seekSet(entry.startPos-2);
+				inode.writeShort(blockList, entrySize);
+			}
+		}
 
 		// Update the deleted entry
         vfs.getDirCache().remove(canonicalPath);
@@ -179,7 +179,7 @@ class JafsDir {
         }
 
 		/*
-		 * Find smallest space to store entry
+		 * Find smallest empty entry to store entry and also check if entry name already exists in a single loop
 		 */
 		long newEntryStartPos = 0;
 		int newEntrySpaceForName = Integer.MAX_VALUE;
@@ -188,10 +188,16 @@ class JafsDir {
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
 			long startPos = inode.getFpos();
-
 			int curLength = inode.readByte();
-			if (curLength!=0) {
-			    if ((curLength & 0x80) != 0) {
+			if (curLength==0) {
+				int spaceForName = entrySize - overhead;
+				if (nameLen <= spaceForName && spaceForName < newEntrySpaceForName) {
+					newEntryStartPos = startPos;
+					newEntrySpaceForName = spaceForName;
+				}
+			}
+			else {
+				if ((curLength & 0x80) != 0) {
 			        curLength &= 0x7f;
 			        curLength |= inode.readByte() << 7;
                 }
@@ -207,13 +213,6 @@ class JafsDir {
 					}
                 }
             }
-
-			int spaceForName = entrySize-overhead;
-			if ((curLength==0) && nameLen<=spaceForName && spaceForName<newEntrySpaceForName) {
-				newEntryStartPos = startPos;
-				newEntrySpaceForName = spaceForName;
-			}
-
 			inode.seekSet(startPos+entrySize);
 			entrySize = inode.readShort();
 		}
@@ -225,15 +224,11 @@ class JafsDir {
 		if (newEntryStartPos>0) {
 			// Re-use an existing entry
 			inode.seekSet(newEntryStartPos);
-			// TODO: if we do not need the complete entry, split it into 2 entries here
             entry.startPos = newEntryStartPos;
+			// TODO: if we do not need the complete entry, split it into 2 entries here
 		}
 		else {
 			// Append to the end
-//			inode.seekCur(-2);
-//			if (inode.readInt()!=0) {
-//				throw new JafsException("end of dir list does not contain entrySize=0");
-//			}
 			inode.seekCur(-2);
 			entry.startPos = inode.getFpos()+2;
             Util.shortToArray(bb, tLen, overhead+nameBuf.length);
