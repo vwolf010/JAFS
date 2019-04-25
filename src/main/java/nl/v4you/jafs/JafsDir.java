@@ -17,6 +17,7 @@ import java.util.Set;
  *
  */
 class JafsDir {
+    static final int MINIMAL_OVERHEAD = 1 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos
 	static final int STORE_ENTRY_SIZE_LENGTH = 2;
     static final byte SLASH[] = {'/'};
 
@@ -171,11 +172,9 @@ class JafsDir {
 		byte nameBuf[] = entry.name;
 		int nameLen = nameBuf.length;
 		int nameChecksum = OneAtATimeHash.calcHash(entry.name) & 0xff;
-		int overhead;
-        if (nameLen < 0x80) {
-            overhead = 1 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos
-        } else {
-            overhead = 2 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos
+		int overhead = MINIMAL_OVERHEAD;
+        if (nameLen >= 0x80) {
+            overhead++;
         }
 
 		/*
@@ -223,9 +222,22 @@ class JafsDir {
 		int tLen=0;
 		if (newEntryStartPos>0) {
 			// Re-use an existing entry
-			inode.seekSet(newEntryStartPos);
+			inode.seekSet(newEntryStartPos-2);
+			entrySize = inode.readShort();
+			if (entrySize > overhead + nameBuf.length + STORE_ENTRY_SIZE_LENGTH + MINIMAL_OVERHEAD) {
+			    // split this entry if it is too big for us
+
+                // adjust the size of this entry
+				inode.seekCur(-2);
+				inode.writeShort(blockList, overhead + nameBuf.length);
+
+				// create a new entry
+				inode.seekCur(overhead + nameBuf.length);
+				inode.writeShort(blockList, entrySize - (overhead + nameBuf.length + STORE_ENTRY_SIZE_LENGTH));
+				inode.writeByte(blockList, 0);
+				inode.seekSet(newEntryStartPos);
+			}
             entry.startPos = newEntryStartPos;
-			// TODO: if we do not need the complete entry, split it into 2 entries here
 		}
 		else {
 			// Append to the end
