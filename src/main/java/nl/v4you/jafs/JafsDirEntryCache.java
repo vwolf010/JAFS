@@ -16,7 +16,7 @@ public class JafsDirEntryCache {
         if (gcache.get(hs.set(dirName.getBytes(Util.UTF8)))!=null) {
             throw new JafsException("directory "+dirName+" already in cache");
         }
-        gcache.add(new OneAtATimeHash(dirName.getBytes(Util.UTF8)), entry);
+        gcache.add(hs.clone(), entry);
     }
 
     JafsDirEntry get(String dirName) {
