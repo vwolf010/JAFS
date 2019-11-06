@@ -219,6 +219,7 @@ public class ReadWriteBytesTest {
         jafs.close();
         jafs = new Jafs(TEST_ARCHIVE);
         JafsOutputStream jos = jafs.getOutputStream(jafs.getFile("/a.txt"));
+        jos.write("Hallo".getBytes());
         jafs.close();
     }
 }

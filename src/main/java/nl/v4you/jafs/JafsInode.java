@@ -14,8 +14,8 @@ class JafsInode {
 
     static final int INODE_FILE    = 0x1;
     static final int INODE_DIR     = 0x2;
-	private static final int INODE_INLINED = 0x4;
-    private static final int INODE_USED = INODE_DIR | INODE_FILE;
+	static final int INODE_INLINED = 0x4;
+    static final int INODE_USED = INODE_DIR | INODE_FILE;
 
 	private Jafs vfs;
 	private JafsInodeContext ctx;

@@ -24,7 +24,7 @@ class JafsInodeContext {
 	private JafsINodePtr ptrs[];
 
 	long maxFileSizeReal = 0;
-	
+
 	int getPtrsPerInode() {
 		return ptrsPerInode;
 	}
@@ -141,6 +141,43 @@ class JafsInodeContext {
 			if (inode.ptrs[n]!=0) {
 				free(blockList, inode.ptrs[n], ptrs[n].level);
 			}
+		}
+	}
+
+	long check(long bpos, int level) throws JafsException, IOException {
+		long size = 0;
+		JafsBlock dum = vfs.getCacheBlock(bpos);
+		if (level!=0) {
+			// this is a pointer block, check all it's entries
+			dum.seekSet(0);
+			for (int n=0; n<ptrsPerPtrBlock; n++) {
+				long ptr = dum.readInt();
+				if (ptr!=0) {
+					size += check(ptr, level-1);
+				}
+			}
+		}
+		else {
+			size += vfs.getSuper().getBlockSize();
+		}
+		return size;
+	}
+
+	void checkDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
+		int blockSize = vfs.getSuper().getBlockSize();
+		long expectedSize = inode.size;
+		if (expectedSize % blockSize!=0) {
+			expectedSize -= expectedSize % blockSize;
+			expectedSize += blockSize;
+		}
+		long realSize = 0;
+		for (int n=0; n<ptrsPerInode; n++) {
+			if (inode.ptrs[n]!=0) {
+				realSize += check(inode.ptrs[n], ptrs[n].level);
+			}
+		}
+		if (realSize!=expectedSize) {
+			throw new JafsException("CheckFs: expected size: "+expectedSize+", real size: "+realSize);
 		}
 	}
 

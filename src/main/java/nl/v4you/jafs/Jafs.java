@@ -10,8 +10,8 @@ import java.util.TreeSet;
 
 public class Jafs {
 
-    private static int CACHE_BLOCK_MAX = 10*1000;
-    private static int CACHE_DIR_MAX   = 100*1000;
+    private static int CACHE_BLOCK_MAX = 100*1000;
+    private static int CACHE_DIR_MAX   = 1000*1000;
 
 	private JafsBlockCache cache;
 	private JafsDirEntryCache dirCache;
