@@ -157,18 +157,16 @@ public class Jafs {
 	}
 
     JafsDirEntry getRootEntry() {
-        if (rootEntry != null) {
-            return rootEntry;
-        } else {
-            rootEntry = new JafsDirEntry();
-            rootEntry.parentBpos = getRootBpos();
-            rootEntry.parentIpos = getRootIpos();
-            rootEntry.bpos = getRootBpos();
-            rootEntry.ipos = getRootIpos();
-            rootEntry.type = JafsInode.INODE_DIR;
-            rootEntry.name = "/".getBytes();
-            return rootEntry;
-        }
+		if (rootEntry == null) {
+			rootEntry = new JafsDirEntry();
+			rootEntry.parentBpos = getRootBpos();
+			rootEntry.parentIpos = getRootIpos();
+			rootEntry.bpos = getRootBpos();
+			rootEntry.ipos = getRootIpos();
+			rootEntry.type = JafsInode.INODE_DIR;
+			rootEntry.name = "/".getBytes();
+		}
+		return rootEntry;
     }
 
     /*

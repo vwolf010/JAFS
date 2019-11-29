@@ -7,9 +7,9 @@ import java.util.LinkedList;
 import java.util.Set;
 
 /*
- * <ushort: entry size> = filename length + filename checksum length + type length + inode bpos length + inode ipos length + filename length
+ * <ushort: entry size> = filename length + filename hash length + type length + inode bpos length + inode ipos length + filename length
  * <byte: filename length> if bit 0x80 is set, the next byte contains 8 more bits
- * <byte: filename checksum> 1-byte filename checksum
+ * <byte: filename hash> 1-byte filename hash
  * <byte: type> (f=file, d=directory)
  * <uint: inode bpos> (must be 0 if not present)
  * <ushort: inode ipos>
@@ -17,7 +17,7 @@ import java.util.Set;
  *
  */
 class JafsDir {
-    static final int MINIMAL_OVERHEAD = 1 + 1 + 1 + 4 + 2; // length + checksum + type + bpos + ipos
+    static final int MINIMAL_OVERHEAD = 1 + 1 + 1 + 4 + 2; // length + hash + type + bpos + ipos
 	static final int STORE_ENTRY_SIZE_LENGTH = 2;
     static final byte SLASH[] = {'/'};
 
@@ -60,7 +60,7 @@ class JafsDir {
 
 	long getEntryPos(byte name[]) throws JafsException, IOException {
 		int nameLen = name.length;
-		int nameChecksum = OneAtATimeHash.calcHash(name) & 0xff;
+		int nameHash = OneAtATimeHash.calcHash(name) & 0xff;
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize!=0) {
@@ -71,7 +71,7 @@ class JafsDir {
 			        curLen &= 0x7f;
 			        curLen |= inode.readByte() << 7;
                 }
-                if (curLen==nameLen && nameChecksum==inode.readByte()) {
+                if (curLen==nameLen && nameHash==inode.readByte()) {
 					inode.seekCur(1 + 4 + 2); // skip type + bpos + ipos
 					inode.readBytes(bb, 0, curLen);
 					int n = 0;
@@ -107,7 +107,7 @@ class JafsDir {
 			entry.parentBpos = inode.getBpos();
 			entry.parentIpos = inode.getIpos();
 
-			// skip length + checksum
+			// skip length + hash
             if (name.length < 0x80) {
                 inode.seekSet(startPos + 1 + 1);
             } else {
@@ -171,7 +171,7 @@ class JafsDir {
 
 		byte nameBuf[] = entry.name;
 		int nameLen = nameBuf.length;
-		int nameChecksum = OneAtATimeHash.calcHash(entry.name) & 0xff;
+		int nameHash = OneAtATimeHash.calcHash(entry.name) & 0xff;
 		int overhead = MINIMAL_OVERHEAD;
         if (nameLen >= 0x80) {
             overhead++;
@@ -200,7 +200,7 @@ class JafsDir {
 			        curLength &= 0x7f;
 			        curLength |= inode.readByte() << 7;
                 }
-                if (curLength == nameLen && nameChecksum == inode.readByte()) {
+                if (curLength == nameLen && nameHash == inode.readByte()) {
 					inode.seekCur(1 + 4 + 2); // skip type + bpos + ipos
 					inode.readBytes(bb, 0, curLength);
 					int n = 0;
@@ -253,7 +253,7 @@ class JafsDir {
             bb[tLen++] = (byte)(0x80 | (nameBuf.length & 0x7f));
             bb[tLen++] = (byte)((nameBuf.length>>>7) & 0xff);
         }
-        bb[tLen++] = (byte) nameChecksum;
+        bb[tLen++] = (byte) nameHash;
 		bb[tLen++] = (byte)entry.type;
         Util.intToArray(bb, tLen, (int)entry.bpos);
 		tLen+=4;
@@ -332,9 +332,9 @@ class JafsDir {
             }
 
             if (entry.name.length < 0x80) {
-                inode.seekSet(entry.startPos + 1 + 1 + 1); // skip len + checksum + type
+                inode.seekSet(entry.startPos + 1 + 1 + 1); // skip len + hash + type
             } else {
-                inode.seekSet(entry.startPos + 2 + 1 + 1); // skip len + checksum + type
+                inode.seekSet(entry.startPos + 2 + 1 + 1); // skip len + hash + type
             }
 
             Util.intToArray(bb, 0, (int)entry.bpos);
@@ -355,7 +355,7 @@ class JafsDir {
 					len &= 0x7f;
 					len |= inode.readByte() << 7;
 				}
-                inode.seekCur(1 + 1 + 4 + 2); // skip checksum + type + bpos + ipos
+                inode.seekCur(1 + 1 + 4 + 2); // skip hash + type + bpos + ipos
 				byte name[] = new byte[len];
 				inode.readBytes(name, 0, len);
 				l.add(new String(name, Util.UTF8));
@@ -363,7 +363,38 @@ class JafsDir {
 			inode.seekSet(startPos+entrySize);
 			entrySize = inode.readShort();
 		}
-		
+		return l.toArray(new String[0]);
+	}
+
+	String[] check() throws JafsException, IOException {
+		LinkedList<String> l = new LinkedList();
+		inode.seekSet(0);
+		int entrySize = inode.readShort();
+		while (entrySize!=0) {
+			long startPos = inode.getFpos();
+			int len = inode.readByte();
+			if (len!=0) {
+				if ((len & 0x80) != 0) {
+					len &= 0x7f;
+					len |= inode.readByte() << 7;
+				}
+				int nameHashStored = inode.readByte();
+				int type = inode.readByte();
+				inode.seekCur(4 + 2); // skip bpos + ipos
+				byte name[] = new byte[len];
+				inode.readBytes(name, 0, len);
+				int nameHash = OneAtATimeHash.calcHash(name) & 0xff;
+				if (nameHash!=nameHashStored) {
+					throw new JafsException("Calculated nameHash does not match stored nameHash");
+				}
+				if ((type & JafsInode.INODE_USED)==0) {
+					throw new JafsException("Type not set");
+				}
+				l.add(new String(name, Util.UTF8));
+			}
+			inode.seekSet(startPos+entrySize);
+			entrySize = inode.readShort();
+		}
 		return l.toArray(new String[0]);
 	}
 }

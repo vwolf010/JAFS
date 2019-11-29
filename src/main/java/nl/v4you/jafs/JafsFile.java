@@ -171,7 +171,7 @@ public class JafsFile {
 		}
 		return new String[0];
 	}
-	
+
 	public boolean delete() throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(canonicalPath);
 		if (entry!=null) {
@@ -252,7 +252,41 @@ public class JafsFile {
 		}
 		return new JafsFile[0];
 	}
-	
+
+	JafsFile[] checkFiles() throws JafsException, IOException {
+		String parent = canonicalPath;
+		if (!parent.endsWith("/")) {
+			parent += "/";
+		}
+		JafsDirEntry entry = getEntry(canonicalPath);
+		if (entry!=null) {
+			if (entry.bpos==0) {
+				return new JafsFile[0];
+			}
+			else {
+				JafsInode inode = vfs.getInodePool().get();
+				JafsDir dir = vfs.getDirPool().get();
+				try {
+					inode.openInode(entry);
+					String l[];
+					dir.setInode(inode);
+					l = dir.check();
+					JafsFile fl[] = new JafsFile[l.length];
+					for (int n=0; n<fl.length; n++) {
+						fl[n] = new JafsFile(vfs, parent + l[n]);
+					}
+					return fl;
+				}
+				finally {
+					vfs.getInodePool().free(inode);
+					vfs.getDirPool().free(dir);
+				}
+
+			}
+		}
+		return new JafsFile[0];
+	}
+
 	public void renameTo(JafsFile target) throws JafsException, IOException {
 		if (exists()) {
 			if (!target.exists()) {

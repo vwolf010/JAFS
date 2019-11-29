@@ -27,12 +27,12 @@ public class JafsCheckFs {
         }
     }
 
-    private Report walkTree(JafsFile base) throws JafsException, IOException {
+    private Report walkTree(JafsFile base)  {
         Report report = new Report();
         report.result = 1;
 
         try {
-            JafsFile lst[] = base.listFiles();
+            JafsFile lst[] = base.checkFiles();
             for (JafsFile f : lst) {
                 JafsDirEntry entry = f.getEntry(f.getName());
                 if (f.isDirectory()) {
@@ -51,7 +51,7 @@ public class JafsCheckFs {
         return report;
     }
 
-    public Report walkTree(Jafs jafs) throws JafsException, IOException {
+    public Report walkTree(Jafs jafs) throws JafsException {
         return walkTree(jafs.getFile("/"));
     }
 
