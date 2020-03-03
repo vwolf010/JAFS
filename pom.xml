@@ -4,7 +4,7 @@
   <groupId>nl.v4you</groupId>
   <artifactId>JAFS</artifactId>
   <packaging>jar</packaging>
-  <version>1.0.9-SNAPSHOT</version>
+  <version>1.0.9</version>
   <name>JAFS</name>
   <url>http://maven.apache.org</url>
   <repositories>
@@ -23,7 +23,7 @@
     <dependency>
       <groupId>nl.v4you</groupId>
       <artifactId>utils</artifactId>
-      <version>1.0.4-SNAPSHOT</version>
+      <version>1.0.4</version>
     </dependency>
   </dependencies>
   <build>

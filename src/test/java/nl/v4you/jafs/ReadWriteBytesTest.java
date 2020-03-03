@@ -124,7 +124,7 @@ public class ReadWriteBytesTest {
     @Ignore
     @Test
     public void adviceBlockSize() throws JafsException, IOException {
-        Jafs jafs = new Jafs("C:\\data\\ggc\\ggc_1024_128_10MB.jafs");
+        Jafs jafs = new Jafs("/tmp/ggc_1024_128_10MB.jafs");
         jafs.adviceBlockSize();
         jafs.close();
     }
@@ -185,7 +185,7 @@ public class ReadWriteBytesTest {
     @Ignore
     @Test
     public void x() throws JafsException, IOException {
-        Jafs jafs = new Jafs("c:/data/ggc/ggc_512_128_10MB_compressed.jafs");
+        Jafs jafs = new Jafs("/tmp/ggc_512_128_10MB_compressed.jafs");
         System.err.println(jafs.stats());
         jafs.close();
     }
