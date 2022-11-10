@@ -48,8 +48,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 	}
 
 	public long getUnusedMapBpos(long bpos) {
-		int n = (int)(bpos/blocksPerUnusedMap);
-		return n*blocksPerUnusedMap;
+		return (bpos / blocksPerUnusedMap) * blocksPerUnusedMap;
 	}
 
 	private void setStartAtValue(boolean isInode, long unusedMap) {
@@ -61,17 +60,16 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 		}
 	}
 
-	private long reserveBpos(long curBpos, long blocksTotal, boolean isInode, int b, int bitMask, long unusedMap, Set<Long> blockList) throws JafsException, IOException {
-		if (curBpos<blocksTotal) {
+	private long allocateBpos(long curBpos, long blocksTotal, boolean isInode, int b, int bitMask, long unusedMap, Set<Long> blockList) throws JafsException, IOException {
+		setStartAtValue(isInode, unusedMap);
+		if (curBpos < blocksTotal) {
 			if (isInode && ((b & (bitMask >>> 1)) == 0)) {
 				JafsBlock tmp = vfs.getCacheBlock(curBpos);
 				tmp.initZeros(blockList);
 			}
-			setStartAtValue(isInode, unusedMap);
 			return curBpos;
 		}
 		else {
-			setStartAtValue(isInode, unusedMap);
 			return 0;
 		}
 	}
@@ -79,7 +77,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 	private long getUnusedBpos(Set<Long> blockList, boolean isInode) throws JafsException, IOException {
         long blocksTotal = superBlock.getBlocksTotal();
 
-        if (!isInode && (vfs.getSuper().getBlocksUsed()==blocksTotal)) {
+        if (!isInode && (vfs.getSuper().getBlocksUsed() == blocksTotal)) {
             // performance shortcut for data blocks,
             // if used==total then there are no more data blocks available
             // handy for situations where no deletes are performed
@@ -106,7 +104,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 
 		long curBpos = startAt * blocksPerUnusedMap;
 		long unusedMap = startAt;
-		for (; curBpos<blocksTotal; unusedMap++) {
+		for (; curBpos < blocksTotal; unusedMap++) {
 			JafsBlock block = vfs.getCacheBlock(unusedMap * blocksPerUnusedMap);
 			int b = block.peekSkipMapByte() & 0xff;
 			if ((b & SKIP_MAP) != 0) {
@@ -121,12 +119,12 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 				curBpos++; // skip the Bpos of the unused map itself
 				for (int bitMask = p0mask >>> 2; bitMask != 0; bitMask >>>= 2) {
 					if (((b & bitMask) == 0)) {
-						return reserveBpos(curBpos, blocksTotal, isInode, b, bitMask, unusedMap, blockList);
+						return allocateBpos(curBpos, blocksTotal, isInode, b, bitMask, unusedMap, blockList);
 					}
 					curBpos++;
 				}
 			}
-			// then process the other bytes
+			// then process the other bytes (each byte containing BLOCKS_PER_BYTE blocks)
 			block.seekSet(1);
 			for (int m = 1; m < blockSize; m++) {
 				b = block.readByte() & 0xff;
@@ -136,7 +134,7 @@ class JafsUnusedMapNotEqual implements JafsUnusedMap {
 				else {
 					for (int bitMask = p0mask; bitMask != 0; bitMask >>>= 2) {
 						if (((b & bitMask) == 0)) {
-							return reserveBpos(curBpos, blocksTotal, isInode, b, bitMask, unusedMap, blockList);
+							return allocateBpos(curBpos, blocksTotal, isInode, b, bitMask, unusedMap, blockList);
 						}
 						curBpos++;
 					}

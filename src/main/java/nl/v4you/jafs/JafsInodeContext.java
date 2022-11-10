@@ -36,13 +36,10 @@ class JafsInodeContext {
 	void createNewBlock(Set<Long> blockList, JafsInode inode, int n, boolean init) throws JafsException, IOException {
 		JafsBlock block;
 		long ptr = vfs.getUnusedMap().getUnusedDataBpos(blockList);
-		if (ptr!=0) {
-			block = vfs.getCacheBlock(ptr);
-		}
-		else {
+		if (ptr == 0) {
 			ptr = vfs.appendNewBlockToArchive(blockList);
-			block = vfs.getCacheBlock(ptr);
 		}
+		block = vfs.getCacheBlock(ptr);
 		vfs.getSuper().incBlocksUsed(blockList);
 		if (init) {
 			block.initZeros(blockList);
@@ -64,13 +61,10 @@ class JafsInodeContext {
 				// Create a new block. Could be a ptr block or a data block.
 				JafsBlock dum;
 				ptr = vfs.getUnusedMap().getUnusedDataBpos(blockList);
-				if (ptr==0) {
+				if (ptr == 0) {
 					ptr = vfs.appendNewBlockToArchive(blockList);
-					dum = vfs.getCacheBlock(ptr);
 				}
-				else {
-					dum = vfs.getCacheBlock(ptr);
-				}
+				dum = vfs.getCacheBlock(ptr);
                 dum.initZeros(blockList);
 				vfs.getSuper().incBlocksUsed(blockList);
 				block.seekSet(idx<<2);

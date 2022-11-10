@@ -49,7 +49,7 @@
             <configuration>
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>nl.v4you.JAFS.main.Main</mainClass>
+                  <mainClass>nl.v4you.jafs.Console</mainClass>
                 </transformer>
               </transformers>
             </configuration>

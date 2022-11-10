@@ -86,8 +86,12 @@ public class JafsFile {
         JafsInode inode = vfs.getInodePool().get();
 		try {
             inode.openInode(entry);
-            long inodeSize = inode.size;
-            return inodeSize;
+            if ((inode.type & JafsInode.INODE_DIR) != 0) {
+            	return 0;
+			}
+			else {
+				return inode.size;
+			}
         }
         finally {
             vfs.getInodePool().free(inode);
