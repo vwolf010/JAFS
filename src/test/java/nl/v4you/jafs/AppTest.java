@@ -24,7 +24,6 @@ public class AppTest {
     Random rnd = new Random();
 
     int blockSize;
-    int inodeSize;
     int fileSize;
 
     @Parameterized.Parameters
@@ -51,7 +50,6 @@ public class AppTest {
 
     public AppTest(int blockSize, int inodeSize, int fileSize) {
         this.blockSize = blockSize;
-        this.inodeSize = inodeSize;
         this.fileSize = fileSize;
     }
 
@@ -93,7 +91,7 @@ public class AppTest {
 
     @Test
     public void fileInputStreamReturnsMinusOneWhenNoMoreToRead() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -114,7 +112,7 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterRename() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -133,7 +131,7 @@ public class AppTest {
     public void fileInputStream() throws Exception {
         byte content[] = "12345678901234567890123456789012345678901234567890".getBytes();
 
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -167,7 +165,7 @@ public class AppTest {
 
     @Test
     public void createDirectories() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/sub1");
         assertEquals(false, f.exists());
@@ -189,7 +187,7 @@ public class AppTest {
 
     @Test
     public void createFileInsideDirectories() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/sub1");
         f.mkdir();
@@ -221,7 +219,7 @@ public class AppTest {
 
     @Test
     public void deleteDirectory() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/sub1");
         f.mkdir();
@@ -251,7 +249,7 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterOverwrite() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -269,7 +267,7 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterAppend() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -290,7 +288,7 @@ public class AppTest {
 
         rnd.nextBytes(content);
 
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 

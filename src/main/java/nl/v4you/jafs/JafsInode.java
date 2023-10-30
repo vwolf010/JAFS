@@ -15,7 +15,6 @@ class JafsInode {
     static final int INODE_FILE    = 0x1;
     static final int INODE_DIR     = 0x2;
 	static final int INODE_INLINED = 0x4;
-    static final int INODE_USED = INODE_DIR | INODE_FILE;
 
 	private Jafs vfs;
 	private JafsInodeContext ctx;
@@ -29,7 +28,6 @@ class JafsInode {
     long maxFileSizeReal;
 	int superBlockSize;
 	int superBlockSizeMask;
-	int superInodeSize;
 
 	private byte bb1[];
 	private byte bb2[]; // used by undoinlined()
@@ -50,13 +48,12 @@ class JafsInode {
         this.vfs = vfs;
         superBlockSize = vfs.getSuper().getBlockSize();
         superBlockSizeMask = superBlockSize-1;
-        superInodeSize = vfs.getSuper().getInodeSize();
         ctx = vfs.getINodeContext();
         maxFileSizeReal = ctx.maxFileSizeReal;
         ptrs = new long[ctx.getPtrsPerInode()];
-        maxInlinedSize = superInodeSize-INODE_HEADER_SIZE;
-        bb1 = new byte[superInodeSize];
-        bb2 = new byte[superInodeSize];
+        maxInlinedSize = superBlockSize-INODE_HEADER_SIZE;
+        bb1 = new byte[superBlockSize];
+        bb2 = new byte[superBlockSize];
 	}
 
 	long getFpos() {
@@ -69,7 +66,7 @@ class JafsInode {
 	
 	void flushInode(Set<Long> blockList) throws JafsException, IOException {
 	    JafsBlock iblock = vfs.getCacheBlock(bpos);
-        iblock.seekSet(ipos * superInodeSize);
+        iblock.seekSet(ipos * superBlockSize);
 
         int len = 0;
         bb1[len++] = (byte)type;
@@ -89,7 +86,7 @@ class JafsInode {
         this.bpos = bpos;
         this.ipos = ipos;
         JafsBlock iblock = vfs.getCacheBlock(bpos);
-		iblock.seekSet(ipos*superInodeSize);
+		iblock.seekSet(ipos*superBlockSize);
 		iblock.readBytes(bb1, 0, 1+8);
         type = (bb1[0] & 0xff);
 		size = Util.arrayToLong(bb1, 1);
@@ -110,63 +107,20 @@ class JafsInode {
 
 	void createInode(Set<Long> blockList, int type) throws JafsException, IOException {
         JafsBlock iblock;
-
-        ipos = -1;
-        while (ipos==-1) {
-            bpos = vfs.getUnusedMap().getUnusedINodeBpos(blockList);
-            if (bpos != 0) {
-                iblock = vfs.getCacheBlock(bpos);
-            }
-            else {
-                // no block could be found, we need to create a new one
-                bpos = vfs.appendNewBlockToArchive(blockList);
-                iblock = vfs.getCacheBlock(bpos);
-                for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
-                    iblock.seekSet((n-1) * superInodeSize);
-                    iblock.writeByte(blockList,0);
-                }
-            }
-
-            // Find the first free inode position in this block
-            // and try to find at least 1 other used position
-            int inodeCnt = 0;
-            for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
-                iblock.seekSet((n-1) * superInodeSize);
-                if ((iblock.readByte() & INODE_USED) != 0) {
-                    inodeCnt++;
-                }
-                else if (ipos==-1) {
-                    inodeCnt++;
-                    ipos = (n-1);
-                }
-                if (ipos!=-1 && inodeCnt>1) {
-                    break;
-                }
-            }
-            if (ipos==-1) {
-                // can happen if the previous call to this method
-                // found an ipos that wasn't the last one
-                vfs.getUnusedMap().setAvailableForNeither(blockList, bpos);
-            }
-            else {
-                this.type = type | INODE_INLINED;
-                this.size = 0;
-                flushInode(blockList);
-
-                // since we try to find at least 1 other used position
-                // we can do the inodeCnt==1 check here
-                if (inodeCnt==1) {
-                    vfs.getSuper().incBlocksUsed(blockList);
-                }
-                if (inodeCnt==vfs.getINodeContext().getInodesPerBlock()) {
-                    // vfs.getINodeContext().getInodesPerBlock() could be 1 so check that first
-                    vfs.getUnusedMap().setAvailableForNeither(blockList, bpos);
-                }
-                else if (inodeCnt==1) {
-                    vfs.getUnusedMap().setAvailableForInodeOnly(blockList, bpos);
-                }
-            }
+        bpos = vfs.getUnusedMap().getUnusedBlockBpos(blockList);
+        if (bpos == 0) {
+            // no block could be found, we need to expand the file
+            bpos = vfs.appendNewBlockToArchive(blockList);
+            iblock = vfs.getCacheBlock(bpos);
+			iblock.seekSet(0);
+			iblock.writeByte(blockList,0);
         }
+        ipos = 0;
+        this.type = type | INODE_INLINED;
+        this.size = 0;
+        flushInode(blockList);
+        vfs.getSuper().incBlocksUsed(blockList);
+        vfs.getUnusedMap().setUnavailable(blockList, bpos);
 	}
 
 	void seekSet(long offset) throws JafsException {
@@ -193,7 +147,7 @@ class JafsInode {
 	private void undoInlined(Set<Long> blockList) throws IOException, JafsException {
 		// The inlined data needs to be copied to a real data block.
         JafsBlock iblock = vfs.getCacheBlock(bpos);
-        iblock.seekSet(ipos *superInodeSize+INODE_HEADER_SIZE);
+        iblock.seekSet(ipos *superBlockSize+INODE_HEADER_SIZE);
 
 		if (size!=0) {
 			iblock.readBytes(bb2, 0, (int)size);
@@ -222,7 +176,7 @@ class JafsInode {
 		checkInlinedOverflow(blockList, 1);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
-            iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
+            iblock.seekSet((int)(ipos * superBlockSize + INODE_HEADER_SIZE + fpos));
 			iblock.writeByte(blockList, b & 0xff);
 			fpos++;
 		}
@@ -248,7 +202,7 @@ class JafsInode {
         checkInlinedOverflow(blockList, len);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
-            iblock.seekSet((int)(ipos * superInodeSize + INODE_HEADER_SIZE + fpos));
+            iblock.seekSet((int)(ipos * superBlockSize + INODE_HEADER_SIZE + fpos));
             iblock.writeBytes(blockList, b, off, len);
             fpos+=len;
 		}
@@ -279,7 +233,7 @@ class JafsInode {
 		}
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
-            iblock.seekSet((int)(ipos *superInodeSize+INODE_HEADER_SIZE+fpos));
+            iblock.seekSet((int)(ipos *superBlockSize+INODE_HEADER_SIZE+fpos));
 			fpos++;
 			return iblock.readByte() & 0xff;
 		}
@@ -303,7 +257,7 @@ class JafsInode {
 		}
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
-            iblock.seekSet((int)(ipos*superInodeSize + INODE_HEADER_SIZE + fpos));
+            iblock.seekSet((int)(ipos*superBlockSize + INODE_HEADER_SIZE + fpos));
             iblock.readBytes(b, off, len);
             fpos+=len;
 		}
@@ -342,17 +296,6 @@ class JafsInode {
 		return Util.arrayToInt(bb1, 0);
 	}
 
-	private boolean iNodesBlockIsUsed() throws JafsException, IOException {
-        JafsBlock iblock = vfs.getCacheBlock(bpos);
-        for (int n=ctx.getInodesPerBlock(); n!=0; n--) {
-            iblock.seekSet((n-1)*superInodeSize);
-			if ((iblock.readByte() & INODE_USED)!=0) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
 	void free(Set<Long> blockList) throws JafsException, IOException {
 		// free all data
         if (!isInlined()) {
@@ -361,19 +304,13 @@ class JafsInode {
 
         // free the iNode
         JafsBlock iblock = vfs.getCacheBlock(bpos);
-        iblock.seekSet(ipos * superInodeSize);
+        iblock.seekSet(ipos * superBlockSize);
         type=0;
         iblock.writeByte(blockList, 0);
 
 		// update the unusedMap
-		if (iNodesBlockIsUsed()) {
-            vfs.getUnusedMap().setAvailableForInodeOnly(blockList, bpos);
-		}
-        else {
-            vfs.getUnusedMap().setAvailableForBoth(blockList, bpos);
-            vfs.getUnusedMap().setStartAtData(bpos);
-            vfs.getSuper().decBlocksUsedAndFlush(blockList);
-		}
-        vfs.getUnusedMap().setStartAtInode(bpos);
+        vfs.getUnusedMap().setAvailable(blockList, bpos);
+        vfs.getUnusedMap().setStartAt(bpos);
+        vfs.getSuper().decBlocksUsedAndFlush(blockList);
 	}
 }

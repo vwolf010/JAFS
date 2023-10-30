@@ -37,7 +37,7 @@ public class ReadWriteBytesTest {
     @Test
     public void writeReadBytesInlined() throws JafsException, IOException {
         int blockSize = 256;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc.txt");
         byte content[] = "ab".getBytes();
         JafsOutputStream jos = jafs.getOutputStream(f);
@@ -54,7 +54,7 @@ public class ReadWriteBytesTest {
     @Test
     public void writeReadBytesBlock() throws JafsException, IOException {
         int blockSize = 256;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc.txt");
         byte content[] = new byte[blockSize];
         rnd.nextBytes(content);
@@ -72,7 +72,7 @@ public class ReadWriteBytesTest {
     @Test
     public void switchFromInlineToBlock() throws JafsException, IOException {
         int blockSize = 256;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc.txt");
         JafsOutputStream jos = jafs.getOutputStream(f);
         jos.write("ab".getBytes());
@@ -92,7 +92,7 @@ public class ReadWriteBytesTest {
     @Test
     public void writeReadBytesWithOffsetAndLength() throws JafsException, IOException {
         int blockSize = 256;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize/2, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc.txt");
         byte content[] = "abcdef".getBytes();
         JafsOutputStream jos = jafs.getOutputStream(f);
@@ -110,7 +110,7 @@ public class ReadWriteBytesTest {
     @Test
     public void writeSingleByte() throws JafsException, IOException {
         int blockSize = 256;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize/2, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc.txt");
         JafsOutputStream jos = jafs.getOutputStream(f);
         jos.write('A');
@@ -133,9 +133,8 @@ public class ReadWriteBytesTest {
     @Test
     public void writeReadBytesUsingMaxFileSize() throws JafsException, IOException {
         int blockSize = 128;
-        int inodeSize = 64;
         long maxFileSize = 4330000;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize,  maxFileSize);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize,  maxFileSize);
         System.err.println(jafs.getINodeContext().toString());
         JafsFile f = jafs.getFile("/abc.txt");
         byte content[] = new byte[blockSize];
@@ -195,7 +194,7 @@ public class ReadWriteBytesTest {
     public void y() throws JafsException, IOException {
         int blockSize = 256;
 
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, blockSize/2, 10L * 1024L * 1024L);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 10L * 1024L * 1024L);
         JafsFile f = jafs.getFile("/a.txt");
         byte content[] = new byte[blockSize];
 
@@ -213,9 +212,8 @@ public class ReadWriteBytesTest {
     @Test
     public void initialCreationIsCorrect() throws JafsException, IOException {
         int blockSize = 128;
-        int inodeSize = 64;
         long maxFileSize = 4*1024*1024;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, inodeSize,  maxFileSize);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize,  maxFileSize);
         jafs.close();
         jafs = new Jafs(TEST_ARCHIVE);
         JafsOutputStream jos = jafs.getOutputStream(jafs.getFile("/a.txt"));

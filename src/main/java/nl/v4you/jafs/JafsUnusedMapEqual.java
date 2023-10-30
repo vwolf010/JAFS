@@ -3,7 +3,7 @@ package nl.v4you.jafs;
 import java.io.IOException;
 import java.util.Set;
 
-class JafsUnusedMapEqual implements JafsUnusedMap {
+class JafsUnusedMapEqual {
 
     static final int SKIP_MAP = 0x80;
     static final int BLOCKS_PER_BYTE = 8;
@@ -104,11 +104,7 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         return 0;
     }
 
-    public long getUnusedINodeBpos(Set<Long> blockList) throws JafsException, IOException {
-        return getUnusedBpos(blockList,true);
-    }
-
-    public long getUnusedDataBpos(Set<Long> blockList) throws JafsException, IOException {
+    public long getUnusedBlockBpos(Set<Long> blockList) throws JafsException, IOException {
         return getUnusedBpos(blockList, false);
     }
 
@@ -116,18 +112,14 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         return (int)((bpos & (blocksPerUnusedMap-1))>>>3);
     }
 
-    public void setStartAtInode(long bpos) {
-        setStartAtData(bpos);
-    }
-
-    public void setStartAtData(long bpos) {
+    public void setStartAt(long bpos) {
         long mapNr = bpos/blocksPerUnusedMap;
         if (mapNr<startAt) {
             startAt = mapNr;
         }
     }
 
-    public void setAvailableForBoth(Set<Long> blockList, long bpos) throws JafsException, IOException {
+    public void setAvailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 0
         int idx = getUnusedIdx(bpos);
@@ -140,18 +132,13 @@ class JafsUnusedMapEqual implements JafsUnusedMap {
         block.pokeSkipMapByte(blockList, b & 0b01111111);
     }
 
-    public void setAvailableForNeither(Set<Long> blockList, long bpos) throws JafsException, IOException {
+    public void setUnavailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
-        // Set to 1b
+        // Set to 1
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
         b |= 0b10000000 >>> (bpos & 0x7); // set block data bit to used (1)
         block.pokeByte(blockList, idx, b);
-    }
-
-    public void setAvailableForInodeOnly(Set<Long> blockList, long bpos) {
-        //setAvailableForBoth(bpos);
-        throw new IllegalStateException("this method thould never be called when iNodeSize==blockSize");
     }
 
     public void createNewUnusedMap(Set<Long> blockList, long bpos) throws JafsException, IOException {

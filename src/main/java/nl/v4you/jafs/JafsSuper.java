@@ -10,7 +10,6 @@ class JafsSuper {
 	private Jafs vfs;
 	private JafsBlock rootBlock;
 	private int blockSize;
-	private int inodeSize = 64;
 	private long maxFileSize = 4L*1024L*1024L*1024L;
 	private long blocksTotal = 0;
 	private long blocksUsed = 0;
@@ -103,16 +102,6 @@ class JafsSuper {
 		rootBlock.writeInt(blockList, blockSize);
 	}
 
-	int getInodeSize() {
-		return inodeSize;
-	}
-	
-	void setInodeSize(Set<Long> blockList, int inodeSize) {
-		rootBlock.seekSet(10);
-		rootBlock.writeInt(blockList, inodeSize);
-		this.inodeSize = inodeSize;
-	}
-	
 	long getMaxFileSize() {
 		return maxFileSize;
 	}
@@ -128,7 +117,6 @@ class JafsSuper {
 		rootBlock.readFromDisk();
 		rootBlock.readBytes(buf, 0, 34);
 		blockSize = (int)Util.arrayToInt(buf, 6);
-		inodeSize = (int)Util.arrayToInt(buf, 10);
 		maxFileSize = Util.arrayToInt(buf, 14);
 		rootDirBPos = Util.arrayToInt(buf, 18);
 		rootDirIdx = (int)Util.arrayToInt(buf, 22);
