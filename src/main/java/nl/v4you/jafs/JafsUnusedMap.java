@@ -3,7 +3,7 @@ package nl.v4you.jafs;
 import java.io.IOException;
 import java.util.Set;
 
-class JafsUnusedMapEqual {
+class JafsUnusedMap {
 
     static final int SKIP_MAP = 0x80;
     static final int BLOCKS_PER_BYTE = 8;
@@ -15,7 +15,7 @@ class JafsUnusedMapEqual {
     private long startAt = 0;
     //long lastVisitedMapForDump = -1;
 
-    JafsUnusedMapEqual(Jafs vfs) {
+    JafsUnusedMap(Jafs vfs) {
         this.vfs = vfs;
         superBlock = vfs.getSuper();
         blockSize = superBlock.getBlockSize();
@@ -75,7 +75,7 @@ class JafsUnusedMapEqual {
                 // and process the rest of the skip map byte:
                 for (int bitMask = 0x40; bitMask != 0; bitMask >>>= 1) {
                     if ((b & bitMask) == 0) {
-                        reserveBpos(curBpos, blocksTotal, isInode, unusedMap, blockList);
+                        return reserveBpos(curBpos, blocksTotal, isInode, unusedMap, blockList);
                     }
                     curBpos++;
                 }
@@ -90,7 +90,7 @@ class JafsUnusedMapEqual {
                 else {
                     for (int bitMask = 0x80; bitMask != 0; bitMask >>>= 1) {
                         if ((b & bitMask) == 0) {
-                            reserveBpos(curBpos, blocksTotal, isInode, unusedMap, blockList);
+                            return reserveBpos(curBpos, blocksTotal, isInode, unusedMap, blockList);
                         }
                         curBpos++;
                     }

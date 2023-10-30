@@ -19,7 +19,7 @@ public class Jafs {
 	private String fname;
 	private RandomAccessFile raf;		
 	private JafsInodeContext ctx;
-	private JafsUnusedMapEqual um;
+	private JafsUnusedMap um;
 	private JafsDirEntry rootEntry = null;
 	private JafsInodePool inodePool = null;
 	private JafsDirPool dirPool = null;
@@ -84,8 +84,10 @@ public class Jafs {
 	}
 
 	public JafsOutputStream getOutputStream(JafsFile f, boolean append) throws JafsException, IOException {
-		if (!append && f.exists() && !f.delete()) {
-			throw new JafsException("getOutputStream(): deleting ["+f.getAbsolutePath()+"] failed");
+		if (!append && f.exists()) {
+			if (!f.delete()) {
+				throw new JafsException("getOutputStream(): deleting [" + f.getAbsolutePath() + "] failed");
+			}
 		}
 		JafsOutputStream jos = new JafsOutputStream(this, f, append);
 
@@ -105,7 +107,7 @@ public class Jafs {
 		return ctx;
 	}
 	
-	JafsUnusedMapEqual getUnusedMap() {
+	JafsUnusedMap getUnusedMap() {
 		return um;
 	}
 	
@@ -166,7 +168,7 @@ public class Jafs {
 	 * Private
 	 */
     private void initInodeContext(int blockSize, long maxFileSize) {
-		um = new JafsUnusedMapEqual(this);
+		um = new JafsUnusedMap(this);
 		ctx = new JafsInodeContext(this, blockSize, maxFileSize);
 	}
 

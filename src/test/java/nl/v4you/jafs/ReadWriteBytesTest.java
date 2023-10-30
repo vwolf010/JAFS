@@ -117,6 +117,7 @@ public class ReadWriteBytesTest {
         jos.close();
         JafsInputStream jis = jafs.getInputStream(f);
         int A = jis.read();
+        jis.close();
         assertEquals('A', A);
         jafs.close();
     }
@@ -218,6 +219,10 @@ public class ReadWriteBytesTest {
         jafs = new Jafs(TEST_ARCHIVE);
         JafsOutputStream jos = jafs.getOutputStream(jafs.getFile("/a.txt"));
         jos.write("Hallo".getBytes());
+        jafs.close();
+        jafs = new Jafs(TEST_ARCHIVE);
+        jos = jafs.getOutputStream(jafs.getFile("/a.txt"));
+        jos.write("again".getBytes());
         jafs.close();
     }
 }

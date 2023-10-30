@@ -114,13 +114,14 @@ class JafsInode {
             iblock = vfs.getCacheBlock(bpos);
 			iblock.seekSet(0);
 			iblock.writeByte(blockList,0);
+			if (bpos == 0) throw new JafsException("Unable to expand file");
         }
         ipos = 0;
         this.type = type | INODE_INLINED;
         this.size = 0;
         flushInode(blockList);
+		vfs.getUnusedMap().setUnavailable(blockList, bpos);
         vfs.getSuper().incBlocksUsed(blockList);
-        vfs.getUnusedMap().setUnavailable(blockList, bpos);
 	}
 
 	void seekSet(long offset) throws JafsException {
