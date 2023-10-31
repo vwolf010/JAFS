@@ -90,7 +90,7 @@ public class UnusedMapTest {
 
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
-        byte content[] = new byte[blockSize];
+        byte[] content = new byte[blockSize];
         rnd.nextBytes(content);
 
         JafsFile f = jafs.getFile("/abc.bin");
