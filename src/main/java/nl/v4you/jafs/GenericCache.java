@@ -12,9 +12,9 @@ class GenericCache<K, V> {
         GenericCacheEntry r;
     }
 
-    private int cacheMaxSize = 100; // 3 is the minimum size!
+    private int cacheMaxSize; // 3 is the minimum size!
 
-    private Map<K, GenericCacheEntry> cache = new HashMap<>();
+    private Map<K, GenericCacheEntry> cache;
     private GenericCacheEntry mostLeft;
     private GenericCacheEntry mostRight;
 
@@ -31,6 +31,7 @@ class GenericCache<K, V> {
             throw new IllegalStateException("Cache size minimum is 3");
         }
         cacheMaxSize = size;
+        cache = new HashMap<>(2 * cacheMaxSize);
     }
 
     V add(K key, V value) {

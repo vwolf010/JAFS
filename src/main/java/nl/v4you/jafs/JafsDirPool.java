@@ -14,7 +14,7 @@ public class JafsDirPool {
 
     JafsDir get() {
         JafsDir dir;
-        if (free.size()==0) {
+        if (free.isEmpty()) {
             dir = new JafsDir(vfs);
             busy.add(dir);
         }
