@@ -20,11 +20,11 @@ class JafsBlockCache {
     }
 
 	JafsBlock get(long bpos) throws JafsException, IOException {
-		if (bpos<0) {
+		if (bpos < 0) {
 			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
 		}
 
-		if (bpos>=vfs.getSuper().getBlocksTotal()) {
+		if (bpos >= vfs.getSuper().getBlocksTotal()) {
 			throw new JafsException("bpos ("+bpos+") >= blocks total ("+vfs.getSuper().getBlocksTotal()+")");
 		}
 
@@ -40,9 +40,9 @@ class JafsBlockCache {
             }
             blk.readFromDisk();
             JafsBlock evicted = gcache.add(bpos, blk);
-            if (evicted!=null) {
+            if (evicted != null) {
                 evicted.writeToDiskIfNeeded();
-                free=evicted;
+                free = evicted;
             }
         }
 
@@ -52,7 +52,7 @@ class JafsBlockCache {
 	void flushBlocks(Set<Long> bl) throws JafsException, IOException {
 	    vfs.getSuper().writeToDisk();
 	    for (long bpos : bl) {
-	        if (bpos>=0) {
+	        if (bpos >= 0) {
                 JafsBlock block = get(bpos);
                 block.writeToDiskIfNeeded();
             }

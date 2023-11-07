@@ -1,20 +1,16 @@
 package nl.v4you.jafs;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.Random;
 
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class DirectoriesTest {
     @Rule
@@ -179,7 +175,7 @@ public class DirectoriesTest {
     public void reusingDirEntryWorks() throws JafsException, IOException {
         String fileName = "/aaaaaaaaaaaaaaaaaaaaaaaaa";
 
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 64, 1024 * 1024);
         JafsFile f = vfs.getFile(fileName);
         assertTrue(f.mkdir());
         vfs.close();
@@ -243,19 +239,57 @@ public class DirectoriesTest {
         vfs.close();
     }
 
+    private void crFile(Jafs vfs, JafsFile f, Random r) throws JafsException, IOException {
+        int flen = 10 + r.nextInt(1_000_000);
+        byte[] content = new byte[flen];
+        //Arrays.fill(content, (byte)0x0);
+        JafsOutputStream jos = vfs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+    }
+
+    @Ignore
+    @Test
+    public void xxx() throws JafsException, IOException {
+        File g = new File(TEST_ARCHIVE);
+        if (g.exists()) g.delete();
+        int blockSize = 512;
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, 10 * 1024 * 1024);
+        JafsFile f;
+
+        Random r = new Random();
+        for (int i = 0; i < Integer.MAX_VALUE; i++) {
+            String d1 = String.format("%01x", r.nextInt(256));
+            String d2 = String.format("%01x", r.nextInt(256));
+            String d3 = String.format("%01x", r.nextInt(256));
+            String d4 = String.format("%01x", r.nextInt(256));
+            f = vfs.getFile("/"+d1+"/"+d2+"/"+d3+"/"+d4);
+            f.mkdirs();
+            f = vfs.getFile(f.getAbsolutePath()+"/0.xml");
+            crFile(vfs, f, r);
+            i++;
+        }
+    }
+
     @Test
     public void directoryEntryReuseWorks() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 64, 1024*1024);
         JafsFile f;
         f = vfs.getFile("/home");
         f.mkdir();
 
         f = vfs.getFile("/home/aa.txt");
         f.createNewFile();
+        assertTrue(f.exists());
         f = vfs.getFile("/home/bb.txt");
         f.createNewFile();
+        assertTrue(f.exists());
         f = vfs.getFile("/home/cc.txt");
         f.createNewFile();
+        assertTrue(f.exists());
+
+        f = vfs.getFile("/home");
+        assertEquals(3, f.list().length);
 
         // reuse middle entry
         f = vfs.getFile("/home/bb.txt");

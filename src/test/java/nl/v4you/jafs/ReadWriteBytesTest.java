@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -125,52 +126,76 @@ public class ReadWriteBytesTest {
     @Ignore
     @Test
     public void adviceBlockSize() throws JafsException, IOException {
-        Jafs jafs = new Jafs("/tmp/ggc_1024_128_10MB.jafs");
+        Jafs jafs = new Jafs("/tmp/test.jafs");
         jafs.adviceBlockSize();
         jafs.close();
+    }
+
+    @Test
+    public void openingOutputStreamSetsFileSizeToZero() throws JafsException, IOException {
+        Jafs jafs = new Jafs(TEST_ARCHIVE, 64, 1024);
+        JafsFile f = jafs.getFile("/t.bin");
+        byte[] buf = new byte[650];
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        jos.write(buf);
+        jos.close();
+        assertEquals(650, f.length());
+        jos = jafs.getOutputStream(f);
+        jos.close();
+        assertEquals(0, f.length());
+        jafs.close();
+    }
+
+    @Test
+    public void appendMode() throws JafsException, IOException {
+        Jafs jafs = new Jafs(TEST_ARCHIVE, 64, 1024);
+        JafsFile f = jafs.getFile("/t.bin");
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        jos.write("abc".getBytes(StandardCharsets.UTF_8));
+        jos.close();
+        jos = jafs.getOutputStream(f, true);
+        jos.write("def".getBytes(StandardCharsets.UTF_8));
+        jos.close();
+        JafsInputStream jis = jafs.getInputStream(f);
+        byte[] buf = new byte[6];
+        jis.read(buf);
+        jis.close();
+        jafs.close();
+        assertEquals("abcdef",new String(buf, StandardCharsets.UTF_8));
     }
 
     @Ignore
     @Test
     public void writeReadBytesUsingMaxFileSize() throws JafsException, IOException {
-        int blockSize = 128;
-        long maxFileSize = 4330000;
+        int blockSize = 64;
+        long maxFileSize = 4_474_432;
+        long bufSize = maxFileSize;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize,  maxFileSize);
         System.err.println(jafs.getINodeContext().toString());
         JafsFile f = jafs.getFile("/abc.txt");
-        byte content[] = new byte[blockSize];
+        byte[] content = new byte[(int)bufSize];
 
         long blocksUsed = jafs.getSuper().getBlocksUsed();
-        System.err.println("blocksUsed: "+blocksUsed);
+        System.err.println("blocksUsed: " + blocksUsed);
 
         JafsOutputStream jos = jafs.getOutputStream(f);
-        long len = 0;
         int i = 0;
-        while (len+blockSize<=maxFileSize) {
-            for (int n=0; n<blockSize; n++) {
-                content[n] = (byte)i++;
-                if (i==17) i=0;
-            }
-            len += blockSize;
-            jos.write(content);
+        for (int n = 0; n < maxFileSize; n++) {
+            content[n] = (byte)i++;
+            if (i == 17) i = 0;
         }
+        jos.write(content);
         jos.close();
 
-        System.err.println("blocksUsed: "+jafs.getSuper().getBlocksUsed());
+        System.err.println("blocksUsed: " + jafs.getSuper().getBlocksUsed());
 
         JafsInputStream jis = jafs.getInputStream(f);
-        len = 0;
         i = 0;
-        while (len+blockSize<maxFileSize) {
-            assertEquals(blockSize, jis.read(content));
-            for (int n=0; n<blockSize; n++) {
-                if (content[n]!=(byte)i) {
-                    assertTrue(false);
-                }
-                i++;
-                if (i==17) i=0;
-            }
-            len += blockSize;
+        assertEquals(maxFileSize, jis.read(content));
+        for (int n = 0; n < maxFileSize; n++) {
+            assertEquals(content[n], (byte)i);
+            i++;
+            if (i == 17) i = 0;
         }
         jis.close();
 
@@ -179,7 +204,7 @@ public class ReadWriteBytesTest {
         System.err.println("blocksUsed: "+jafs.getSuper().getBlocksUsed());
 
         jafs.close();
-        System.err.println(len+" bytes written");
+        System.err.println(maxFileSize + " bytes written");
     }
 
     @Ignore

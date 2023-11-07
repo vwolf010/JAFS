@@ -12,7 +12,7 @@ public class JafsInodePool {
         this.vfs = vfs;
     }
 
-    JafsInode get() {
+    JafsInode claim() {
         JafsInode inode;
         if (free.size()==0) {
             inode = new JafsInode(vfs);
@@ -26,7 +26,7 @@ public class JafsInodePool {
 //        return new JafsInode(vfs);
     }
 
-    void free(JafsInode inode) {
+    void release(JafsInode inode) {
         busy.remove(inode);
         free.add(inode);
     }

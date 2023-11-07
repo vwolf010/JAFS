@@ -8,13 +8,13 @@ import java.util.Set;
 class JafsBlock {
 	private static final int SUPERBLOCK_SIZE = 1;
 
-	private int blockSize = -1;
-	private byte[] buf;
+	private final int blockSize;
+	private final byte[] buf;
 	public long bpos = -1;
-	private RandomAccessFile raf;
+	private final RandomAccessFile raf;
 	public int byteIdx = 0;
 	boolean needsFlush = false;
-	Jafs vfs;
+	final Jafs vfs;
 
 	int bytesLeft() {
 		return blockSize-byteIdx;
@@ -27,7 +27,7 @@ class JafsBlock {
 	JafsBlock(Jafs vfs, long bpos, int blockSize) {
 		this.vfs = vfs;
 		raf = vfs.getRaf();
-		if (blockSize<0) {
+		if (blockSize < 0) {
 			blockSize = vfs.getSuper().getBlockSize();
 		}
 		this.blockSize = blockSize;
@@ -51,11 +51,11 @@ class JafsBlock {
 	}
 		
 	void readFromDisk() throws IOException {
-		long start = (SUPERBLOCK_SIZE+bpos) * blockSize;
+		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
 		raf.seek(start);
 		raf.read(buf);
 		byteIdx = 0;
-		needsFlush=false;
+		needsFlush = false;
 	}
 	
 	private void writeToDisk() throws IOException, JafsException {
@@ -69,13 +69,13 @@ class JafsBlock {
 		}
 		raf.seek(start);
 		raf.write(buf);
-		needsFlush=false;
+		needsFlush = false;
 	}
 
 	void writeToDiskIfNeeded() throws IOException, JafsException {
 	    if (needsFlush) {
 	        writeToDisk();
-	        needsFlush=false;
+	        needsFlush = false;
         }
     }
 
@@ -123,7 +123,7 @@ class JafsBlock {
 	}
 
 	int peekByte(int idx) {
-		return buf[idx];
+		return buf[idx] & 0xff;
 	}
 
 	void pokeByte(Set<Long> blockList, int idx, int b) {
@@ -131,7 +131,7 @@ class JafsBlock {
         markForFlush(blockList);
 	}
 
-	void readBytes(byte b[], int off, int len) {
+	void readBytes(byte[] b, int off, int len) {
 		if (len == 0) {
 			return;
 		}
@@ -139,19 +139,35 @@ class JafsBlock {
 		byteIdx += len;
 	}
 
-	void writeBytes(Set<Long> blockList, byte b[]) {
-		writeBytes(blockList, b, 0, b.length);
+	void readBytes(byte[] b, int len) {
+		if (len == 0) {
+			return;
+		}
+		System.arraycopy(buf, byteIdx, b, 0, len);
+		byteIdx += len;
 	}
 
-	void writeBytes(Set<Long> blockList, byte b[], int off, int len) {
+	void writeBytes(Set<Long> blockList, byte[] b) {
+		writeBytes(blockList, b, b.length);
+	}
+
+	void writeBytes(Set<Long> blockList, byte[] b, int off, int len) {
 		if (len == 0) {
 			return;
 		}
 		System.arraycopy(b, off, buf, byteIdx, len);
-		byteIdx+=len;
+		byteIdx += len;
         markForFlush(blockList);
 	}
-		
+
+	void writeBytes(Set<Long> blockList, byte[] b, int len) {
+		if (len == 0) {
+			return;
+		}
+		System.arraycopy(b, 0, buf, byteIdx, len);
+		byteIdx += len;
+		markForFlush(blockList);
+	}
 	long readInt() {
 		long i = 0;
 		i |= (buf[byteIdx++] & 0xffL)<<24;
@@ -172,7 +188,7 @@ class JafsBlock {
 	void markForFlush(Set<Long> blockList) {
         if (!needsFlush) {
             blockList.add(bpos);
-            needsFlush=true;
+            needsFlush = true;
         }
     }
 }

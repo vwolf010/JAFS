@@ -83,14 +83,14 @@ public class JafsFile {
 		if (entry==null || entry.bpos==0) {
 			return 0;
 		}
-        JafsInode inode = vfs.getInodePool().get();
+        JafsInode inode = vfs.getInodePool().claim();
 		try {
-            inode.openInode(entry);
+            inode.openInode(entry.bpos);
             long inodeSize = inode.size;
             return inodeSize;
         }
         finally {
-            vfs.getInodePool().free(inode);
+            vfs.getInodePool().release(inode);
         }
 	}
 
@@ -98,27 +98,27 @@ public class JafsFile {
 		String parentPath = getParent(canonicalPath);
 		JafsDirEntry parent = getEntry(parentPath);
 		Set<Long> blockList = new TreeSet<>();
-		if (parent!=null) {
-			if (parent.bpos==0) {
+		if (parent != null) {
+			if (parent.bpos == 0) {
 				// Parent exists but has no inode yet, let's create it
-                JafsInode inode = vfs.getInodePool().get();
-                JafsDir dir = vfs.getDirPool().get();
+                JafsInode inode = vfs.getInodePool().claim();
+                JafsDir dir = vfs.getDirPool().claim();
                 try {
-                    inode.openInode(parent.parentBpos, parent.parentIpos);
+                    inode.openInode(parent.parentBpos);
                     dir.setInode(inode);
                     dir.mkinode(blockList, parent, JafsInode.INODE_DIR);
                 }
                 finally {
-                    vfs.getInodePool().free(inode);
-                    vfs.getDirPool().free(dir);
+                    vfs.getInodePool().release(inode);
+                    vfs.getDirPool().release(dir);
                 }
 			}
-			JafsInode inode = vfs.getInodePool().get();
-            JafsDir dir = vfs.getDirPool().get();
+			JafsInode inode = vfs.getInodePool().claim();
+            JafsDir dir = vfs.getDirPool().claim();
 			try {
-                inode.openInode(parent);
+                inode.openInode(parent.bpos);
                 dir.setInode(inode);
-                dir.createNewEntry(blockList, canonicalPath, getName().getBytes(Util.UTF8), JafsInode.INODE_FILE, 0, 0);
+                dir.createNewEntry(blockList, canonicalPath, getName().getBytes(Util.UTF8), JafsInode.INODE_FILE, 0);
                 return true;
             }
             catch (Throwable t) {
@@ -126,8 +126,8 @@ public class JafsFile {
             }
             finally {
 			    vfs.getBlockCache().flushBlocks(blockList);
-                vfs.getInodePool().free(inode);
-                vfs.getDirPool().free(dir);
+                vfs.getInodePool().release(inode);
+                vfs.getDirPool().release(dir);
             }
 		}
 		return false;
@@ -142,7 +142,8 @@ public class JafsFile {
 
 	public boolean mkdirs() throws JafsException, IOException {
         Set<Long> blockList = new TreeSet<>();
-        mkParentDirs(blockList, getParent(canonicalPath));
+		String parent = getParent(canonicalPath);
+        mkParentDirs(blockList, parent);
 		boolean b = mkdir(blockList, canonicalPath);
 		vfs.getBlockCache().flushBlocks(blockList);
 		return b;
@@ -155,17 +156,17 @@ public class JafsFile {
 				return new String[0];
 			}
 			else {
-			    JafsInode inode = vfs.getInodePool().get();
-                JafsDir dir = vfs.getDirPool().get();
+			    JafsInode inode = vfs.getInodePool().claim();
+                JafsDir dir = vfs.getDirPool().claim();
 			    try {
-                    inode.openInode(entry);
+                    inode.openInode(entry.bpos);
                     dir.setInode(inode);
                     String lst[] = dir.list();
                     return lst;
                 }
                 finally {
-                    vfs.getInodePool().free(inode);
-                    vfs.getDirPool().free(dir);
+                    vfs.getInodePool().release(inode);
+                    vfs.getDirPool().release(dir);
                 }
 			}
 		}
@@ -175,44 +176,42 @@ public class JafsFile {
 	public boolean delete() throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(canonicalPath);
 		if (entry!=null) {
-			if (entry.bpos>0) {
+			if (entry.bpos != 0) {
 				if (entry.isDirectory()) {
-				    JafsInode inode = vfs.getInodePool().get();
-                    JafsDir dir = vfs.getDirPool().get();
+				    JafsInode inode = vfs.getInodePool().claim();
+                    JafsDir dir = vfs.getDirPool().claim();
 				    try {
-                        inode.openInode(entry);
+                        inode.openInode(entry.bpos);
                         dir.setInode(inode);
                         if (dir.hasActiveEntries()) {
                             throw new JafsException("directory " + canonicalPath + " not empty");
                         }
                     }
                     finally {
-                        vfs.getInodePool().free(inode);
-                        vfs.getDirPool().free(dir);
+                        vfs.getInodePool().release(inode);
+                        vfs.getDirPool().release(dir);
                     }
 				}
 			}
-			JafsInode inode = vfs.getInodePool().get();
-            JafsDir parentDir = vfs.getDirPool().get();
+			JafsInode inode = vfs.getInodePool().claim();
+            JafsDir parentDir = vfs.getDirPool().claim();
             Set<Long> blockList = new TreeSet<>();
 			try {
 			    // first remove the entry from the directory
-                inode.openInode(entry.parentBpos, entry.parentIpos);
+                inode.openInode(entry.parentBpos);
                 parentDir.setInode(inode);
-				{
-					parentDir.deleteEntry(blockList, canonicalPath, entry);
-				}
+				parentDir.deleteEntry(blockList, canonicalPath, entry);
 
                 // then free the inode, pointerblocks and datablocks
-				if (entry.bpos>0) {
-					inode.openInode(entry);
+				if (entry.bpos > 0) {
+					inode.openInode(entry.bpos);
 					inode.free(blockList);
 				}
             }
             finally {
 			    vfs.getBlockCache().flushBlocks(blockList);
-                vfs.getInodePool().free(inode);
-                vfs.getDirPool().free(parentDir);
+                vfs.getInodePool().release(inode);
+                vfs.getDirPool().release(parentDir);
             }
 			return true;
 		}
@@ -230,10 +229,10 @@ public class JafsFile {
 				return new JafsFile[0];
 			}
 			else {
-			    JafsInode inode = vfs.getInodePool().get();
-                JafsDir dir = vfs.getDirPool().get();
+			    JafsInode inode = vfs.getInodePool().claim();
+                JafsDir dir = vfs.getDirPool().claim();
 			    try {
-                    inode.openInode(entry);
+                    inode.openInode(entry.bpos);
                     String l[];
                     dir.setInode(inode);
                     l = dir.list();
@@ -244,8 +243,8 @@ public class JafsFile {
                     return fl;
                 }
                 finally {
-                    vfs.getInodePool().free(inode);
-                    vfs.getDirPool().free(dir);
+                    vfs.getInodePool().release(inode);
+                    vfs.getDirPool().release(dir);
                 }
 
 			}
@@ -258,14 +257,14 @@ public class JafsFile {
 			if (!target.exists()) {
 				if (exists(target.getParent())) {
 					JafsDirEntry entry = getEntry(canonicalPath);
-					JafsInode inodeSrc = vfs.getInodePool().get();
-                    JafsInode inodeDst = vfs.getInodePool().get();
-                    JafsDir srcDir = vfs.getDirPool().get();
-                    JafsDir dstDir = vfs.getDirPool().get();
+					JafsInode inodeSrc = vfs.getInodePool().claim();
+                    JafsInode inodeDst = vfs.getInodePool().claim();
+                    JafsDir srcDir = vfs.getDirPool().claim();
+                    JafsDir dstDir = vfs.getDirPool().claim();
                     Set<Long> blockList = new TreeSet<>();
 					try {
-                        inodeSrc.openInode(entry.parentBpos, entry.parentIpos);
-                        inodeDst.openInode(getEntry(target.getParent()));
+                        inodeSrc.openInode(entry.parentBpos);
+                        inodeDst.openInode(getEntry(target.getParent()).bpos);
                         srcDir.setInode(inodeSrc);
                         dstDir.setInode(inodeDst);
                         srcDir.deleteEntry(blockList, canonicalPath, entry);
@@ -273,14 +272,14 @@ public class JafsFile {
                         dstDir.createNewEntry(
                         		blockList,
                                 target.canonicalPath,
-                                target.getName().getBytes(Util.UTF8), entry.type, entry.bpos, entry.ipos);
+                                target.getName().getBytes(Util.UTF8), entry.type, entry.bpos);
                     }
                     finally {
 					    vfs.getBlockCache().flushBlocks(blockList);
-					    vfs.getInodePool().free(inodeSrc);
-					    vfs.getInodePool().free(inodeDst);
-                        vfs.getDirPool().free(srcDir);
-                        vfs.getDirPool().free(dstDir);
+					    vfs.getInodePool().release(inodeSrc);
+					    vfs.getInodePool().release(inodeDst);
+                        vfs.getDirPool().release(srcDir);
+                        vfs.getDirPool().release(dstDir);
                     }
 				}
 			}
@@ -297,13 +296,13 @@ public class JafsFile {
             return vfs.getRootEntry();
         }
 
-        String parts[] = SLASH.split(normPath);// first entry is always empty
-        int n=parts.length;
+        String[] parts = SLASH.split(normPath);// first entry is always empty
+        int n = parts.length;
 
         JafsDirEntry entry=null;
 
         String curPath = normPath;
-        while (n>0) {
+        while (n > 0) {
             entry = dc.get(curPath);
             if (entry!=null) {
                 break;
@@ -312,28 +311,28 @@ public class JafsFile {
             n--;
         }
 
-        if (n==parts.length) {
+        if (n == parts.length) {
             return entry;
         }
 
-        if (n==0) {
+        if (n == 0) {
             entry = vfs.getRootEntry();
-            curPath="";
+            curPath = "";
             n=1;
         }
 
-        if (entry.bpos==0) {
+        if (entry.bpos == 0) {
             return null;
         }
 
-        JafsInode inode = vfs.getInodePool().get();
-        JafsDir dir = vfs.getDirPool().get();
+        JafsInode inode = vfs.getInodePool().claim();
+        JafsDir dir = vfs.getDirPool().claim();
         try {
-            inode.openInode(entry);
+            inode.openInode(entry.bpos);
             dir.setInode(inode);
             for (; n < parts.length; n++) {
                 String part = parts[n];
-                if (part.length() != 0) {
+                if (!part.isEmpty()) {
                     curPath += "/" + part;
                     entry = dir.getEntry(part.getBytes(Util.UTF8));
                     if (entry == null) {
@@ -350,7 +349,7 @@ public class JafsFile {
                         } else {
                             dc.add(curPath, entry);
                             if (entry.bpos != 0) {
-                                inode.openInode(entry);
+                                inode.openInode(entry.bpos);
                                 dir.setInode(inode);
                             } else {
                                 entry = null;
@@ -362,8 +361,8 @@ public class JafsFile {
             }
         }
         finally {
-            vfs.getInodePool().free(inode);
-            vfs.getDirPool().free(dir);
+            vfs.getInodePool().release(inode);
+            vfs.getDirPool().release(dir);
         }
 		return entry;
 	}
@@ -465,29 +464,28 @@ public class JafsFile {
 		if (entry!=null) {
 			if (entry.bpos==0) {
 				// Parent exists but has no inode yet
-                JafsInode inode = vfs.getInodePool().get();
-                JafsDir dir = vfs.getDirPool().get();
+                JafsInode inode = vfs.getInodePool().claim();
+                JafsDir dir = vfs.getDirPool().claim();
                 try {
-                    inode.openInode(entry.parentBpos, entry.parentIpos);
+                    inode.openInode(entry.parentBpos);
                     dir.setInode(inode);
                     dir.mkinode(blockList, entry, JafsInode.INODE_DIR);
                 }
                 finally {
-                    vfs.getInodePool().free(inode);
-                    vfs.getDirPool().free(dir);
+                    vfs.getInodePool().release(inode);
+                    vfs.getDirPool().release(dir);
                 }
 			}
-			JafsInode inode = vfs.getInodePool().get();
-            JafsDir dir = vfs.getDirPool().get();
+			JafsInode inode = vfs.getInodePool().claim();
+            JafsDir dir = vfs.getDirPool().claim();
 			try {
-                inode.openInode(entry);
+                inode.openInode(entry.bpos);
                 dir.setInode(inode);
                 dir.createNewEntry(
                 		blockList,
                         getCanonicalPath(normalizePath(path)),
                         getName(path).getBytes(Util.UTF8),
                         JafsInode.INODE_DIR,
-                        0,
                         0);
                 return true;
 			}
@@ -495,8 +493,8 @@ public class JafsFile {
 				return false;
 			}
 			finally {
-			    vfs.getInodePool().free(inode);
-                vfs.getDirPool().free(dir);
+			    vfs.getInodePool().release(inode);
+                vfs.getDirPool().release(dir);
             }
 		}
 		return false;		

@@ -2,6 +2,7 @@ package nl.v4you.jafs;
 
 import org.junit.Test;
 
+import static junit.framework.TestCase.assertFalse;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
@@ -9,7 +10,7 @@ public class UtilTest {
 
     @Test
     public void convertInt() {
-        byte b[] = new byte[4];
+        byte[] b = new byte[4];
 
         int i = 0x01020304;
         Util.intToArray(b, 0, i);
@@ -22,7 +23,7 @@ public class UtilTest {
 
     @Test
     public void convertShort() {
-        byte b[] = new byte[4];
+        byte[] b = new byte[4];
 
         int i = 0x0102;
         Util.shortToArray(b, 0, i);
@@ -38,8 +39,8 @@ public class UtilTest {
         assertTrue(Util.contains("abcdefg".getBytes(), "abc".getBytes()));
         assertTrue(Util.contains("abcdefg".getBytes(), new byte[0]));
         assertTrue(Util.contains(new byte[0], new byte[0]));
-        assertTrue(!Util.contains("abcdefg".getBytes(), "abx".getBytes()));
-        assertTrue(!Util.contains("abcdefg".getBytes(), "xyz".getBytes()));
-        assertTrue(!Util.contains("ab".getBytes(), "abcd".getBytes()));
+        assertFalse(Util.contains("abcdefg".getBytes(), "abx".getBytes()));
+        assertFalse(Util.contains("abcdefg".getBytes(), "xyz".getBytes()));
+        assertFalse(Util.contains("ab".getBytes(), "abcd".getBytes()));
     }
 }

@@ -14,7 +14,7 @@ public class JafsInputStream extends InputStream {
 		JafsDirEntry entry = f.getEntry(path);
 		if (entry.bpos>0) {
 			inode = new JafsInode(vfs);
-			inode.openInode(entry);
+			inode.openInode(entry.bpos);
 		}
 	}
 
@@ -27,7 +27,7 @@ public class JafsInputStream extends InputStream {
 				JafsDirEntry entry = f.getEntry(f.getPath());
 				if (entry.bpos>0) {
 					inode = new JafsInode(vfs);
-					inode.openInode(entry);
+					inode.openInode(entry.bpos);
 				}
 			}
 			if (inode!=null) {
@@ -48,7 +48,7 @@ public class JafsInputStream extends InputStream {
 				JafsDirEntry entry = f.getEntry(f.getPath());
 				if (entry.bpos>0) {
 					inode = new JafsInode(vfs);
-					inode.openInode(entry);
+					inode.openInode(entry.bpos);
 				}			
 			}
 			if (inode!=null) {

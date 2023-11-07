@@ -17,10 +17,10 @@ public class JafsOutputStream extends OutputStream {
 		}
 		this.path = f.getCanonicalPath();
 		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
-		if (entry!=null) {
-			if (entry.bpos>0) {
+		if (entry != null) {
+			if (entry.bpos != 0) {
 				inode = new JafsInode(vfs);
-				inode.openInode(entry);
+				inode.openInode(entry.bpos);
 				if (append) {
 					inode.seekEnd(0);
 				}
@@ -36,22 +36,22 @@ public class JafsOutputStream extends OutputStream {
 	private void createInode(Set<Long> blockList) throws IOException {
 		try {
 			JafsFile f = new JafsFile(vfs, path);
-			JafsInode inodeParent = vfs.getInodePool().get();
-			JafsDir dir = vfs.getDirPool().get();
+			JafsInode inodeDirectory = vfs.getInodePool().claim();
+			JafsDir dir = vfs.getDirPool().claim();
 			try {
-				inodeParent.openInode(f.getEntry(f.getParent()));
-				dir.setInode(inodeParent);
+				inodeDirectory.openInode(f.getEntry(f.getParent()).bpos);
+				dir.setInode(inodeDirectory);
 				JafsDirEntry entry = f.getEntry(path);
 				if (entry == null) {
 					throw new JafsException("No entry found for [" + path + "]");
 				}
 				dir.mkinode(blockList, entry, JafsInode.INODE_FILE);
 				inode = new JafsInode(vfs);
-				inode.openInode(entry);
+				inode.openInode(entry.bpos);
 			}
 			finally {
-				vfs.getInodePool().free(inodeParent);
-				vfs.getDirPool().free(dir);
+				vfs.getInodePool().release(inodeDirectory);
+				vfs.getDirPool().release(dir);
 			}
 		} catch (JafsException e) {
 			e.printStackTrace();
@@ -63,7 +63,7 @@ public class JafsOutputStream extends OutputStream {
 	public void write(int arg0) throws IOException {
 		try {
 			Set<Long> blockList = new TreeSet<>();
-			if (inode==null) {
+			if (inode == null) {
 				createInode(blockList);
 			}
 			inode.writeByte(blockList, arg0);
@@ -75,10 +75,10 @@ public class JafsOutputStream extends OutputStream {
 	}
 
 	@Override
-	public void write(byte buf[], int start, int len) throws IOException {
+	public void write(byte[] buf, int start, int len) throws IOException {
 		try {
 			Set<Long> blockList = new TreeSet<>();
-			if (inode==null) {
+			if (inode == null) {
 				createInode(blockList);
 			}
 			inode.writeBytes(blockList, buf, start, len);
@@ -90,7 +90,7 @@ public class JafsOutputStream extends OutputStream {
 	}
 
 	@Override
-	public void write(byte buf[]) throws IOException {
+	public void write(byte[] buf) throws IOException {
 		write(buf, 0, buf.length);
 	}
 }

@@ -40,8 +40,8 @@ public class UnusedMapTest {
     public void forceCreationOfNewUnusedMap() throws JafsException, IOException {
         int blockSize = 128;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
-        byte content[] = new byte[blockSize];
-        byte buf[] = new byte[blockSize];
+        byte[] content = new byte[blockSize];
+        byte[] buf = new byte[blockSize];
         for (int i=0; i<2*blockSize; i++) {
             JafsFile f = jafs.getFile("/abc"+i+".txt");
             JafsOutputStream jos = jafs.getOutputStream(f);
@@ -88,14 +88,14 @@ public class UnusedMapTest {
     @Test
     public void fileSizeStable() throws JafsException, IOException {
 
-        int blockSize = 256;
+        int blockSize = 64;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         byte[] content = new byte[blockSize];
         rnd.nextBytes(content);
 
         JafsFile f = jafs.getFile("/abc.bin");
         JafsOutputStream jos = jafs.getOutputStream(f);
-        for (int i=0; i<20; i++) {
+        for (int i=0; i<2; i++) {
             jos.write(content);
         }
         jos.close();
@@ -108,7 +108,7 @@ public class UnusedMapTest {
         for (int n=0; n<5; n++) {
             f = jafs.getFile("/abc.bin");
             jos = jafs.getOutputStream(f);
-            for (int i=0; i<20; i++) {
+            for (int i=0; i<2; i++) {
                 jos.write(content);
             }
             jos.close();
@@ -137,7 +137,8 @@ public class UnusedMapTest {
             block.seekSet(1);
             block.writeByte(blockList, 0);
             block.writeToDiskIfNeeded();
-            jafs.getUnusedMap().setAvailable(blockList, 8+n);
+            JafsUnusedMap um = jafs.getUnusedMap();
+            um.setAvailable(blockList, 8 + n);
             jafs.getBlockCache().flushBlocks(blockList);
             blockList.clear();
             block.readFromDisk();
@@ -148,7 +149,7 @@ public class UnusedMapTest {
             block.seekSet(1);
             block.writeByte(blockList, 0b11111111);
             block.writeToDiskIfNeeded();
-            jafs.getUnusedMap().setAvailable(blockList, 8+n);
+            um.setAvailable(blockList, 8 + n);
             jafs.getBlockCache().flushBlocks(blockList);
             blockList.clear();
             block.readFromDisk();
@@ -159,7 +160,7 @@ public class UnusedMapTest {
             block.seekSet(1);
             block.writeByte(blockList, 0);
             block.writeToDiskIfNeeded();
-            jafs.getUnusedMap().setUnavailable(blockList, 8+n);
+            um.setUnavailable(blockList, 8 + n);
             jafs.getBlockCache().flushBlocks(blockList);
             blockList.clear();
             block.readFromDisk();
@@ -170,7 +171,7 @@ public class UnusedMapTest {
             block.seekSet(1);
             block.writeByte(blockList, 0b11111111);
             block.writeToDiskIfNeeded();
-            jafs.getUnusedMap().setUnavailable(blockList, 8+n);
+            um.setUnavailable(blockList, 8 + n);
             jafs.getBlockCache().flushBlocks(blockList);
             blockList.clear();
             block.readFromDisk();

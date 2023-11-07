@@ -21,7 +21,7 @@ public class JafsCheckFs {
 
     private void checkEntry(JafsDirEntry de) throws JafsException, IOException {
         JafsInode inode = new JafsInode(jafs);
-        inode.openInode(de);
+        inode.openInode(de.bpos);
         if ((inode.type & JafsInode.INODE_INLINED)==0) {
             jafs.getINodeContext().checkDataAndPtrBlocks(inode);
         }

@@ -12,7 +12,7 @@ public class JafsDirPool {
         this.vfs = vfs;
     }
 
-    JafsDir get() {
+    JafsDir claim() {
         JafsDir dir;
         if (free.isEmpty()) {
             dir = new JafsDir(vfs);
@@ -26,7 +26,7 @@ public class JafsDirPool {
 //        return new JafsDir(vfs);
     }
 
-    void free(JafsDir dir) {
+    void release(JafsDir dir) {
         busy.remove(dir);
         free.add(dir);
     }

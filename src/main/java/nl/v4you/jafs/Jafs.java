@@ -114,11 +114,7 @@ public class Jafs {
 	long getRootBpos() {
 		return superBlock.getRootDirBpos();
 	}
-	
-	int getRootIpos() {
-		return superBlock.getRootDirIpos();
-	}
-	
+
 	RandomAccessFile getRaf() {
 		return raf;
 	}
@@ -139,13 +135,23 @@ public class Jafs {
         return dirCache;
     }
 
-    long appendNewBlockToArchive(Set<Long> blockList) throws JafsException, IOException {
-		long bpos = superBlock.getBlocksTotal();
-		if (bpos==um.getUnusedMapBpos(bpos)) {
-			um.createNewUnusedMap(blockList, bpos);
-			bpos = superBlock.getBlocksTotal();
-		}
+    private long appendNewBlockToArchive(Set<Long> blockList) throws JafsException, IOException {
 		superBlock.incBlocksTotal(blockList);
+		long bpos = (superBlock.getBlocksTotal() - 1);
+		long unusedMapBpos = um.getUnusedMapBpos(bpos);
+		if (bpos == unusedMapBpos) {
+			superBlock.incBlocksTotalAndUsed(blockList);
+			um.initializeUnusedMap(blockList, unusedMapBpos);
+			bpos++;
+		}
+		return bpos;
+	}
+
+	long getAvailableBpos(Set<Long> blockList) throws JafsException, IOException {
+		long bpos = getUnusedMap().getUnusedBpos(blockList);
+		if (bpos == 0) bpos = appendNewBlockToArchive(blockList);
+		getSuper().incBlocksUsed(blockList);
+		um.setUnavailable(blockList, bpos);
 		return bpos;
 	}
 
@@ -155,9 +161,7 @@ public class Jafs {
         } else {
             rootEntry = new JafsDirEntry();
             rootEntry.parentBpos = getRootBpos();
-            rootEntry.parentIpos = getRootIpos();
             rootEntry.bpos = getRootBpos();
-            rootEntry.ipos = getRootIpos();
             rootEntry.type = JafsInode.INODE_DIR;
             rootEntry.name = "/".getBytes();
             return rootEntry;
