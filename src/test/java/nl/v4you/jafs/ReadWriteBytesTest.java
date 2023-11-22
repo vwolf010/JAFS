@@ -13,6 +13,7 @@ import java.util.Random;
 
 import static junit.framework.TestCase.assertTrue;
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class ReadWriteBytesTest {
@@ -68,6 +69,146 @@ public class ReadWriteBytesTest {
         assertEquals(content.length, len);
         assertTrue(Arrays.equals(content, Arrays.copyOf(buf, content.length)));
         jafs.close();
+    }
+
+    private void assertContent(Jafs jafs, JafsFile f, byte[] content) throws JafsException, IOException {
+        byte[] buf = new byte[content.length];
+        JafsInputStream jis = jafs.getInputStream(f);
+        jis.read(buf);
+        jis.close();
+        assertArrayEquals(content, buf);
+    }
+
+    @Test
+    public void overWrite() throws JafsException, IOException {
+        // write 2 blocks to f1.txt -> super - unused - rootDir - inode f1 - data f1 - data f1
+        // write 1 block to f1.txt  -> super - unused - rootDir - inode f1 - data f1 - available block
+        // write 10 bytes to f2.txt -> super - unused - rootDir - inode f1 - data f1 - inode f2/inlined data
+        // write 10 bytes to f3.txt -> super - unused - rootDir - inode f1 - data f1 - inode f2/inlined data - inode f3/inlined data
+        // total blocks in the end: 7
+        int blockSize = 64;
+
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+
+        JafsFile f = jafs.getFile("/f1.txt");
+        byte[] content = new byte[blockSize];
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        Arrays.fill(content, (byte)1);
+        jos.write(content);
+        jos.write(content);
+        jos.close();
+
+        assertEquals(2 * blockSize, f.length());
+
+        Arrays.fill(content, (byte)2);
+        jos = jafs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+
+        //assertEquals(blockSize, f.length());
+        jafs.close();
+
+        File g = new File(TEST_ARCHIVE);
+        long len = g.length();
+
+        jafs = new Jafs(TEST_ARCHIVE);
+
+        f = jafs.getFile("/f2.txt");
+        Arrays.fill(content, (byte)3);
+        jos = jafs.getOutputStream(f);
+        jos.write(content, 0, 10);
+        jos.close();
+
+        f = jafs.getFile("/f3.txt");
+        Arrays.fill(content, (byte)4);
+        jos = jafs.getOutputStream(f);
+        jos.write(content, 0, 10);
+        jos.close();
+
+        byte[] buf = new byte[10];
+        f = jafs.getFile("/f1.txt");
+        Arrays.fill(buf, (byte)2);
+        assertEquals(blockSize, f.length());
+        assertContent(jafs, f, buf);
+        f = jafs.getFile("/f2.txt");
+        Arrays.fill(buf, (byte)3);
+        assertEquals(10, f.length());
+        assertContent(jafs, f, buf);
+        f = jafs.getFile("/f3.txt");
+        Arrays.fill(buf, (byte)4);
+        assertEquals(10, f.length());
+        assertContent(jafs, f, buf);
+
+        jafs.close();
+
+        g = new File(TEST_ARCHIVE);
+        assertEquals(7 * blockSize, g.length());
+    }
+
+    @Test
+    public void overWriteRedoInlined() throws JafsException, IOException {
+        // write 2 blocks to f1.txt -> super - unused - rootDir - inode f1 - data f1 - data f1
+        // write 1 byte to f1.txt   -> super - unused - rootDir - inode f1/inlined data - available block - available block
+        // write 1 block to f2.txt  -> super - unused - rootDir - inode f1/inlined data - inode f2 - data f2
+        // write 1 byte to f3.txt   -> super - unused - rootDir - inode f1/inlined data - inode f2 - data f2 - inode f3/inlined data
+        // total blocks in the end: 7
+        int blockSize = 64;
+
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+
+        JafsFile f = jafs.getFile("/f1.txt");
+        byte[] content = new byte[blockSize];
+        JafsOutputStream jos = jafs.getOutputStream(f);
+        Arrays.fill(content, (byte)1);
+        jos.write(content);
+        jos.write(content);
+        jos.close();
+
+        assertEquals(2 * blockSize, f.length());
+
+        jos = jafs.getOutputStream(f);
+        Arrays.fill(content, (byte)2);
+        jos.write(content, 0, 10);
+        jos.close();
+
+        //assertEquals(blockSize, f.length());
+        jafs.close();
+
+        File g = new File(TEST_ARCHIVE);
+        long len = g.length();
+
+        jafs = new Jafs(TEST_ARCHIVE);
+
+        f = jafs.getFile("/f2.txt");
+        Arrays.fill(content, (byte)3);
+        jos = jafs.getOutputStream(f);
+        jos.write(content);
+        jos.close();
+
+        f = jafs.getFile("/f3.txt");
+        Arrays.fill(content, (byte)4);
+        jos = jafs.getOutputStream(f);
+        jos.write(content, 0, 10);
+        jos.close();
+
+        byte[] buf = new byte[10];
+        f = jafs.getFile("/f1.txt");
+        Arrays.fill(buf, (byte)2);
+        assertEquals(10, f.length());
+        assertContent(jafs, f, buf);
+        f = jafs.getFile("/f2.txt");
+        Arrays.fill(buf, (byte)3);
+        assertEquals(blockSize, f.length());
+        assertContent(jafs, f, buf);
+        f = jafs.getFile("/f3.txt");
+        Arrays.fill(buf, (byte)4);
+        assertEquals(10, f.length());
+        assertContent(jafs, f, buf);
+
+        jafs.close();
+
+        g = new File(TEST_ARCHIVE);
+        assertEquals(7 * blockSize, g.length());
     }
 
     @Test

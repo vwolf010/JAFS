@@ -1,10 +1,15 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.JafsException;
+import nl.v4you.jafs.internal.JafsBlock;
+import nl.v4you.jafs.internal.JafsSuper;
 
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
-class JafsUnusedMap {
+public class JafsUnusedMap {
 
     static final int SKIP_MAP = 0x80;
     static final int BLOCKS_PER_BYTE = 8;
@@ -15,9 +20,10 @@ class JafsUnusedMap {
     final int blockSize;
     private long startAtMapNumber = 0;
     private final Set<Long> availableMaps = new TreeSet<>(); // alleen free() mag hier aan toevoegen
-    private long removeMap = -1;
+    private final Set<Long> removeMaps = new TreeSet<>();
 
-    JafsUnusedMap(Jafs vfs) {
+
+    public JafsUnusedMap(Jafs vfs) {
         this.vfs = vfs;
         superBlock = vfs.getSuper();
         blockSize = superBlock.getBlockSize();
@@ -38,66 +44,32 @@ class JafsUnusedMap {
     }
 
     private long getBposFromUnusedMap(Set<Long> blockList, long mapNumber) throws JafsException, IOException {
-        long foundBpos = 0;
         long curBpos = mapNumber * blocksPerUnusedMap;
         JafsBlock block = vfs.getCacheBlock(curBpos);
-        int b = block.peekSkipMapByte() & 0xff;
-        if ((b & SKIP_MAP) != 0) {
+        if ((block.peekSkipMapByte() & SKIP_MAP) != 0) {
             return 0;
         }
-        curBpos++;
-        // first process the skip map byte
-        if ((b & 0x7f) == 0x7f) {
-            curBpos += (BLOCKS_PER_BYTE - 1);
-        }
-        else {
-            // skip the Bpos bit of the unused map itself
-            // and process the rest of the skip map byte:
-            for (int bitMask = 0x40; bitMask != 0; bitMask >>>= 1) {
-                if ((b & bitMask) == 0) {
-                    if (foundBpos == 0) {
-                        foundBpos = curBpos;
-                    }
-                    else {
-                        return foundBpos;
-                    }
-                }
-                curBpos++;
+        block.seekSet(0);
+        for (int m = 0; m < blockSize; m++) {
+            int b = block.readByte();
+            if (b != 0) {
+                if ((b & 0x80) != 0) return curBpos;
+                if ((b & 0x40) != 0) return curBpos + 1;
+                if ((b & 0x20) != 0) return curBpos + 2;
+                if ((b & 0x10) != 0) return curBpos + 3;
+                if ((b & 0x8) != 0) return curBpos + 4;
+                if ((b & 0x4) != 0) return curBpos + 5;
+                if ((b & 0x2) != 0) return curBpos + 6;
+                if ((b & 0x1) != 0) return curBpos + 7;
             }
-        }
-        // then process the other bytes
-        block.seekSet(1);
-        for (int m = 1; m < blockSize; m++) {
-            b = block.readByte() & 0xff;
-            if ((b & 0xff) == 0xff) {
-                curBpos += BLOCKS_PER_BYTE;
-            }
-            else {
-                for (int bitMask = 0x80; bitMask != 0; bitMask >>>= 1) {
-                    if ((b & bitMask) == 0) {
-                        if (foundBpos == 0) {
-                            foundBpos = curBpos;
-                        }
-                        else {
-
-                            return foundBpos;
-                        }
-                    }
-                    curBpos++;
-                }
-            }
+            curBpos += BLOCKS_PER_BYTE;
         }
         // skip this unusedMap next time it gets visited
-        block.pokeSkipMapByte(blockList, 0xff);
-        removeMap = mapNumber;
-        if (foundBpos != 0) {
-            // this was the last bpos available in this unusedmap
-            return foundBpos;
-        }
+        block.pokeSkipMapByte(blockList, 0x80);
         return 0;
     }
 
-    long getUnusedBpos(Set<Long> blockList) throws JafsException, IOException {
+    public long getUnusedBpos(Set<Long> blockList) throws JafsException, IOException {
         long blocksTotal = superBlock.getBlocksTotal();
         long blocksUsed = vfs.getSuper().getBlocksUsed();
         if (blocksUsed == blocksTotal) {
@@ -106,17 +78,16 @@ class JafsUnusedMap {
 
         if (!availableMaps.isEmpty()) {
             long bpos = 0;
-            removeMap = -1;
-            // using a loop since there is no api to retrieve the first entry of an ordered set
             for (long mapNumber : availableMaps) {
                 bpos = getBposFromUnusedMap(blockList, mapNumber);
-                if (blocksUsed + 1 == blocksTotal) removeMap = mapNumber;
-                break; // odd, but we know an availableMap must return at least 1 bpos
+                if (bpos != 0 && bpos < blocksTotal) {
+                    break;
+                }
+                removeMaps.add(mapNumber);
             }
-            if (removeMap != -1) {
-                availableMaps.remove(removeMap);
-            }
-            return bpos;
+            availableMaps.removeAll(removeMaps);
+            removeMaps.clear();
+            if (bpos != 0) return bpos;
         }
 
         long mapNumber = startAtMapNumber;
@@ -134,22 +105,16 @@ class JafsUnusedMap {
         return (int)((bpos & (blocksPerUnusedMap - 1)) >>> 3);
     }
 
-    public void setAvailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
+    public void setUnavailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 0
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
         b &= ~(0b10000000 >>> (bpos & 0x7)); // set block data bit to unused (0)
         block.pokeByte(blockList, idx, b);
-
-        // don't skip this map next time we look for a free block
-        b = block.peekSkipMapByte();
-        block.pokeSkipMapByte(blockList, b & 0b01111111);
-
-        availableMaps.add(getMapNumber(bpos));
     }
 
-    public void setUnavailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
+    public void setAvailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
         JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
         // Set to 1
         int idx = getUnusedIdx(bpos);
@@ -157,8 +122,11 @@ class JafsUnusedMap {
         b |= 0b10000000 >>> (bpos & 0x7); // set block data bit to used (1)
         block.pokeByte(blockList, idx, b);
 
-//        block = vfs.getCacheBlock(bpos);
-//        block.initZeros(blockList);
+        // don't skip this map next time we look for a free block
+        b = block.peekSkipMapByte();
+        block.pokeSkipMapByte(blockList, b & 0x7f);
+
+        availableMaps.add(getMapNumber(bpos));
     }
 
     public void initializeUnusedMap(Set<Long> blockList, long unusedMapBpos) throws JafsException, IOException {
@@ -166,7 +134,8 @@ class JafsUnusedMap {
             throw new JafsException("supplied bpos is not an unused map bpos");
         }
         JafsBlock block = vfs.getCacheBlock(unusedMapBpos);
-        block.initZeros(blockList);
+        block.initOnes(blockList);
+        block.pokeSkipMapByte(blockList,0b01111111);
     }
 
 //	void dumpLastVisited() {

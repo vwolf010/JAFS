@@ -1,4 +1,4 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
 
 import java.util.HashMap;
 import java.util.Map;

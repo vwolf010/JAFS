@@ -253,11 +253,12 @@ public class DirectoriesTest {
     public void xxx() throws JafsException, IOException {
         File g = new File(TEST_ARCHIVE);
         if (g.exists()) g.delete();
-        int blockSize = 512;
+        int blockSize = 1024;
         Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, 10 * 1024 * 1024);
         JafsFile f;
 
-        Random r = new Random();
+        Random r = new Random(0);
+        long t1 = System.currentTimeMillis();
         for (int i = 0; i < Integer.MAX_VALUE; i++) {
             String d1 = String.format("%01x", r.nextInt(256));
             String d2 = String.format("%01x", r.nextInt(256));
@@ -269,6 +270,7 @@ public class DirectoriesTest {
             crFile(vfs, f, r);
             i++;
         }
+        System.out.println("time measured: " + (System.currentTimeMillis() - t1) + " msecs");
     }
 
     @Test

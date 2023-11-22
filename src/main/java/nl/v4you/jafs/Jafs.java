@@ -1,5 +1,7 @@
 package nl.v4you.jafs;
 
+import nl.v4you.jafs.internal.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -48,10 +50,10 @@ public class Jafs {
 		if (!isSupportedSize(blockSize, 64, 8192)) {
 			throw new JafsException("block size "+blockSize+" not supported");
 		}
-		if (maxFileSize<0) {
+		if (maxFileSize < 0) {
 			maxFileSize = 0;
 		}
-		if (maxFileSize>JafsInodeContext.MAX_FILE_SIZE) {
+		if (maxFileSize > JafsInodeContext.MAX_FILE_SIZE) {
 			maxFileSize = JafsInodeContext.MAX_FILE_SIZE;
 		}
 		init(fname, blockSize, maxFileSize);
@@ -84,14 +86,18 @@ public class Jafs {
 	}
 
 	public JafsOutputStream getOutputStream(JafsFile f, boolean append) throws JafsException, IOException {
-		if (!append && f.exists()) {
-			if (!f.delete()) {
-				throw new JafsException("getOutputStream(): deleting [" + f.getAbsolutePath() + "] failed");
+		if (f.exists()) {
+			if (f.isDirectory()) {
+				throw new JafsException(f.getCanonicalPath() + " should not be a directory");
+			}
+			if (!append) {
+				if (!f.resetSize()) {
+					throw new JafsException("getOutputStream(): resetSize [" + f.getAbsolutePath() + "] failed");
+				}
 			}
 		}
 		JafsOutputStream jos = new JafsOutputStream(this, f, append);
-
-		Set<Long> blockList = new TreeSet();
+		Set<Long> blockList = new TreeSet<>();
 		cache.flushBlocks(blockList);
 		return jos;
 	}
@@ -103,11 +109,11 @@ public class Jafs {
 	/*
 	 * Package private
 	 */
-	JafsInodeContext getINodeContext() {
+	public JafsInodeContext getINodeContext() {
 		return ctx;
 	}
 	
-	JafsUnusedMap getUnusedMap() {
+	public JafsUnusedMap getUnusedMap() {
 		return um;
 	}
 	
@@ -115,23 +121,23 @@ public class Jafs {
 		return superBlock.getRootDirBpos();
 	}
 
-	RandomAccessFile getRaf() {
+	public RandomAccessFile getRaf() {
 		return raf;
 	}
 		
-	JafsSuper getSuper() {
+	public JafsSuper getSuper() {
 		return superBlock;
 	}
 
-	JafsBlock getCacheBlock(long bpos) throws JafsException, IOException {
+	public JafsBlock getCacheBlock(long bpos) throws JafsException, IOException {
 		return cache.get(bpos);
 	}
 
-	JafsBlockCache getBlockCache() {
+	public JafsBlockCache getBlockCache() {
 	    return cache;
     }
 
-    JafsDirEntryCache getDirCache() {
+    public JafsDirEntryCache getDirCache() {
         return dirCache;
     }
 
@@ -147,7 +153,7 @@ public class Jafs {
 		return bpos;
 	}
 
-	long getAvailableBpos(Set<Long> blockList) throws JafsException, IOException {
+	public long getAvailableBpos(Set<Long> blockList) throws JafsException, IOException {
 		long bpos = getUnusedMap().getUnusedBpos(blockList);
 		if (bpos == 0) bpos = appendNewBlockToArchive(blockList);
 		getSuper().incBlocksUsed(blockList);
@@ -160,10 +166,10 @@ public class Jafs {
             return rootEntry;
         } else {
             rootEntry = new JafsDirEntry();
-            rootEntry.parentBpos = getRootBpos();
-            rootEntry.bpos = getRootBpos();
-            rootEntry.type = JafsInode.INODE_DIR;
-            rootEntry.name = "/".getBytes();
+            rootEntry.setParentBpos(getRootBpos());
+            rootEntry.setBpos(getRootBpos());
+            rootEntry.setType(JafsInode.INODE_DIR);
+            rootEntry.setName("/".getBytes());
             return rootEntry;
         }
     }
@@ -179,10 +185,10 @@ public class Jafs {
 
     private void open(int blockSize, long maxFileSize) throws IOException, JafsException {
 		File f = new File(fname);
-		if (!f.exists() && blockSize<0) {
+		if (!f.exists() && blockSize < 0) {
 			throw new JafsException("["+fname+"] does not exist");
 		}
-		if (f.exists() && f.length()<64) {
+		if (f.exists() && f.length() < 64) {
 			throw new JafsException("["+fname+"] does not contain a header");
 		}
 		raf = new RandomAccessFile(f, "rw");
@@ -190,7 +196,7 @@ public class Jafs {
 		dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 		inodePool = new JafsInodePool(this);
 		dirPool = new JafsDirPool(this);
-		if (f.length()==0) {
+		if (f.length() == 0) {
 			raf.setLength(blockSize);
 			superBlock = new JafsSuper(this, blockSize);
 			Set<Long> blockList = new TreeSet<>();
@@ -213,11 +219,11 @@ public class Jafs {
 		open(blockSize, maxFileSize);
 	}
 
-	JafsInodePool getInodePool() {
+	public JafsInodePool getInodePool() {
         return inodePool;
     }
 
-    JafsDirPool getDirPool() {
+    public JafsDirPool getDirPool() {
     	return dirPool;
 	}
 

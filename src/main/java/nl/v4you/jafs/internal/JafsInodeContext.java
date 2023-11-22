@@ -1,9 +1,12 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
 import java.util.Set;
 
-class JafsInodeContext {
+public class JafsInodeContext {
 
     class JafsINodePtr {
         int level;
@@ -12,27 +15,31 @@ class JafsInodeContext {
         long fPosEnd;
     }
 
-	static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
+	public static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
+
+	public static final int BYTES_PER_PTR = 4;
 
 	private Jafs vfs;
 
 	private int ptrsPerInode;
 	private int ptrsPerPtrBlock;
 	
-	private long levelSizes[] = new long[50];
-	private JafsINodePtr ptrs[];
+	private long[] levelSizes = new long[50];
+	private JafsINodePtr[] ptrInfo;
 
-	long maxFileSizeReal = 0;
+	final long maxFileSizeReal;
 
-	JafsInodeContext(Jafs vfs, int blockSize, long maxFileSize) {
+	final int blockSize;
 
+	public JafsInodeContext(Jafs vfs, int blockSize, long maxFileSize) {
 		this.vfs = vfs;
-		ptrsPerInode = (blockSize - JafsInode.INODE_HEADER_SIZE) / 4;
-		ptrsPerPtrBlock = vfs.getSuper().getBlockSize() / 4;
+		this.blockSize = blockSize;
+		ptrsPerInode = (blockSize - JafsInode.INODE_HEADER_SIZE) / BYTES_PER_PTR;
+		ptrsPerPtrBlock = blockSize / BYTES_PER_PTR;
 		int maxLevelDepth = -1;
-		ptrs = new JafsINodePtr[ptrsPerInode];
+		ptrInfo = new JafsINodePtr[ptrsPerInode];
 		for (int n = 0; n < ptrsPerInode; n++) {
-			ptrs[n] = new JafsINodePtr();
+			ptrInfo[n] = new JafsINodePtr();
 		}
 
 		long maxFileSizeNow = 0;
@@ -48,7 +55,7 @@ class JafsInodeContext {
 			maxFileSizeNow = 0;
 			int maxLevel = maxLevelDepth;
 			for (int n = ptrsPerInode - 1; n >= 0; n--) {
-				ptrs[n].level = maxLevel;
+				ptrInfo[n].level = maxLevel;
 				maxFileSizeNow += levelSizes[maxLevel];
 				maxLevel--;
 				if (maxLevel < 0) {
@@ -60,10 +67,10 @@ class JafsInodeContext {
 		// build the inode pointers structure
 		maxFileSizeNow = 0;
 		for (int n=0; n < ptrsPerInode; n++) {
-			ptrs[n].size = levelSizes[ptrs[n].level];
-			ptrs[n].fPosStart = maxFileSizeNow;
-			maxFileSizeNow += levelSizes[ptrs[n].level];
-			ptrs[n].fPosEnd = maxFileSizeNow;
+			ptrInfo[n].size = levelSizes[ptrInfo[n].level];
+			ptrInfo[n].fPosStart = maxFileSizeNow;
+			maxFileSizeNow += levelSizes[ptrInfo[n].level];
+			ptrInfo[n].fPosEnd = maxFileSizeNow;
 		}
 
 		maxFileSizeReal = maxFileSizeNow;
@@ -119,8 +126,8 @@ class JafsInodeContext {
 		}
 
 		for (int n = 0; n < ptrsPerInode; n++) {
-            if (ptrs[n].fPosStart <= fpos && fpos < ptrs[n].fPosEnd) {
-				int level = ptrs[n].level;
+            if (ptrInfo[n].fPosStart <= fpos && fpos < ptrInfo[n].fPosEnd) {
+				int level = ptrInfo[n].level;
 				if (level == 0) {
 					if (inode.ptrs[n] == 0) {
 						// Create new data block (ptr in inode)
@@ -133,8 +140,8 @@ class JafsInodeContext {
 						// Create new ptr block
                         createNewBlock(blockList, inode, n, true);
 					}
-					long lengthRemaining = ptrs[n].fPosEnd - ptrs[n].fPosStart;
-                    return getBlkPos(blockList, level, inode.ptrs[n], ptrs[n].fPosStart, lengthRemaining, fpos);
+					long lengthRemaining = ptrInfo[n].fPosEnd - ptrInfo[n].fPosStart;
+                    return getBlkPos(blockList, level, inode.ptrs[n], ptrInfo[n].fPosStart, lengthRemaining, fpos);
 				}
 			}
 		}
@@ -147,25 +154,51 @@ class JafsInodeContext {
 		vfs.getSuper().decBlocksUsed(blockList);
 	}
 	
-	void free(Set<Long> blockList, long bpos, int level) throws JafsException, IOException {
-		if (level != 0) {
-		    // this is a pointer block, free all it's entries
+	boolean free(Set<Long> blockList, long size, long bpos, long fPosStart, long levelSize) throws JafsException, IOException {
+		if (levelSize == blockSize) {
+			if (size <= fPosStart) {
+				freeBlock(blockList, bpos);
+				return true;
+			}
+			return false;
+		}
+		else {
+		    // this is a pointer block
+			levelSize /= ptrsPerPtrBlock;
 			JafsBlock dum = vfs.getCacheBlock(bpos);
 			dum.seekSet(0);
+			boolean allHasBeenDeleted = true;
 			for (int n = 0; n < ptrsPerPtrBlock; n++) {
 				long ptr = dum.readInt();
 				if (ptr != 0) {
-					free(blockList, ptr, level - 1);
+					long posStart = fPosStart + n * levelSize;
+					if (size <= posStart) {
+						if (free(blockList, size, ptr, posStart, levelSize)) {
+							dum.seekSet(n * 4);
+							dum.writeInt(blockList, 0);
+						}
+						else {
+							allHasBeenDeleted = false;
+						}
+					}
+				} else {
+					break;
 				}
 			}
+			return allHasBeenDeleted;
 		}
-		freeBlock(blockList, bpos);
 	}
 
 	void freeDataAndPtrBlocks(Set<Long> blockList, JafsInode inode) throws JafsException, IOException {
 		for (int n = 0; n < ptrsPerInode; n++) {
-			if (inode.ptrs[n] != 0) {
-				free(blockList, inode.ptrs[n], ptrs[n].level);
+			if (inode.ptrs[n] == 0) {
+				break;
+			}
+			if (inode.size <= ptrInfo[n].fPosStart) {
+				if (free(blockList, inode.size, inode.ptrs[n], ptrInfo[n].fPosStart, ptrInfo[n].fPosEnd - ptrInfo[n].fPosStart)) {
+					inode.ptrs[n] = 0;
+					inode.flushInode(blockList);
+				}
 			}
 		}
 	}
@@ -184,13 +217,12 @@ class JafsInodeContext {
 			}
 		}
 		else {
-			size += vfs.getSuper().getBlockSize();
+			size += blockSize;
 		}
 		return size;
 	}
 
-	void checkDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
-		int blockSize = vfs.getSuper().getBlockSize();
+	public void checkDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
 		long expectedSize = inode.size;
 		if (expectedSize % blockSize!=0) {
 			expectedSize -= expectedSize % blockSize;
@@ -199,7 +231,7 @@ class JafsInodeContext {
 		long realSize = 0;
 		for (int n=0; n<ptrsPerInode; n++) {
 			if (inode.ptrs[n]!=0) {
-				realSize += check(inode.ptrs[n], ptrs[n].level);
+				realSize += check(inode.ptrs[n], ptrInfo[n].level);
 			}
 		}
 		if (realSize!=expectedSize) {
@@ -210,13 +242,13 @@ class JafsInodeContext {
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
-		sb.append("Block size         : " + vfs.getSuper().getBlockSize() + "\n");
+		sb.append("Block size         : " + blockSize + "\n");
 		sb.append("Max file size      : " + vfs.getSuper().getMaxFileSize() + "\n");
 		sb.append("Max file size real : " + maxFileSizeReal + "\n");
 		sb.append("Pointers per iNode : " + getPtrsPerInode() + "\n");
 		sb.append("Pointers per block : " + this.ptrsPerPtrBlock + "\n");
 		for (int n=0; n<ptrsPerInode; n++) {
-			sb.append(n+": level="+ptrs[n].level+" size="+ptrs[n].level+" start="+ptrs[n].fPosStart+" end="+ptrs[n].fPosEnd +"\n");
+			sb.append(n+": level="+ ptrInfo[n].level+" size="+ ptrInfo[n].level+" start="+ ptrInfo[n].fPosStart+" end="+ ptrInfo[n].fPosEnd +"\n");
 		}
 		return sb.toString();
 	}

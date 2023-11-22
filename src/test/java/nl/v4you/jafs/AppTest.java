@@ -19,7 +19,7 @@ import static junit.framework.TestCase.assertTrue;
 public class AppTest {
 
     static final String TEST_PATH = "/tmp";
-    static final String TEST_ARCHIVE = TEST_PATH + "/test.jafs";
+    public static final String TEST_ARCHIVE = TEST_PATH + "/test.jafs";
 
     Random rnd = new Random();
 

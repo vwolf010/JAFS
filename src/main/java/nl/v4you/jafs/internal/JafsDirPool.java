@@ -1,4 +1,7 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.internal.JafsDir;
 
 import java.util.LinkedList;
 
@@ -8,11 +11,11 @@ public class JafsDirPool {
 
     private Jafs vfs;
 
-    JafsDirPool(Jafs vfs) {
+    public JafsDirPool(Jafs vfs) {
         this.vfs = vfs;
     }
 
-    JafsDir claim() {
+    public JafsDir claim() {
         JafsDir dir;
         if (free.isEmpty()) {
             dir = new JafsDir(vfs);
@@ -26,12 +29,12 @@ public class JafsDirPool {
 //        return new JafsDir(vfs);
     }
 
-    void release(JafsDir dir) {
+    public void release(JafsDir dir) {
         busy.remove(dir);
         free.add(dir);
     }
 
-    String stats() {
+    public String stats() {
         return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n";
     }
 }

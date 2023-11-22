@@ -1,10 +1,13 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
-class JafsSuper {
+public class JafsSuper {
 	private static final int VERSION = 1;
 
 	private Jafs vfs;
@@ -16,7 +19,7 @@ class JafsSuper {
 	private long rootDirBPos = 1;
 	byte[] buf = new byte[64];
 
-	JafsSuper(Jafs vfs, int blockSize) {
+	public JafsSuper(Jafs vfs, int blockSize) {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
 		rootBlock = new JafsBlock(vfs, -1, blockSize);
@@ -27,7 +30,7 @@ class JafsSuper {
 		setBlockSize(blockList, blockSize);
 	}
 	
-	long getRootDirBpos() {
+	public long getRootDirBpos() {
 		return rootDirBPos;
 	}
 	
@@ -37,20 +40,20 @@ class JafsSuper {
 		rootBlock.writeInt(blockList, bpos);
 	}
 
-	long getBlocksTotal() {
+	public long getBlocksTotal() {
 		return blocksTotal;
 	}
 
-	long getBlocksUsed() {
+	public long getBlocksUsed() {
 		return blocksUsed;
 	}
 
-	void incBlocksTotalAndUsed(Set<Long> blockList) {
+	public void incBlocksTotalAndUsed(Set<Long> blockList) {
 		incBlocksTotal(blockList);
 		incBlocksUsed(blockList);
 	}
 	
-	void incBlocksTotal(Set<Long> blockList) {
+	public void incBlocksTotal(Set<Long> blockList) {
 		blocksTotal++;
 		rootBlock.seekSet(18);
 		rootBlock.writeInt(blockList, blocksTotal);
@@ -61,7 +64,7 @@ class JafsSuper {
 		rootBlock.writeInt(blockList, blocksUsed);
 	}
 
-	void incBlocksUsed(Set<Long> blockList) {
+	public void incBlocksUsed(Set<Long> blockList) {
 		blocksUsed++;
 		if (blocksUsed > blocksTotal) {
 			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
@@ -77,7 +80,7 @@ class JafsSuper {
 		writeBlocksUsed(blockList);
 	}
 
-	int getBlockSize() {
+	public int getBlockSize() {
 		return blockSize;
 	}
 
@@ -86,21 +89,21 @@ class JafsSuper {
 		rootBlock.writeInt(blockList, blockSize);
 	}
 
-	long getMaxFileSize() {
+	public long getMaxFileSize() {
 		return maxFileSize;
 	}
 	
-	void setMaxFileSize(Set<Long> blockList, long maxFileSize) {
+	public void setMaxFileSize(Set<Long> blockList, long maxFileSize) {
 		this.maxFileSize = maxFileSize;
 		rootBlock.seekSet(10);
 		rootBlock.writeInt(blockList, maxFileSize);
 	}
 
-	void read() throws IOException {
+	public void read() throws IOException {
 		rootBlock.seekSet(0);
 		rootBlock.readFromDisk();
 		rootBlock.readBytes(buf, 0, 26);
-		blockSize = (int)Util.arrayToInt(buf, 6);
+		blockSize = (int) Util.arrayToInt(buf, 6);
 		maxFileSize = Util.arrayToInt(buf, 10);
 		rootDirBPos = Util.arrayToInt(buf, 14);
 		blocksTotal = Util.arrayToInt(buf, 18);

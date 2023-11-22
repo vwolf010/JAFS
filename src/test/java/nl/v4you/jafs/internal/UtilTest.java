@@ -1,5 +1,6 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
 
+import nl.v4you.jafs.internal.Util;
 import org.junit.Test;
 
 import static junit.framework.TestCase.assertFalse;

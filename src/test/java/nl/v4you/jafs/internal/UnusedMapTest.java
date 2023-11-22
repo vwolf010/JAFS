@@ -1,5 +1,8 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
 
+import nl.v4you.jafs.*;
+import nl.v4you.jafs.internal.JafsBlock;
+import nl.v4you.jafs.internal.JafsUnusedMap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -190,23 +193,23 @@ public class UnusedMapTest {
         Jafs jafs;
         JafsFile f;
         JafsOutputStream jos;
-        byte buf[] = new byte[blockSize];
+        byte[] buf = new byte[blockSize];
         rnd.nextBytes(buf);
 
-        int TEST_LOOP = 10000;
+        int TEST_LOOP = 10_000;
 
         jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
 
-        for (int n=0; n<TEST_LOOP; n++) {
+        for (int n=0; n < TEST_LOOP; n++) {
 
-            int i = rnd.nextInt(1000);
+            int i = rnd.nextInt(1_000);
 
-            if (rnd.nextInt(50)==0) {
+            if (rnd.nextInt(50) == 0) {
                 jafs.close();
                 jafs = new Jafs(TEST_ARCHIVE);
             }
 
-            f = jafs.getFile("/" + (i*1000));
+            f = jafs.getFile("/" + (i * 1000));
 
             long fileLen;
             if (f.exists()) {
@@ -216,8 +219,9 @@ public class UnusedMapTest {
                     jos.write(buf);
                     jos.close();
                     assertEquals(fileLen + blockSize, f.length());
-                } else {
-                    if (rnd.nextInt(100)<20) {
+                }
+                else {
+                    if (rnd.nextInt(100) < 20) {
                         assertTrue(f.delete());
                         assertTrue(!f.exists());
                     }

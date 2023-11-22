@@ -1,5 +1,9 @@
 package nl.v4you.jafs;
 
+import nl.v4you.jafs.internal.JafsDir;
+import nl.v4you.jafs.internal.JafsDirEntry;
+import nl.v4you.jafs.internal.JafsInode;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Set;
@@ -17,13 +21,11 @@ public class JafsOutputStream extends OutputStream {
 		}
 		this.path = f.getCanonicalPath();
 		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
-		if (entry != null) {
-			if (entry.bpos != 0) {
-				inode = new JafsInode(vfs);
-				inode.openInode(entry.bpos);
-				if (append) {
-					inode.seekEnd(0);
-				}
+		if (entry != null && entry.getBpos() != 0) {
+			inode = new JafsInode(vfs);
+			inode.openInode(entry.getBpos());
+			if (append) {
+				inode.seekEnd(0);
 			}
 		}
 	}
@@ -39,7 +41,7 @@ public class JafsOutputStream extends OutputStream {
 			JafsInode inodeDirectory = vfs.getInodePool().claim();
 			JafsDir dir = vfs.getDirPool().claim();
 			try {
-				inodeDirectory.openInode(f.getEntry(f.getParent()).bpos);
+				inodeDirectory.openInode(f.getEntry(f.getParent()).getBpos());
 				dir.setInode(inodeDirectory);
 				JafsDirEntry entry = f.getEntry(path);
 				if (entry == null) {
@@ -47,7 +49,7 @@ public class JafsOutputStream extends OutputStream {
 				}
 				dir.mkinode(blockList, entry, JafsInode.INODE_FILE);
 				inode = new JafsInode(vfs);
-				inode.openInode(entry.bpos);
+				inode.openInode(entry.getBpos());
 			}
 			finally {
 				vfs.getInodePool().release(inodeDirectory);
@@ -92,5 +94,40 @@ public class JafsOutputStream extends OutputStream {
 	@Override
 	public void write(byte[] buf) throws IOException {
 		write(buf, 0, buf.length);
+	}
+
+	@Override
+	public void close() throws IOException {
+		try {
+			Set<Long> blockList = new TreeSet<>();
+			inode.free(blockList);
+			if (inode.getSize() == 0) {
+				try {
+					JafsFile f = new JafsFile(vfs, path);
+					JafsInode inodeDirectory = vfs.getInodePool().claim();
+					JafsDir dir = vfs.getDirPool().claim();
+					try {
+						inodeDirectory.openInode(f.getEntry(f.getParent()).getBpos());
+						dir.setInode(inodeDirectory);
+						JafsDirEntry entry = f.getEntry(path);
+						if (entry == null) {
+							throw new JafsException("No entry found for [" + path + "]");
+						}
+						dir.deleteEntry(blockList, f.getCanonicalPath(), entry);
+					}
+					finally {
+						vfs.getInodePool().release(inodeDirectory);
+						vfs.getDirPool().release(dir);
+					}
+				} catch (JafsException e) {
+					e.printStackTrace();
+					throw new IOException("VFSExcepion wrapper: "+e.getMessage());
+				}
+			}
+			vfs.getBlockCache().flushBlocks(blockList);
+		} catch (JafsException e) {
+			throw new RuntimeException(e);
+		}
+		super.close();
 	}
 }

@@ -1,4 +1,7 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.internal.JafsInode;
 
 import java.util.LinkedList;
 
@@ -8,13 +11,13 @@ public class JafsInodePool {
 
     private Jafs vfs;
 
-    JafsInodePool(Jafs vfs) {
+    public JafsInodePool(Jafs vfs) {
         this.vfs = vfs;
     }
 
-    JafsInode claim() {
+    public JafsInode claim() {
         JafsInode inode;
-        if (free.size()==0) {
+        if (free.isEmpty()) {
             inode = new JafsInode(vfs);
             busy.add(inode);
         }
@@ -26,12 +29,12 @@ public class JafsInodePool {
 //        return new JafsInode(vfs);
     }
 
-    void release(JafsInode inode) {
+    public void release(JafsInode inode) {
         busy.remove(inode);
         free.add(inode);
     }
 
-    String stats() {
+    public String stats() {
         return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n";
     }
 }

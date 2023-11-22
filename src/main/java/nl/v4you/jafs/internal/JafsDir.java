@@ -1,6 +1,7 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
 
 import nl.v4you.hash.OneAtATimeHash;
+import nl.v4you.jafs.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,7 +17,7 @@ import java.util.Set;
  * <string: filename>
  *
  */
-class JafsDir {
+public class JafsDir {
 	static final int ENTRY_SIZE_LENGTH = 2;
     static final int ENTRY_OVERHEAD = 1 + 1 + 1 + 4; // length + checksum + type + bpos
     static final byte[] SLASH = {'/'};
@@ -28,7 +29,7 @@ class JafsDir {
 	private static final int MAX_FILE_NAME_LENGTH = 0x7FFF;
 	private final byte[] bb = new byte[BB_LEN];
 
-	static void createRootDir(Set<Long> blockList, Jafs vfs) throws JafsException, IOException {
+	public static void createRootDir(Set<Long> blockList, Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().claim();
         JafsDir dir = vfs.getDirPool().claim();
         try {
@@ -48,7 +49,7 @@ class JafsDir {
 		this.vfs = vfs;
 	}
 
-	void setInode(JafsInode inode) throws JafsException {
+	public void setInode(JafsInode inode) throws JafsException {
         this.inode = inode;
         if (inode != null) {
             if ((inode.type & JafsInode.INODE_DIR) == 0) {
@@ -88,7 +89,7 @@ class JafsDir {
 		return -1;
 	}
 	
-	JafsDirEntry getEntry(byte[] name) throws JafsException, IOException {
+	public JafsDirEntry getEntry(byte[] name) throws JafsException, IOException {
 		if (name == null || name.length == 0) {
 			throw new JafsException("name parameter is mandatory");
 		}
@@ -118,7 +119,7 @@ class JafsDir {
 		}
 	}
 
-	void deleteEntry(Set<Long> blockList, String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
+	public void deleteEntry(Set<Long> blockList, String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
 		// Test the next entry to see if we can merge with it
 		// in an attempt to avoid fragmentation of the directory list
 		inode.seekSet(entry.startPos - 2);
@@ -141,7 +142,7 @@ class JafsDir {
 		inode.writeByte(blockList,0); // name length
 	}
 	
-	boolean hasActiveEntries() throws JafsException, IOException {
+	public boolean hasActiveEntries() throws JafsException, IOException {
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize != 0) {
@@ -276,7 +277,7 @@ class JafsDir {
 		inode.writeShort(blockList,0);
 	}
 	
-	void createNewEntry(Set<Long> blockList, String canonicalPath, byte[] name, int type, long bpos) throws JafsException, IOException {
+	public void createNewEntry(Set<Long> blockList, String canonicalPath, byte[] name, int type, long bpos) throws JafsException, IOException {
 	    if (name == null || name.length == 0) {
 	        throw new JafsException("Name not suppied");
         }
@@ -304,7 +305,7 @@ class JafsDir {
 		vfs.getDirCache().add(canonicalPath, entry);
 	}
 
-    void mkinode(Set<Long> blockList, JafsDirEntry entry, int type) throws JafsException, IOException {
+    public void mkinode(Set<Long> blockList, JafsDirEntry entry, int type) throws JafsException, IOException {
         if (entry == null) {
             throw new JafsException("entry cannot be null");
         }
@@ -335,7 +336,7 @@ class JafsDir {
         }
     }
 
-	String[] list() throws JafsException, IOException {
+	public String[] list() throws JafsException, IOException {
 		LinkedList<String> l = new LinkedList<>();
 		inode.seekSet(0);
 		int entrySize = inode.readShort();

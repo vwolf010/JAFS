@@ -1,9 +1,14 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.JafsException;
+import nl.v4you.jafs.internal.GenericCache;
+import nl.v4you.jafs.internal.JafsBlock;
 
 import java.io.IOException;
 import java.util.Set;
 
-class JafsBlockCache {
+public class JafsBlockCache {
 
 	private Jafs vfs;
 
@@ -13,13 +18,13 @@ class JafsBlockCache {
 
     public int cacheMaxSize;
 
-	JafsBlockCache(Jafs vfs, int size) {
+	public JafsBlockCache(Jafs vfs, int size) {
 	    this.vfs = vfs;
 	    cacheMaxSize = size;
 	    gcache = new GenericCache<>(size);
     }
 
-	JafsBlock get(long bpos) throws JafsException, IOException {
+	public JafsBlock get(long bpos) throws JafsException, IOException {
 		if (bpos < 0) {
 			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
 		}
@@ -49,7 +54,7 @@ class JafsBlockCache {
 		return blk;
 	}
 
-	void flushBlocks(Set<Long> bl) throws JafsException, IOException {
+	public void flushBlocks(Set<Long> bl) throws JafsException, IOException {
 	    vfs.getSuper().writeToDisk();
 	    for (long bpos : bl) {
 	        if (bpos >= 0) {
@@ -60,7 +65,7 @@ class JafsBlockCache {
         bl.clear();
     }
 
-	String stats() {
+	public String stats() {
         return gcache.stats();
     }
 }

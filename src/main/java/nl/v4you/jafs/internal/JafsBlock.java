@@ -1,11 +1,14 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
+
+import nl.v4you.jafs.Jafs;
+import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.Set;
 
-class JafsBlock {
+public class JafsBlock {
 	private static final int SUPERBLOCK_SIZE = 1;
 
 	private final int blockSize;
@@ -44,6 +47,11 @@ class JafsBlock {
 	void initZeros(Set<Long> blockList) {
 		Arrays.fill(buf, (byte)0);
         markForFlush(blockList);
+	}
+
+	void initOnes(Set<Long> blockList) {
+		Arrays.fill(buf, (byte)0xff);
+		markForFlush(blockList);
 	}
 	
 	void seekSet(int b) {
@@ -96,7 +104,7 @@ class JafsBlock {
 //	}
 
 	int peekSkipMapByte() {
-		return buf[0];
+		return buf[0] & 0xff;
 	}
 
 	void pokeSkipMapByte(Set<Long> blockList, int b) {
@@ -105,7 +113,7 @@ class JafsBlock {
 	}
 
 	int readByte() {
-		return buf[byteIdx++];
+		return buf[byteIdx++] & 0xff;
 	}
 
 	void writeByte(Set<Long> blockList, int b) {

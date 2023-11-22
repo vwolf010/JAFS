@@ -1,4 +1,4 @@
-package nl.v4you.jafs;
+package nl.v4you.jafs.internal;
 
 import java.nio.charset.Charset;
 
@@ -6,7 +6,7 @@ public class Util {
 
     static final String DUMP_DIR = "c:/data/temp";
 
-    static final Charset UTF8 =Charset.forName("UTF-8");
+    public static final Charset UTF8 =Charset.forName("UTF-8");
 
     static void shortToArray(byte b[], int off, int i) {
         b[off] = (byte)((i>>>8) & 0xff);

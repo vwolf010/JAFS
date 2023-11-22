@@ -4,6 +4,9 @@ package nl.v4you.jafs;
 // for each file, check all blocks
 // for each unnused block, check if all used blocks are really used
 
+import nl.v4you.jafs.internal.JafsDirEntry;
+import nl.v4you.jafs.internal.JafsInode;
+
 import java.io.IOException;
 
 public class JafsCheckFs {
@@ -21,8 +24,8 @@ public class JafsCheckFs {
 
     private void checkEntry(JafsDirEntry de) throws JafsException, IOException {
         JafsInode inode = new JafsInode(jafs);
-        inode.openInode(de.bpos);
-        if ((inode.type & JafsInode.INODE_INLINED)==0) {
+        inode.openInode(de.getBpos());
+        if ((inode.getType() & JafsInode.INODE_INLINED)==0) {
             jafs.getINodeContext().checkDataAndPtrBlocks(inode);
         }
     }

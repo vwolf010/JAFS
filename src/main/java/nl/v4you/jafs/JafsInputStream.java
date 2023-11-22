@@ -1,5 +1,8 @@
 package nl.v4you.jafs;
 
+import nl.v4you.jafs.internal.JafsDirEntry;
+import nl.v4you.jafs.internal.JafsInode;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -12,9 +15,9 @@ public class JafsInputStream extends InputStream {
 		this.vfs = vfs;
 		path = f.getPath();
 		JafsDirEntry entry = f.getEntry(path);
-		if (entry.bpos>0) {
+		if (entry.getBpos() != 0) {
 			inode = new JafsInode(vfs);
-			inode.openInode(entry.bpos);
+			inode.openInode(entry.getBpos());
 		}
 	}
 
@@ -25,9 +28,9 @@ public class JafsInputStream extends InputStream {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
 				JafsDirEntry entry = f.getEntry(f.getPath());
-				if (entry.bpos>0) {
+				if (entry.getBpos() != 0) {
 					inode = new JafsInode(vfs);
-					inode.openInode(entry.bpos);
+					inode.openInode(entry.getBpos());
 				}
 			}
 			if (inode!=null) {
@@ -46,9 +49,9 @@ public class JafsInputStream extends InputStream {
 			if (inode==null) {
 				JafsFile f = new JafsFile(vfs, path);
 				JafsDirEntry entry = f.getEntry(f.getPath());
-				if (entry.bpos>0) {
+				if (entry.getBpos() != 0) {
 					inode = new JafsInode(vfs);
-					inode.openInode(entry.bpos);
+					inode.openInode(entry.getBpos());
 				}			
 			}
 			if (inode!=null) {
