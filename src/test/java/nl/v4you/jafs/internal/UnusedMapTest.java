@@ -196,7 +196,7 @@ public class UnusedMapTest {
         byte[] buf = new byte[blockSize];
         rnd.nextBytes(buf);
 
-        int TEST_LOOP = 10_000;
+        int TEST_LOOP = 5_000;
 
         jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
 

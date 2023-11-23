@@ -141,7 +141,15 @@ public class JafsDir {
         inode.seekSet(entry.startPos);
 		inode.writeByte(blockList,0); // name length
 	}
-	
+
+	public void entryClearInodePtr(Set<Long> blockList, JafsDirEntry entry) throws JafsException, IOException {
+		inode.seekSet(entry.startPos + 1 + 1 + 1);
+		inode.writeByte(blockList, 0);
+		inode.writeByte(blockList, 0);
+		inode.writeByte(blockList, 0);
+		inode.writeByte(blockList, 0);
+	}
+
 	public boolean hasActiveEntries() throws JafsException, IOException {
 		inode.seekSet(0);
 		int entrySize = inode.readShort();

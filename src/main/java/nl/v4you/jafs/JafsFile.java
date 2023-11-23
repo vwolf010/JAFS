@@ -175,14 +175,14 @@ public class JafsFile {
 		return new String[0];
 	}
 
-	public boolean resetSize() throws JafsException, IOException{
+	public boolean resetSize(Set<Long> blockList) throws JafsException, IOException{
 		JafsDirEntry entry = getEntry(canonicalPath);
 		if (entry != null) {
 			if (entry.getBpos() != 0) {
 				JafsInode inode = vfs.getInodePool().claim();
 				try {
 					inode.openInode(entry.getBpos());
-					inode.resetSize();
+					inode.resetSize(blockList);
 				}
 				finally {
 					vfs.getInodePool().release(inode);
@@ -195,7 +195,7 @@ public class JafsFile {
 
 	public boolean delete() throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(canonicalPath);
-		if (entry!=null) {
+		if (entry != null) {
 			if (entry.getBpos() != 0) {
 				if (entry.isDirectory()) {
 				    JafsInode inode = vfs.getInodePool().claim();
@@ -225,7 +225,7 @@ public class JafsFile {
                 // then free the inode, pointerblocks and datablocks
 				if (entry.getBpos() != 0) {
 					inode.openInode(entry.getBpos());
-					inode.setSize(0);
+					inode.resetSize(blockList);
 					inode.free(blockList);
 				}
             }

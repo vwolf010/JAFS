@@ -49,11 +49,9 @@ public class JafsInode {
 	public void setSize(long size) {
 		this.size = size;
 	}
-	public void resetSize() throws JafsException, IOException {
+	public void resetSize(Set<Long> blockList) throws JafsException, IOException {
 		size = 0;
-		Set<Long> blockList = new TreeSet<>();
 		flushInode(blockList);
-		vfs.getBlockCache().flushBlocks(blockList);
 	}
 	public int getType() {
 		return type;
@@ -143,41 +141,38 @@ public class JafsInode {
         }
 	}
 
-	private void redoInlined(Set<Long> blockList) throws IOException, JafsException {
+	private void undoInlined(Set<Long> blockList) throws IOException, JafsException {
 		if (size != 0) {
-			long remember = fpos;
 			seekSet(0);
 			readBytes(bb2, 0, (int)size);
-			fpos = remember;
 		}
-		JafsBlock iblock = vfs.getCacheBlock(bpos);
-		iblock.seekSet(INODE_HEADER_SIZE);
+		type &= ~INODE_INLINED; // Turn inlined mode off
+		Arrays.fill(ptrs, 0);
+		flushInode(blockList);
 		if (size != 0) {
-			iblock.writeBytes(blockList, bb2, (int)size);
+			seekSet(0);
+			writeBytes(blockList, bb2, (int)size);
+		}
+	}
+
+	private void redoInlined(Set<Long> blockList) throws IOException, JafsException {
+		if (size != 0) {
+			seekSet(0);
+			readBytes(bb2, 0, (int)size);
+		}
+		if (ptrs[0] != 0) {
+			// free before pointer gets overwritten
+			ctx.freeBlock(blockList, ptrs[0]);
 		}
 		type |= INODE_INLINED; // Turn inlined mode on
 		flushInode(blockList);
-	}
-
-	private void undoInlined(Set<Long> blockList) throws IOException, JafsException {
-		// The inlined data needs to be copied to a real data block.
-        JafsBlock iblock = vfs.getCacheBlock(bpos);
-        iblock.seekSet(INODE_HEADER_SIZE);
 		if (size != 0) {
-			iblock.readBytes(bb2, (int)size);
-		}
-		Arrays.fill(ptrs, 0);
-		type &= ~INODE_INLINED; // Turn inlined mode off
-		flushInode(blockList);
-		if (size != 0) {
-			long remember = fpos;
 			seekSet(0);
 			writeBytes(blockList, bb2, (int)size);
-			fpos = remember;
 		}
 	}
-	
-	private void checkInlinedOverflow(Set<Long> blockList, int n) throws JafsException, IOException {
+
+	private void checkIfInlinedWillOverflow(Set<Long> blockList, int n) throws JafsException, IOException {
 		if (isInlined() && (fpos + n > maxInlinedSize)) {
 			undoInlined(blockList);
 		}
@@ -187,7 +182,7 @@ public class JafsInode {
 	    if ((fpos + 1) > maxFileSizeReal) {
 	        throw new IllegalStateException("exceeding maximum file size");
         }
-		checkInlinedOverflow(blockList, 1);
+		checkIfInlinedWillOverflow(blockList, 1);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(INODE_HEADER_SIZE + fpos));
@@ -213,7 +208,7 @@ public class JafsInode {
         if ((fpos + len) > maxFileSizeReal) {
             throw new IllegalStateException("exceeding maximum file size: " + (fpos + len) + " >= " + maxFileSizeReal);
         }
-        checkInlinedOverflow(blockList, len);
+        checkIfInlinedWillOverflow(blockList, len);
 		if (isInlined()) {
             JafsBlock iblock = vfs.getCacheBlock(bpos);
             iblock.seekSet((int)(INODE_HEADER_SIZE + fpos));
@@ -317,13 +312,13 @@ public class JafsInode {
 	public void free(Set<Long> blockList) throws JafsException, IOException {
         if (!isInlined()) {
             ctx.freeDataAndPtrBlocks(blockList, this);
-			if (size <= maxInlinedSize) {
+			if (ptrs[0] != 0 && size <= maxInlinedSize) {
 				redoInlined(blockList);
-				ctx.freeBlock(blockList, ptrs[0]);
 			}
         }
 		if (size == 0) {
 			ctx.freeBlock(blockList, bpos);
+			bpos = 0;
 			type = 0;
 		}
 	}

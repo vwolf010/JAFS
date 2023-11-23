@@ -190,16 +190,17 @@ public class JafsInodeContext {
 	}
 
 	void freeDataAndPtrBlocks(Set<Long> blockList, JafsInode inode) throws JafsException, IOException {
-		for (int n = 0; n < ptrsPerInode; n++) {
-			if (inode.ptrs[n] == 0) {
-				break;
-			}
+		boolean flushInode = false;
+		for (int n = 0; n < ptrsPerInode && inode.ptrs[n] != 0; n++) {
 			if (inode.size <= ptrInfo[n].fPosStart) {
 				if (free(blockList, inode.size, inode.ptrs[n], ptrInfo[n].fPosStart, ptrInfo[n].fPosEnd - ptrInfo[n].fPosStart)) {
 					inode.ptrs[n] = 0;
-					inode.flushInode(blockList);
+					flushInode = true;
 				}
 			}
+		}
+		if (flushInode) {
+			inode.flushInode(blockList);
 		}
 	}
 

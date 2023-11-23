@@ -91,15 +91,14 @@ public class Jafs {
 				throw new JafsException(f.getCanonicalPath() + " should not be a directory");
 			}
 			if (!append) {
-				if (!f.resetSize()) {
+				Set<Long> blockList = new TreeSet<>();
+				if (!f.resetSize(blockList)) {
 					throw new JafsException("getOutputStream(): resetSize [" + f.getAbsolutePath() + "] failed");
 				}
+				cache.flushBlocks(blockList);
 			}
 		}
-		JafsOutputStream jos = new JafsOutputStream(this, f, append);
-		Set<Long> blockList = new TreeSet<>();
-		cache.flushBlocks(blockList);
-		return jos;
+		return new JafsOutputStream(this, f, append);
 	}
 
 	public void close() throws IOException {
@@ -155,7 +154,9 @@ public class Jafs {
 
 	public long getAvailableBpos(Set<Long> blockList) throws JafsException, IOException {
 		long bpos = getUnusedMap().getUnusedBpos(blockList);
-		if (bpos == 0) bpos = appendNewBlockToArchive(blockList);
+		if (bpos == 0) {
+			bpos = appendNewBlockToArchive(blockList);
+		}
 		getSuper().incBlocksUsed(blockList);
 		um.setUnavailable(blockList, bpos);
 		return bpos;

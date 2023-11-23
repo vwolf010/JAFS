@@ -19,9 +19,7 @@ public class JafsUnusedMap {
     final int blocksPerUnusedMap; // blocksPerUnusedMap includes the unusedMap itself
     final int blockSize;
     private long startAtMapNumber = 0;
-    private final Set<Long> availableMaps = new TreeSet<>(); // alleen free() mag hier aan toevoegen
-    private final Set<Long> removeMaps = new TreeSet<>();
-
+    private final TreeSet<Long> availableMaps = new TreeSet<>(); // alleen free() mag hier aan toevoegen
 
     public JafsUnusedMap(Jafs vfs) {
         this.vfs = vfs;
@@ -72,31 +70,28 @@ public class JafsUnusedMap {
     public long getUnusedBpos(Set<Long> blockList) throws JafsException, IOException {
         long blocksTotal = superBlock.getBlocksTotal();
         long blocksUsed = vfs.getSuper().getBlocksUsed();
+
         if (blocksUsed == blocksTotal) {
             return 0;
         }
 
-        if (!availableMaps.isEmpty()) {
-            long bpos = 0;
-            for (long mapNumber : availableMaps) {
-                bpos = getBposFromUnusedMap(blockList, mapNumber);
-                if (bpos != 0 && bpos < blocksTotal) {
-                    break;
-                }
-                removeMaps.add(mapNumber);
-            }
-            availableMaps.removeAll(removeMaps);
-            removeMaps.clear();
+        while (!availableMaps.isEmpty()) {
+            long mapNumber = availableMaps.first();
+            long bpos = getBposFromUnusedMap(blockList, mapNumber);
+            if (bpos >= blocksTotal) bpos = 0;
             if (bpos != 0) return bpos;
+            availableMaps.remove(mapNumber);
         }
 
-        long mapNumber = startAtMapNumber;
-        long curBpos = mapNumber * blocksPerUnusedMap;
+        long curBpos = startAtMapNumber * blocksPerUnusedMap;
         while (curBpos < blocksTotal) {
-            long bpos = getBposFromUnusedMap(blockList, mapNumber);
+            long bpos = getBposFromUnusedMap(blockList, startAtMapNumber);
+            if (bpos >= blocksTotal) {
+                break;
+            }
             if (bpos != 0) return bpos;
-            mapNumber++;
-            curBpos = mapNumber * blocksPerUnusedMap;
+            startAtMapNumber++;
+            curBpos = startAtMapNumber * blocksPerUnusedMap;
         }
         return 0;
     }

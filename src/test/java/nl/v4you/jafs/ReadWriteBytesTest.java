@@ -58,13 +58,13 @@ public class ReadWriteBytesTest {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
         JafsFile f = jafs.getFile("/abc.txt");
-        byte content[] = new byte[blockSize];
+        byte[] content = new byte[blockSize];
         rnd.nextBytes(content);
         JafsOutputStream jos = jafs.getOutputStream(f);
         jos.write(content);
         jos.close();
         JafsInputStream jis = jafs.getInputStream(f);
-        byte buf[] = new byte[content.length];
+        byte[] buf = new byte[content.length];
         int len = jis.read(buf);
         assertEquals(content.length, len);
         assertTrue(Arrays.equals(content, Arrays.copyOf(buf, content.length)));

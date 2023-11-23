@@ -10,14 +10,14 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class JafsOutputStream extends OutputStream {
-	Jafs vfs;
+	final Jafs vfs;
+	final String path;
 	JafsInode inode;
-	String path;
-	
+
 	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
 		if (!f.exists() && !f.createNewFile()) {
-			throw new JafsException("Could not appendNewBlockToArchive "+f.getCanonicalPath());
+			throw new JafsException("Could not appendNewBlockToArchive " + f.getCanonicalPath());
 		}
 		this.path = f.getCanonicalPath();
 		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
@@ -100,7 +100,6 @@ public class JafsOutputStream extends OutputStream {
 	public void close() throws IOException {
 		try {
 			Set<Long> blockList = new TreeSet<>();
-			inode.free(blockList);
 			if (inode.getSize() == 0) {
 				try {
 					JafsFile f = new JafsFile(vfs, path);
@@ -113,7 +112,7 @@ public class JafsOutputStream extends OutputStream {
 						if (entry == null) {
 							throw new JafsException("No entry found for [" + path + "]");
 						}
-						dir.deleteEntry(blockList, f.getCanonicalPath(), entry);
+						dir.entryClearInodePtr(blockList, entry);
 					}
 					finally {
 						vfs.getInodePool().release(inodeDirectory);
@@ -124,6 +123,7 @@ public class JafsOutputStream extends OutputStream {
 					throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 				}
 			}
+			inode.free(blockList);
 			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			throw new RuntimeException(e);
