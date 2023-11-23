@@ -146,8 +146,7 @@ public class UnusedMapTest {
             blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
-            x = block.readByte();
-            assertEquals(0, x);
+            assertEquals(mask, block.readByte());
 
             block.seekSet(1);
             block.writeByte(blockList, 0b11111111);
@@ -157,19 +156,7 @@ public class UnusedMapTest {
             blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
-            x = block.readByte();
-            assertEquals(invMask, x & 0xff);
-
-            block.seekSet(1);
-            block.writeByte(blockList, 0);
-            block.writeToDiskIfNeeded();
-            um.setUnavailable(blockList, 8 + n);
-            jafs.getBlockCache().flushBlocks(blockList);
-            blockList.clear();
-            block.readFromDisk();
-            block.seekSet(1);
-            x = block.readByte();
-            assertEquals( mask, x & 0xff);
+            assertEquals(0b11111111, block.readByte());
 
             block.seekSet(1);
             block.writeByte(blockList, 0b11111111);
@@ -179,8 +166,17 @@ public class UnusedMapTest {
             blockList.clear();
             block.readFromDisk();
             block.seekSet(1);
-            x = block.readByte();
-            assertEquals( 0b11111111, x & 0xff);
+            assertEquals( invMask, block.readByte());
+
+            block.seekSet(1);
+            block.writeByte(blockList, 0);
+            block.writeToDiskIfNeeded();
+            um.setUnavailable(blockList, 8 + n);
+            jafs.getBlockCache().flushBlocks(blockList);
+            blockList.clear();
+            block.readFromDisk();
+            block.seekSet(1);
+            assertEquals( 0, block.readByte());
         }
 
         jafs.close();

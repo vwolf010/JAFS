@@ -154,9 +154,7 @@ public class Jafs {
 
 	public long getAvailableBpos(Set<Long> blockList) throws JafsException, IOException {
 		long bpos = getUnusedMap().getUnusedBpos(blockList);
-		if (bpos == 0) {
-			bpos = appendNewBlockToArchive(blockList);
-		}
+		if (bpos == 0) bpos = appendNewBlockToArchive(blockList);
 		getSuper().incBlocksUsed(blockList);
 		um.setUnavailable(blockList, bpos);
 		return bpos;

@@ -32,8 +32,8 @@ public class JafsInode {
 	int superBlockSize;
 	int superBlockSizeMask;
 
-	private byte bb1[];
-	private byte bb2[]; // used by undoinlined()
+	private byte[] bb1;
+	private byte[] bb2; // used by undoinlined()
 
 	/* INode header */
 	int type = 0;
@@ -142,16 +142,19 @@ public class JafsInode {
 	}
 
 	private void undoInlined(Set<Long> blockList) throws IOException, JafsException {
+		JafsBlock iblock = vfs.getCacheBlock(bpos);
+		iblock.seekSet(INODE_HEADER_SIZE);
 		if (size != 0) {
-			seekSet(0);
-			readBytes(bb2, 0, (int)size);
+			iblock.readBytes(bb2, (int)size);
 		}
-		type &= ~INODE_INLINED; // Turn inlined mode off
 		Arrays.fill(ptrs, 0);
+		type &= ~INODE_INLINED; // Turn inlined mode off
 		flushInode(blockList);
 		if (size != 0) {
+			long remember = fpos;
 			seekSet(0);
 			writeBytes(blockList, bb2, (int)size);
+			fpos = remember;
 		}
 	}
 

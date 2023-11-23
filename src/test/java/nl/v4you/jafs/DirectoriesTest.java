@@ -34,24 +34,27 @@ public class DirectoriesTest {
 
     @Test
     public void directoryGreaterThanBlockSize() throws JafsException, IOException {
-        int blockSize = 256;
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, 1024*1024);
+        int blockSize = 64;
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
 
         LinkedList<String> a = new LinkedList<>();
         JafsFile f;
-        for (int n=0; n<blockSize; n++) {
+        for (int n = 0; n < blockSize; n++) {
             String fname = String.format("%08d", n);
             f = vfs.getFile("/"+fname);
             a.add(fname);
+            f.createNewFile();
             JafsOutputStream jos = vfs.getOutputStream(f);
             jos.write("hallo".getBytes());
             jos.close();
         }
+
         f = vfs.getFile("/");
-        String names[] = f.list();
+        String[] names = f.list();
         for (String name : names) {
             a.remove(name);
         }
+
         assertEquals(0, a.size());
 
         vfs.close();
