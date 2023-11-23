@@ -10,9 +10,11 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class JafsOutputStream extends OutputStream {
-	final Jafs vfs;
-	final String path;
-	JafsInode inode;
+	private final Jafs vfs;
+	private final String path;
+	private JafsInode inode;
+
+	private long oldSize = 0;
 
 	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
@@ -24,8 +26,14 @@ public class JafsOutputStream extends OutputStream {
 		if (entry != null && entry.getBpos() != 0) {
 			inode = new JafsInode(vfs);
 			inode.openInode(entry.getBpos());
+			oldSize = inode.getSize();
 			if (append) {
 				inode.seekEnd(0);
+			}
+			else {
+				Set<Long> blockList = new TreeSet<>();
+				inode.resetSize(blockList);
+				vfs.getBlockCache().flushBlocks(blockList);
 			}
 		}
 	}
@@ -123,7 +131,7 @@ public class JafsOutputStream extends OutputStream {
 					throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 				}
 			}
-			inode.free(blockList);
+			inode.free(blockList, oldSize);
 			vfs.getBlockCache().flushBlocks(blockList);
 		} catch (JafsException e) {
 			throw new RuntimeException(e);

@@ -90,13 +90,6 @@ public class Jafs {
 			if (f.isDirectory()) {
 				throw new JafsException(f.getCanonicalPath() + " should not be a directory");
 			}
-			if (!append) {
-				Set<Long> blockList = new TreeSet<>();
-				if (!f.resetSize(blockList)) {
-					throw new JafsException("getOutputStream(): resetSize [" + f.getAbsolutePath() + "] failed");
-				}
-				cache.flushBlocks(blockList);
-			}
 		}
 		return new JafsOutputStream(this, f, append);
 	}

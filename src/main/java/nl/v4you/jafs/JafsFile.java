@@ -226,7 +226,7 @@ public class JafsFile {
 				if (entry.getBpos() != 0) {
 					inode.openInode(entry.getBpos());
 					inode.resetSize(blockList);
-					inode.free(blockList);
+					inode.free(blockList, 0);
 				}
             }
             finally {

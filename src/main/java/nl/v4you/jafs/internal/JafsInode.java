@@ -312,17 +312,25 @@ public class JafsInode {
 		return Util.arrayToInt(bb1, 0);
 	}
 
-	public void free(Set<Long> blockList) throws JafsException, IOException {
-        if (!isInlined()) {
-            ctx.freeDataAndPtrBlocks(blockList, this);
+	long calcBlocksUsed(long size) {
+		long blocksUsed = size / ctx.blockSize;
+		if ((size & (ctx.blockSize - 1)) != 0) blocksUsed++;
+		return blocksUsed;
+	}
+
+	public void free(Set<Long> blockList, long oldSize) throws JafsException, IOException {
+		if (size == 0) {
+			ctx.freeDataAndPtrBlocks(blockList, this);
+			ctx.freeBlock(blockList, bpos);
+			bpos = 0;
+			type = 0;
+			return;
+		}
+        if (!isInlined() && calcBlocksUsed(size) < calcBlocksUsed(oldSize)) {
+			ctx.freeDataAndPtrBlocks(blockList, this);
 			if (ptrs[0] != 0 && size <= maxInlinedSize) {
 				redoInlined(blockList);
 			}
         }
-		if (size == 0) {
-			ctx.freeBlock(blockList, bpos);
-			bpos = 0;
-			type = 0;
-		}
 	}
 }
