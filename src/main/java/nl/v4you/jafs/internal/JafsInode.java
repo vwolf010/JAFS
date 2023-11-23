@@ -326,8 +326,10 @@ public class JafsInode {
 			type = 0;
 			return;
 		}
-        if (!isInlined() && calcBlocksUsed(size) < calcBlocksUsed(oldSize)) {
-			ctx.freeDataAndPtrBlocks(blockList, this);
+        if (!isInlined()) {
+			if (calcBlocksUsed(size) < calcBlocksUsed(oldSize)) {
+				ctx.freeDataAndPtrBlocks(blockList, this);
+			}
 			if (ptrs[0] != 0 && size <= maxInlinedSize) {
 				redoInlined(blockList);
 			}
