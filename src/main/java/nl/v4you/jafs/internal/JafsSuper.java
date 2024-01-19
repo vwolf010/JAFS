@@ -21,7 +21,6 @@ public class JafsSuper {
 	private int blockSize;
 	private long blocksTotal = 0;
 	private long blocksUsed = 0;
-	private long rootDirBPos = 1;
 	byte[] buf = new byte[64];
 	int isLocked = FALSE;
 
@@ -53,6 +52,7 @@ public class JafsSuper {
 		rootBlock = new JafsBlock(vfs, -1, 32);
 		read();
 		rootBlock = new JafsBlock(vfs, -1, blockSize);
+		read();
 		lock(myFile, unusedMap);
 	}
 
@@ -67,16 +67,6 @@ public class JafsSuper {
 		setBlockSize(blockList, blockSize);
 		lock(myFIle, unusedMap);
 	}
-	
-//	public long getRootDirBpos() {
-//		return rootDirBPos;
-//	}
-//
-//	void setRootDirBpos(Set<Long> blockList, long bpos) {
-//		this.rootDirBPos = bpos;
-//		rootBlock.seekSet(14);
-//		rootBlock.writeInt(blockList, bpos);
-//	}
 
 	public long getBlocksTotal() {
 		return blocksTotal;

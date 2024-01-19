@@ -81,10 +81,7 @@ public class JafsBlock {
 	}
 
 	void writeToDiskIfNeeded() throws IOException, JafsException {
-	    if (needsFlush) {
-	        writeToDisk();
-	        needsFlush = false;
-        }
+	    if (needsFlush) writeToDisk();
     }
 
 //	void dumpBlock(File f) {
