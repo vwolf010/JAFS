@@ -34,8 +34,8 @@ public class DirectoriesTest {
 
     @Test
     public void directoryGreaterThanBlockSize() throws JafsException, IOException {
-        int blockSize = 64;
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+        int blockSize = 512;
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         LinkedList<String> a = new LinkedList<>();
         JafsFile f;
@@ -62,7 +62,7 @@ public class DirectoriesTest {
 
     @Test
     public void fileLengthShouldBeZeroAfterCreate() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/abc.file");
         f.createNewFile();
         assertEquals(0, f.length());
@@ -71,7 +71,7 @@ public class DirectoriesTest {
 
     @Test
     public void localDirIndicatorWorks() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/a.txt");
         f.createNewFile();
         f = vfs.getFile("/./a.txt");
@@ -81,7 +81,7 @@ public class DirectoriesTest {
 
     @Test
     public void bbb() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 8*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/dateStamp/2018/11/10/04/42/05.000Z");
         f.mkdirs();
         vfs.close();
@@ -89,7 +89,7 @@ public class DirectoriesTest {
 
     @Test
     public void aaa() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/11/11/11/11");
         f.mkdirs();
         f = vfs.getFile("/11/11/11/11/a.txt");
@@ -105,7 +105,7 @@ public class DirectoriesTest {
 
     @Test
     public void parentDirIndicatorWorks() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/a");
         assertTrue(f.mkdir());
         f = vfs.getFile("/a/b.txt");
@@ -117,7 +117,7 @@ public class DirectoriesTest {
 
     @Test
     public void currentDirIndicator() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/.");
         assertEquals("/", f.getCanonicalPath());
         vfs.close();
@@ -125,7 +125,7 @@ public class DirectoriesTest {
 
     @Test
     public void parentDirIndicatorMustNotGoBeyondRoot1() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         try {
             JafsFile f = vfs.getFile("/..");
             assertTrue("must not reach this line", false);
@@ -138,7 +138,7 @@ public class DirectoriesTest {
 
     @Test
     public void getCanonicalPath() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/6d");
         f.createNewFile();
         f = vfs.getFile("/");
@@ -150,7 +150,7 @@ public class DirectoriesTest {
 
     @Test
     public void parentDirIndicatorMustNotGoBeyondRoot2() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         try {
             JafsFile f = vfs.getFile("/abc/../..");
             assertTrue("must not reach this line", false);
@@ -163,7 +163,7 @@ public class DirectoriesTest {
 
     @Test
     public void rootSlashMandatory() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         try {
             JafsFile f = vfs.getFile("abc");
             assertTrue("should not reach this line", false);
@@ -178,7 +178,7 @@ public class DirectoriesTest {
     public void reusingDirEntryWorks() throws JafsException, IOException {
         String fileName = "/aaaaaaaaaaaaaaaaaaaaaaaaa";
 
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 64, 1024 * 1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 64);
         JafsFile f = vfs.getFile(fileName);
         assertTrue(f.mkdir());
         vfs.close();
@@ -199,7 +199,7 @@ public class DirectoriesTest {
 
     @Test
     public void cachEntryRemovedAfterDeletingFile() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         JafsFile f = vfs.getFile("/a.txt");
         JafsOutputStream jos = vfs.getOutputStream(f);
         jos.write("12345".getBytes());
@@ -212,7 +212,7 @@ public class DirectoriesTest {
 
     @Test
     public void veryLongDirectoryNameSupported() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         byte longFileName[] = new byte[512];
         Arrays.fill(longFileName, (byte)65);
 
@@ -226,7 +226,7 @@ public class DirectoriesTest {
 
     @Test
     public void getParentTests() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
         byte longFileName[] = new byte[512];
         Arrays.fill(longFileName, (byte)65);
 
@@ -257,7 +257,7 @@ public class DirectoriesTest {
         File g = new File(TEST_ARCHIVE);
         if (g.exists()) g.delete();
         int blockSize = 1024;
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, 10 * 1024 * 1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
         JafsFile f;
 
         Random r = new Random(0);
@@ -278,7 +278,7 @@ public class DirectoriesTest {
 
     @Test
     public void directoryEntryReuseWorks() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 64, 1024*1024);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 64);
         JafsFile f;
         f = vfs.getFile("/home");
         f.mkdir();

@@ -27,7 +27,7 @@ class GenericCache<K, V> {
     GenericCache(int size) {
         mostLeft = null;
         mostRight = null;
-        if (size<3) {
+        if (size < 3) {
             throw new IllegalStateException("Cache size minimum is 3");
         }
         cacheMaxSize = size;
@@ -38,7 +38,7 @@ class GenericCache<K, V> {
         GenericCacheEntry ce = null;
         V evicted = null;
 
-        if (cache.size()>= cacheMaxSize) {
+        if (cache.size() >= cacheMaxSize) {
             // Cache too big? Evict (=delete) the oldest entry
             GenericCacheEntry tmp = mostLeft;
             mostLeft = mostLeft.r;
@@ -49,7 +49,7 @@ class GenericCache<K, V> {
         }
 
         // Create new entry
-        if (ce==null) {
+        if (ce == null) {
             ce = new GenericCacheEntry();
         }
         ce.key = key;
@@ -67,7 +67,7 @@ class GenericCache<K, V> {
 
         // Check if this block is already in cache
         ce = cache.get(key);
-        if (ce==null) {
+        if (ce == null) {
             cntMiss++;
             return null;
         }
@@ -81,7 +81,7 @@ class GenericCache<K, V> {
 
     void remove(K key) {
         GenericCacheEntry ce = cache.get(key);
-        if (ce!=null) {
+        if (ce != null) {
             removeEntry(cache.get(key));
             cache.remove(ce.key);
             cntRemoved++;
@@ -94,17 +94,17 @@ class GenericCache<K, V> {
 
     private void addEntry(GenericCacheEntry ce) {
         // First entry? Set mostleft
-        if (mostLeft==null) mostLeft=ce;
+        if (mostLeft == null) mostLeft = ce;
 
         // Update access list (add to the right)
         ce.r = null;
         ce.l = mostRight;
-        if (mostRight!=null) mostRight.r = ce;
+        if (mostRight != null) mostRight.r = ce;
         mostRight = ce;
     }
 
     private void removeEntry(GenericCacheEntry ce) {
-        if (ce!=null) {
+        if (ce != null) {
             if (ce == mostLeft) mostLeft = ce.r;
             if (mostLeft != null) mostLeft.l = null;
 
@@ -118,14 +118,14 @@ class GenericCache<K, V> {
 
     String stats() {
         StringBuilder sb = new StringBuilder();
-        int used = (int) Math.round((cache.size()*100.0)/cacheMaxSize);
-        sb.append("   size    : "+cache.size()+" ("+used+"%)\n");
-        sb.append("   added   : "+cntAdded+"\n");
-        sb.append("   evicted : "+cntEvicted+"\n");
-        sb.append("   removed : "+cntRemoved+"\n");
-        int hit = (int)Math.round((cntHit*100.0)/(cntHit+cntMiss));
-        sb.append("   hit     : "+cntHit+" ("+hit+"%)\n");
-        sb.append("   miss    : "+cntMiss+" ("+(100-hit)+"%)\n");
+        int used = (int) Math.round((cache.size() * 100.0) / cacheMaxSize);
+        sb.append("   size    : " + cache.size() + " (" + used + "%)\n");
+        sb.append("   added   : " + cntAdded + "\n");
+        sb.append("   evicted : " + cntEvicted + "\n");
+        sb.append("   removed : " + cntRemoved + "\n");
+        int hit = (int)Math.round((cntHit * 100.0) / (cntHit + cntMiss));
+        sb.append("   hit     : " + cntHit + " (" + hit + "%)\n");
+        sb.append("   miss    : " + cntMiss + " (" + (100 - hit) + "%)\n");
         return sb.toString();
     }
 }

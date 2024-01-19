@@ -14,7 +14,7 @@ import java.util.TreeSet;
  * 8 bytes : long file size, is 0 for directories
  */
 public class JafsInode {
-	static final int INODE_HEADER_SIZE = 1+8; // type + size
+	public static final int INODE_HEADER_SIZE = 1 + 8; // type + size
 
     public static final int INODE_FILE    = 0x1;
     public static final int INODE_DIR     = 0x2;
@@ -24,8 +24,8 @@ public class JafsInode {
 	private JafsInodeContext ctx;
 
 	private final long maxInlinedSize;
-	private long bpos=0; // Position of this block in the archive
-	private long fpos=0; // Position of the file pointer
+	private long bpos = 0; // Position of this block in the archive
+	private long fpos = 0; // Position of the file pointer
 	long ptrs[];
 
     long maxFileSizeReal;
@@ -322,8 +322,6 @@ public class JafsInode {
 		if (size == 0) {
 			ctx.freeDataAndPtrBlocks(blockList, this);
 			ctx.freeBlock(blockList, bpos);
-			bpos = 0;
-			type = 0;
 			return;
 		}
         if (!isInlined()) {

@@ -55,7 +55,6 @@ public class JafsBlockCache {
 	}
 
 	public void flushBlocks(Set<Long> bl) throws JafsException, IOException {
-	    vfs.getSuper().writeToDisk();
 	    for (long bpos : bl) {
 	        if (bpos >= 0) {
                 JafsBlock block = get(bpos);

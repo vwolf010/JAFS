@@ -24,33 +24,22 @@ public class AppTest {
     Random rnd = new Random();
 
     int blockSize;
-    int fileSize;
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
-                { 64, 16, 32*1024 },
-                { 64, 32, 32*1024 },
-                { 64, 32, 32*1024 },
-                { 128, 128, 1024*1024*1024 },
-                { 128, 64, 1024*1024*1024 },
-                { 256, 256, 1024*1024*1024 },
-                { 256, 128, 1024*1024*1024 },
-                { 256, 64, 1024*1024*1024 },
-                { 256, 32, 1024*1024*1024 },
-                { 1024, 1024, 1024*1024*1024 },
-                { 1024, 64, 1024*1024*1024 },
-                { 2048, 2048, 1024*1024*1024 },
-                { 2048, 1024, 1024*1024*1024 },
-                { 4096, 4096, 1024*1024*1024 },
-                { 4096, 2048, 1024*1024*1024 }
+                { 64},
+                { 128},
+                { 256},
+                { 1024},
+                { 2048},
+                { 4096},
                 //The first item in the array is the input, and second is the expected outcome.
         });
     }
 
-    public AppTest(int blockSize, int inodeSize, int fileSize) {
+    public AppTest(int blockSize) {
         this.blockSize = blockSize;
-        this.fileSize = fileSize;
     }
 
     @Before
@@ -91,7 +80,7 @@ public class AppTest {
 
     @Test
     public void fileInputStreamReturnsMinusOneWhenNoMoreToRead() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -112,7 +101,7 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterRename() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -131,7 +120,7 @@ public class AppTest {
     public void fileInputStream() throws Exception {
         byte content[] = "12345678901234567890123456789012345678901234567890".getBytes();
 
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -165,7 +154,7 @@ public class AppTest {
 
     @Test
     public void createDirectories() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/sub1");
         assertEquals(false, f.exists());
@@ -187,7 +176,7 @@ public class AppTest {
 
     @Test
     public void createFileInsideDirectories() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/sub1");
         f.mkdir();
@@ -219,7 +208,7 @@ public class AppTest {
 
     @Test
     public void deleteDirectory() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/sub1");
         f.mkdir();
@@ -249,7 +238,7 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterOverwrite() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -267,7 +256,7 @@ public class AppTest {
 
     @Test
     public void fileLengthIsCorrectAfterAppend() throws Exception {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -284,11 +273,11 @@ public class AppTest {
     }
 
     private void createAndCheckFileLengthAndContent(int i) throws IOException, JafsException {
-        byte content[] = new byte[i];
+        byte[] content = new byte[i];
 
         rnd.nextBytes(content);
 
-        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize, fileSize);
+        Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/content.txt");
 
@@ -298,7 +287,7 @@ public class AppTest {
 
         assertEquals(content.length, f.length());
 
-        byte buf[] = new byte[(int)f.length()];
+        byte[] buf = new byte[(int)f.length()];
         JafsInputStream fis = vfs.getInputStream(f);
         fis.read(buf);
         fis.close();

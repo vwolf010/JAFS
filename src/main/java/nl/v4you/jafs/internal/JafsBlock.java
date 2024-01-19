@@ -67,14 +67,14 @@ public class JafsBlock {
 	}
 	
 	private void writeToDisk() throws IOException, JafsException {
-		long start = (SUPERBLOCK_SIZE+bpos) * blockSize;
-		long end = start + blockSize;
-		if (end>raf.length()) {
-			vfs.getSuper().setRafSize();
-			if (end>raf.length()) {
-				throw new JafsException("Trying to write beyond filesize");
-			}
-		}
+		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
+//		long end = start + blockSize;
+//		if (end > raf.length()) {
+//			vfs.getSuper().setRafSize();
+//			if (end > raf.length()) {
+//				throw new JafsException("Trying to write beyond filesize");
+//			}
+//		}
 		raf.seek(start);
 		raf.write(buf);
 		needsFlush = false;

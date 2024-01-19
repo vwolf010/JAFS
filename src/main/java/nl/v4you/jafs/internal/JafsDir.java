@@ -37,7 +37,6 @@ public class JafsDir {
             rootInode.flushInode(blockList);
             dir.setInode(rootInode);
             dir.initDir(blockList);
-            vfs.getSuper().setRootDirBpos(blockList, rootInode.getBpos());
         }
         finally {
             vfs.getInodePool().release(rootInode);

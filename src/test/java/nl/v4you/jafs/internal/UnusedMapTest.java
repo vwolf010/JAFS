@@ -42,7 +42,7 @@ public class UnusedMapTest {
     @Test
     public void forceCreationOfNewUnusedMap() throws JafsException, IOException {
         int blockSize = 128;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
         byte[] content = new byte[blockSize];
         byte[] buf = new byte[blockSize];
         for (int i=0; i<2*blockSize; i++) {
@@ -62,7 +62,7 @@ public class UnusedMapTest {
     @Test
     public void reuseDataBlockAsInodeBlock() throws JafsException, IOException {
         int blockSize = 128;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
         byte content[] = new byte[blockSize];
         Arrays.fill(content, (byte)0xff); // if this were an inode record, all flags would be set
 
@@ -92,7 +92,7 @@ public class UnusedMapTest {
     public void fileSizeStable() throws JafsException, IOException {
 
         int blockSize = 64;
-        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
         byte[] content = new byte[blockSize];
         rnd.nextBytes(content);
 
@@ -107,7 +107,7 @@ public class UnusedMapTest {
         File g = new File(TEST_ARCHIVE);
         long flen1 = g.length();
 
-        jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+        jafs = new Jafs(TEST_ARCHIVE, blockSize);
         for (int n=0; n<5; n++) {
             f = jafs.getFile("/abc.bin");
             jos = jafs.getOutputStream(f);
@@ -127,7 +127,7 @@ public class UnusedMapTest {
 
     @Test
     public void setUnused() throws JafsException, IOException {
-        Jafs jafs = new Jafs(TEST_ARCHIVE, 128, 1024 * 1024);
+        Jafs jafs = new Jafs(TEST_ARCHIVE, 128);
         JafsBlock block = jafs.getCacheBlock(0);
         int x;
 
@@ -194,7 +194,7 @@ public class UnusedMapTest {
 
         int TEST_LOOP = 5_000;
 
-        jafs = new Jafs(TEST_ARCHIVE, blockSize, 1024 * 1024);
+        jafs = new Jafs(TEST_ARCHIVE, blockSize);
 
         for (int n=0; n < TEST_LOOP; n++) {
 

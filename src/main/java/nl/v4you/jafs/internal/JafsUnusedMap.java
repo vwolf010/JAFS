@@ -133,6 +133,25 @@ public class JafsUnusedMap {
         block.pokeSkipMapByte(blockList,0b01111111);
     }
 
+    public int countUsedBlocks(int mapNumber) throws JafsException, IOException {
+        long curBpos = mapNumber * blocksPerUnusedMap;
+        JafsBlock block = vfs.getCacheBlock(curBpos);
+        block.seekSet(0);
+
+        int count = 1; // unused block itself
+        int b = block.readByte();
+        for (int i = 6; i >= 0; i--) {
+            if ((b & (1 << i)) == 0) count++;
+        }
+        for (int j = 1; j < blockSize; j++) {
+            b = block.readByte();
+            for (int i = 7; i >= 0; i--) {
+                if ((b & (1 << i)) == 0) count++;
+            }
+        }
+        return count;
+    }
+
 //	void dumpLastVisited() {
 //        long blockPos = lastVisitedMapForDump*blocksPerUnusedMap;
 //        File f = new File(Util.DUMP_DIR+"/unused_"+lastVisitedMapForDump+"_block_"+blockPos+".dmp");
