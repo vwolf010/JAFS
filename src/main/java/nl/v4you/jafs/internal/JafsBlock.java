@@ -74,18 +74,12 @@ public class JafsBlock {
 			needsFlush = true;
 		}
 	}
-	private void writeToDisk() throws IOException {
+	void writeToDisk() throws IOException {
 		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
 		raf.seek(start);
 		raf.write(buf);
 		needsFlush = false;
 	}
-
-	void writeToDiskIfNeeded() throws IOException, JafsException {
-	    if (needsFlush) {
-			writeToDisk();
-		}
-    }
 
 //	void dumpBlock(File f) {
 //		try {

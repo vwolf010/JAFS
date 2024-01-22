@@ -40,7 +40,7 @@ public class JafsBlockCache {
             JafsBlock evicted = gcache.add(bpos, blk);
             if (evicted != null) {
                 if (evicted.needsFlush) {
-                    evicted.writeToDiskIfNeeded();
+                    evicted.writeToDisk();
                     flushList.remove(evicted.bpos);
                 }
                 free = evicted;
@@ -58,7 +58,10 @@ public class JafsBlockCache {
 	    for (long bpos : flushList) {
 	        if (bpos >= 0) {
                 JafsBlock block = get(bpos);
-                block.writeToDiskIfNeeded();
+                if (block == null || !block.needsFlush) {
+                    throw new IllegalStateException("should not happen");
+                }
+                block.writeToDisk();
             }
         }
         flushList.clear();
