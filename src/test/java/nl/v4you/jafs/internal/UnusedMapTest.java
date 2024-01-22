@@ -136,7 +136,7 @@ public class UnusedMapTest {
 
             block.seekSet(1);
             block.writeByte(0);
-            block.writeToDiskIfNeeded();
+            block.writeToDisk();
             JafsUnusedMap um = jafs.getUnusedMap();
             um.setAvailable(8 + n);
             jafs.getBlockCache().flushBlocks();
@@ -146,7 +146,7 @@ public class UnusedMapTest {
 
             block.seekSet(1);
             block.writeByte(0b11111111);
-            block.writeToDiskIfNeeded();
+            block.writeToDisk();
             um.setAvailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
@@ -155,7 +155,7 @@ public class UnusedMapTest {
 
             block.seekSet(1);
             block.writeByte(0b11111111);
-            block.writeToDiskIfNeeded();
+            block.writeToDisk();
             um.setUnavailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
@@ -164,7 +164,7 @@ public class UnusedMapTest {
 
             block.seekSet(1);
             block.writeByte(0);
-            block.writeToDiskIfNeeded();
+            block.writeToDisk();
             um.setUnavailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
