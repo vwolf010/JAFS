@@ -10,13 +10,10 @@ public class JafsBlockCache {
 	private Jafs vfs;
 	private LRUCache<Long, JafsBlock> gcache;
     private JafsBlock free = null;
-    public int cacheMaxSize;
-
     private TreeSet<Long> flushList = new TreeSet<>();
 
 	public JafsBlockCache(Jafs vfs, int size) {
 	    this.vfs = vfs;
-	    cacheMaxSize = size;
 	    gcache = new LRUCache<>(size);
     }
 
@@ -42,8 +39,10 @@ public class JafsBlockCache {
             blk.readFromDisk();
             JafsBlock evicted = gcache.add(bpos, blk);
             if (evicted != null) {
-                evicted.writeToDiskIfNeeded();
-                flushList.remove(evicted.bpos);
+                if (evicted.needsFlush) {
+                    evicted.writeToDiskIfNeeded();
+                    flushList.remove(evicted.bpos);
+                }
                 free = evicted;
             }
         }

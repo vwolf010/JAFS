@@ -67,7 +67,13 @@ public class JafsBlock {
 		raf.read(buf);
 		byteIdx = 0;
 	}
-	
+
+	void markForFlush() {
+		if (!needsFlush) {
+			blockCache.addToFlushList(bpos);
+			needsFlush = true;
+		}
+	}
 	private void writeToDisk() throws IOException {
 		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
 		raf.seek(start);
@@ -186,11 +192,4 @@ public class JafsBlock {
 		buf[byteIdx++] = (byte)(l & 0xffL);
 		markForFlush();
 	}
-
-	void markForFlush() {
-        if (!needsFlush) {
-            blockCache.addToFlushList(bpos);
-            needsFlush = true;
-        }
-    }
 }
