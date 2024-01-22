@@ -12,14 +12,14 @@ import java.util.TreeSet;
 
 public class Jafs implements AutoCloseable {
 
-    private static int CACHE_BLOCK_MAX = 16 * 1024;
-    private static int CACHE_DIR_MAX   = 256 * 256;
+	private static int CACHE_BLOCK_MAX = 16 * 1024;
+	private static int CACHE_DIR_MAX   = 256 * 256;
 
-	private JafsBlockCache cache;
+	private JafsBlockCache blockCache;
 	private JafsDirEntryCache dirCache;
 	private JafsSuper superBlock;
 	private File myFile;
-	private RandomAccessFile raf;		
+	private RandomAccessFile raf;
 	private JafsInodeContext ctx;
 	private JafsUnusedMap um;
 	private JafsDirEntry rootEntry = null;
@@ -30,21 +30,21 @@ public class Jafs implements AutoCloseable {
 	 * Public
 	 */
 	boolean isSupportedSize(int size, int sizeMin, int sizeMax) {
-        boolean supported = false;
-        int n;
-        for (n=1; n<=16; n++) {
-            int pow = 2 << n;
-            if (size==pow && sizeMin<=size && size<=sizeMax) {
-                supported = true;
-                break;
-            }
-        }
-        return supported;
-    }
+		boolean supported = false;
+		int n;
+		for (n=1; n<=16; n++) {
+			int pow = 2 << n;
+			if (size==pow && sizeMin<=size && size<=sizeMax) {
+				supported = true;
+				break;
+			}
+		}
+		return supported;
+	}
 
 	public Jafs(String fname) throws IOException, JafsException {
 		myFile = new File(fname);
-		init(fname, -1);
+		init(fname, 0);
 	}
 
 	public Jafs(String fname, int blockSize) throws JafsException, IOException {
@@ -52,15 +52,12 @@ public class Jafs implements AutoCloseable {
 			throw new JafsException("block size " + blockSize + " not supported");
 		}
 		init(fname, blockSize);
-		if (blockSize!=superBlock.getBlockSize()) {
-			throw new JafsException("Supplied block size [" + blockSize + "] does not match header block size [" + superBlock.getBlockSize() + "]");
-		}
 	}
-	
+
 	public JafsFile getFile(String name) throws JafsException {
 		return new JafsFile(this, name);
 	}
-	
+
 	public JafsFile getFile(String parent, String name) throws JafsException {
 		return new JafsFile(this, parent, name);
 	}
@@ -72,7 +69,7 @@ public class Jafs implements AutoCloseable {
 	public JafsInputStream getInputStream(JafsFile f) throws JafsException, IOException {
 		return new JafsInputStream(this, f);
 	}
-	
+
 	public JafsOutputStream getOutputStream(JafsFile f) throws JafsException, IOException {
 		return getOutputStream(f, false);
 	}
@@ -102,7 +99,7 @@ public class Jafs implements AutoCloseable {
 	public JafsInodeContext getINodeContext() {
 		return ctx;
 	}
-	
+
 	public JafsUnusedMap getUnusedMap() {
 		return um;
 	}
@@ -110,24 +107,28 @@ public class Jafs implements AutoCloseable {
 	public RandomAccessFile getRaf() {
 		return raf;
 	}
-		
+
 	public JafsSuper getSuper() {
 		return superBlock;
 	}
 
-	public JafsBlock getCacheBlock(long bpos) throws JafsException, IOException {
-		return cache.get(bpos);
+	public JafsBlock getCacheBlockForRead(long bpos) throws JafsException, IOException {
+		return blockCache.get(null, bpos);
+	}
+
+	public JafsBlock getCacheBlockForWrite(Set<Long> bl, long bpos) throws JafsException, IOException {
+		return blockCache.get(bl, bpos);
 	}
 
 	public JafsBlockCache getBlockCache() {
-	    return cache;
-    }
+		return blockCache;
+	}
 
-    public JafsDirEntryCache getDirCache() {
-        return dirCache;
-    }
+	public JafsDirEntryCache getDirCache() {
+		return dirCache;
+	}
 
-    private long appendNewBlockToArchive(Set<Long> blockList) throws JafsException, IOException {
+	private long appendNewBlockToArchive(Set<Long> blockList) throws JafsException, IOException {
 		superBlock.incBlocksTotal();
 		long bpos = (superBlock.getBlocksTotal() - 1);
 		long unusedMapBpos = um.getUnusedMapBpos(bpos);
@@ -147,52 +148,46 @@ public class Jafs implements AutoCloseable {
 		return bpos;
 	}
 
-    JafsDirEntry getRootEntry() {
-        if (rootEntry != null) {
-            return rootEntry;
-        } else {
-            rootEntry = new JafsDirEntry();
-            rootEntry.setParentBpos(1);
-            rootEntry.setBpos(1);
-            rootEntry.setType(JafsInode.INODE_DIR);
-            rootEntry.setName("/".getBytes());
-            return rootEntry;
-        }
-    }
+	JafsDirEntry getRootEntry() {
+		if (rootEntry != null) {
+			return rootEntry;
+		} else {
+			rootEntry = new JafsDirEntry();
+			rootEntry.setParentBpos(1);
+			rootEntry.setBpos(1);
+			rootEntry.setType(JafsInode.INODE_DIR);
+			rootEntry.setName("/".getBytes());
+			return rootEntry;
+		}
+	}
 
-    /*
+	/*
 	 * Private
 	 */
-    private void initInodeContext(int blockSize) {
+	private void initInodeContext(int blockSize) {
 		um = new JafsUnusedMap(this);
 		ctx = new JafsInodeContext(this, blockSize);
 	}
 
 
-    private void open(int blockSize) throws IOException, JafsException {
+	private void open(int blockSize) throws IOException, JafsException {
 		if (!myFile.exists() && blockSize < 0) {
 			throw new JafsException("[" + myFile.getName() + "] does not exist");
 		}
-		if (myFile.exists() && myFile.length() < 64) {
-			throw new JafsException("[" + myFile.getName() + "] does not contain a header");
-		}
 		raf = new RandomAccessFile(myFile, "rw");
-		cache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
+		blockCache = new JafsBlockCache(this, CACHE_BLOCK_MAX);
 		dirCache = new JafsDirEntryCache(CACHE_DIR_MAX);
 		inodePool = new JafsInodePool(this);
 		dirPool = new JafsDirPool(this);
-		if (myFile.length() == 0) {
-			raf.setLength(blockSize);
-			superBlock = new JafsSuper(this, blockSize, myFile, getUnusedMap());
+		boolean isNewFile = myFile.length() == 0;
+		superBlock = new JafsSuper(raf, blockSize);
+		initInodeContext(superBlock.getBlockSize());
+		if (isNewFile) {
 			Set<Long> blockList = new TreeSet<>();
-			initInodeContext(blockSize);
 			JafsDir.createRootDir(blockList, this);
-			cache.flushBlocks(blockList);
+			blockCache.flushBlocks(blockList);
 		}
-		else {
-			superBlock = new JafsSuper(this, myFile, getUnusedMap());
-			initInodeContext(superBlock.getBlockSize());
-		}
+		superBlock.lock(myFile, getUnusedMap());
 	}
 
 	public void setBlocksTotal() {
@@ -202,66 +197,66 @@ public class Jafs implements AutoCloseable {
 	public void setBlocksUsed() throws IOException, JafsException {
 		superBlock.setBlocksUsed(getUnusedMap());
 	}
-	
+
 	private void init(String fname, int blockSize) throws JafsException, IOException {
 		myFile = new File(fname);
 		open(blockSize);
 	}
 
 	public JafsInodePool getInodePool() {
-        return inodePool;
-    }
+		return inodePool;
+	}
 
-    public JafsDirPool getDirPool() {
-    	return dirPool;
+	public JafsDirPool getDirPool() {
+		return dirPool;
 	}
 
 	public String stats() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("blocksUsed         : "+superBlock.getBlocksUsed()+"\n");
-        sb.append("blocksTotal        : "+superBlock.getBlocksTotal()+"\n\n");
-        sb.append(ctx.toString()+"\n");
-        sb.append("blockCache:\n"+cache.stats());
-        sb.append("inodePool:\n"+inodePool.stats());
-        sb.append("dirPool:\n"+dirPool.stats());
-        sb.append("dirCache:\n"+dirCache.stats());
-        return sb.toString();
-    }
+		StringBuilder sb = new StringBuilder();
+		sb.append("blocksUsed         : "+superBlock.getBlocksUsed()+"\n");
+		sb.append("blocksTotal        : "+superBlock.getBlocksTotal()+"\n\n");
+		sb.append(ctx.toString()+"\n");
+		sb.append("blockCache:\n"+ blockCache.stats());
+		sb.append("inodePool:\n"+inodePool.stats());
+		sb.append("dirPool:\n"+dirPool.stats());
+		sb.append("dirCache:\n"+dirCache.stats());
+		return sb.toString();
+	}
 
-    private void adviceBlockSizeScan(Fsize fsize, JafsFile f) throws JafsException, IOException {
-        JafsFile[] l = f.listFiles();
-        for (JafsFile g : l) {
-            if (g.isFile()) {
-                long size = g.length();
-                for (int n=0; n<fsize.sizes.length; n++) {
-                    long bs = fsize.sizes[n];
-                    long mod = (size % bs);
-                    if (mod == 0) {
-                        fsize.onDisk[n] += (size / bs) * bs;
-                    } else {
-                        fsize.onDisk[n] += (size / bs) * bs + bs;
-                    }
-                    fsize.lost[n] += bs - mod;
-                }
-            }
-            else {
-                adviceBlockSizeScan(fsize, g);
-            }
-        }
-    }
+	private void adviceBlockSizeScan(Fsize fsize, JafsFile f) throws JafsException, IOException {
+		JafsFile[] l = f.listFiles();
+		for (JafsFile g : l) {
+			if (g.isFile()) {
+				long size = g.length();
+				for (int n=0; n<fsize.sizes.length; n++) {
+					long bs = fsize.sizes[n];
+					long mod = (size % bs);
+					if (mod == 0) {
+						fsize.onDisk[n] += (size / bs) * bs;
+					} else {
+						fsize.onDisk[n] += (size / bs) * bs + bs;
+					}
+					fsize.lost[n] += bs - mod;
+				}
+			}
+			else {
+				adviceBlockSizeScan(fsize, g);
+			}
+		}
+	}
 
-    public void adviceBlockSize() throws JafsException, IOException {
-        Fsize fsize = new Fsize();
-        JafsFile f = getFile("/");
-        adviceBlockSizeScan(fsize, f);
-        for (int n=0; n<fsize.sizes.length; n++) {
-            System.err.println("blockSize " + fsize.sizes[n]+": " + fsize.onDisk[n] + " (on disk), " + fsize.lost[n] + " (lost), " + ((fsize.lost[n] * 100.f) / fsize.onDisk[n]) + "%");
-        }
-    }
+	public void adviceBlockSize() throws JafsException, IOException {
+		Fsize fsize = new Fsize();
+		JafsFile f = getFile("/");
+		adviceBlockSizeScan(fsize, f);
+		for (int n=0; n<fsize.sizes.length; n++) {
+			System.err.println("blockSize " + fsize.sizes[n]+": " + fsize.onDisk[n] + " (on disk), " + fsize.lost[n] + " (lost), " + ((fsize.lost[n] * 100.f) / fsize.onDisk[n]) + "%");
+		}
+	}
 
-    static class Fsize {
-        long[] sizes = {64, 128, 256, 512, 1024, 2048, 4096};
-        long[] onDisk = new long[sizes.length];
-        long[] lost = new long[sizes.length];
-    }
+	static class Fsize {
+		long[] sizes = {64, 128, 256, 512, 1024, 2048, 4096};
+		long[] onDisk = new long[sizes.length];
+		long[] lost = new long[sizes.length];
+	}
 }

@@ -52,7 +52,7 @@ public class JafsInodeContext {
 	private void createNewBlock(Set<Long> blockList, JafsInode inode, int n, boolean isPtrBlock) throws JafsException, IOException {
 		long ptr = vfs.getAvailableBpos(blockList);
 		if (isPtrBlock) {
-			JafsBlock block = vfs.getCacheBlock(ptr);
+			JafsBlock block = vfs.getCacheBlockForWrite(blockList, ptr);
 			block.initZeros(blockList);
 		}
 		inode.ptrs[n] = ptr;
@@ -60,7 +60,7 @@ public class JafsInodeContext {
 	}
 
 	private long getBlkPos(Set<Long> blockList, int level, long bpos, long off, long len, long fpos) throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlock(bpos);
+		JafsBlock block = vfs.getCacheBlockForWrite(blockList, bpos);
 		if (level == 0) {
 			// data block is reached
 			return bpos;
@@ -76,7 +76,7 @@ public class JafsInodeContext {
 				block.seekSet(idx << 2);
 				block.writeInt(blockList, ptr);
 				// init ptr block with zeros
-				block = vfs.getCacheBlock(ptr);
+				block = vfs.getCacheBlockForWrite(blockList, ptr);
 				block.initZeros(blockList);
 			}
 			return getBlkPos(blockList, level - 1, ptr, off + idx * nextLen, nextLen, fpos);
@@ -136,7 +136,7 @@ public class JafsInodeContext {
 		else {
 		    // this is a pointer block
 			levelSize /= ptrsPerPtrBlock;
-			JafsBlock dum = vfs.getCacheBlock(bpos);
+			JafsBlock dum = vfs.getCacheBlockForWrite(blockList, bpos);
 			dum.seekSet(0);
 			boolean allHasBeenDeleted = true;
 			for (int n = 0; n < ptrsPerPtrBlock; n++) {
@@ -191,7 +191,7 @@ public class JafsInodeContext {
 
 	long check(long bpos, int level) throws JafsException, IOException {
 		long size = 0;
-		JafsBlock dum = vfs.getCacheBlock(bpos);
+		JafsBlock dum = vfs.getCacheBlockForRead(bpos);
 		if (level != 0) {
 			// this is a pointer block, check all it's entries
 			dum.seekSet(0);

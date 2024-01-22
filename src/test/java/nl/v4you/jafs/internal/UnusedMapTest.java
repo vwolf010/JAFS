@@ -128,11 +128,9 @@ public class UnusedMapTest {
     @Test
     public void setUnused() throws JafsException, IOException {
         Jafs jafs = new Jafs(TEST_ARCHIVE, 128);
-        JafsBlock block = jafs.getCacheBlock(0);
-        int x;
 
-        Set<Long> blockList = new TreeSet();
-
+        Set<Long> blockList = new TreeSet<>();
+        JafsBlock block = jafs.getCacheBlockForWrite(blockList, 0);
         for (int n = 0; n < 8; n++) {
             int mask = 0b10000000 >> n;
             int invMask = mask ^ 0xff;

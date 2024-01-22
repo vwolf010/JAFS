@@ -2,8 +2,6 @@ package nl.v4you.jafs.internal;
 
 import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
-import nl.v4you.jafs.internal.JafsBlock;
-import nl.v4you.jafs.internal.JafsSuper;
 
 import java.io.IOException;
 import java.util.Set;
@@ -43,7 +41,7 @@ public class JafsUnusedMap {
 
     private long getBposFromUnusedMap(Set<Long> blockList, long mapNumber) throws JafsException, IOException {
         long curBpos = mapNumber * blocksPerUnusedMap;
-        JafsBlock block = vfs.getCacheBlock(curBpos);
+        JafsBlock block = vfs.getCacheBlockForWrite(blockList, curBpos);
         if ((block.peekSkipMapByte() & SKIP_MAP) != 0) {
             return 0;
         }
@@ -101,7 +99,7 @@ public class JafsUnusedMap {
     }
 
     public void setUnavailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
-        JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
+        JafsBlock block = vfs.getCacheBlockForWrite(blockList, getUnusedMapBpos(bpos));
         // Set to 0
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
@@ -110,7 +108,7 @@ public class JafsUnusedMap {
     }
 
     public void setAvailable(Set<Long> blockList, long bpos) throws JafsException, IOException {
-        JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
+        JafsBlock block = vfs.getCacheBlockForWrite(blockList, getUnusedMapBpos(bpos));
         // Set to 1
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
@@ -128,14 +126,14 @@ public class JafsUnusedMap {
         if (unusedMapBpos != getUnusedMapBpos(unusedMapBpos)) {
             throw new JafsException("supplied bpos is not an unused map bpos");
         }
-        JafsBlock block = vfs.getCacheBlock(unusedMapBpos);
+        JafsBlock block = vfs.getCacheBlockForWrite(blockList, unusedMapBpos);
         block.initOnes(blockList);
         block.pokeSkipMapByte(blockList,0b01111111);
     }
 
     public int countUsedBlocks(int mapNumber) throws JafsException, IOException {
         long curBpos = mapNumber * blocksPerUnusedMap;
-        JafsBlock block = vfs.getCacheBlock(curBpos);
+        JafsBlock block = vfs.getCacheBlockForRead(curBpos);
         block.seekSet(0);
 
         int count = 1; // unused block itself

@@ -24,7 +24,7 @@ public class JafsBlockCache {
 	    gcache = new GenericCache<>(size);
     }
 
-	public JafsBlock get(long bpos) throws JafsException, IOException {
+	public JafsBlock get(Set<Long> bl, long bpos) throws JafsException, IOException {
 		if (bpos < 0) {
 			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
 		}
@@ -47,6 +47,7 @@ public class JafsBlockCache {
             JafsBlock evicted = gcache.add(bpos, blk);
             if (evicted != null) {
                 evicted.writeToDiskIfNeeded();
+                bl.remove(evicted.bpos);
                 free = evicted;
             }
         }
@@ -57,7 +58,7 @@ public class JafsBlockCache {
 	public void flushBlocks(Set<Long> bl) throws JafsException, IOException {
 	    for (long bpos : bl) {
 	        if (bpos >= 0) {
-                JafsBlock block = get(bpos);
+                JafsBlock block = get(bl, bpos);
                 block.writeToDiskIfNeeded();
             }
         }

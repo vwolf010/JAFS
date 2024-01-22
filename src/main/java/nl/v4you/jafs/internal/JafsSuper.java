@@ -5,8 +5,8 @@ import nl.v4you.jafs.JafsException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class JafsSuper {
 	private static final int VERSION = 1;
@@ -16,56 +16,50 @@ public class JafsSuper {
 	private static int POS_IS_LOCKED = 18;
 	private static int FALSE = 0;
 	private static int TRUE = 1;
-	private Jafs vfs;
-	private JafsBlock rootBlock;
-	private int blockSize;
+	private static int HEADER_SIZE = 19;
+	private final RandomAccessFile raf;
+	private int blockSize = 0;
 	private long blocksTotal = 0;
 	private long blocksUsed = 0;
-	byte[] buf = new byte[64];
+	byte[] buf = new byte[HEADER_SIZE];
 	int isLocked = FALSE;
 
-	private void writeIsLocked() throws JafsException, IOException {
-		rootBlock.seekSet(POS_IS_LOCKED);
-		Set<Long> blockList = new TreeSet<>();
-		rootBlock.writeByte(blockList, isLocked);
-		rootBlock.writeToDiskIfNeeded();
-	}
-
-	private void lock(File myFile, JafsUnusedMap unusedMap) throws JafsException, IOException {
+	public void lock(File myFile, JafsUnusedMap unusedMap) throws JafsException, IOException {
 		if (isLocked == TRUE) {
 			setBlocksTotal(myFile);
 			setBlocksUsed(unusedMap);
 		}
 		else {
 			isLocked = TRUE;
-			writeIsLocked();
+			flush();
 		}
 	}
 
 	public void close() throws JafsException, IOException {
 		isLocked = FALSE;
-		writeIsLocked();
+		flush();
 	}
 
-	public JafsSuper(Jafs vfs, File myFile, JafsUnusedMap unusedMap) throws IOException, JafsException {
-		this.vfs = vfs;
-		rootBlock = new JafsBlock(vfs, -1, 32);
-		read();
-		rootBlock = new JafsBlock(vfs, -1, blockSize);
-		read();
-		lock(myFile, unusedMap);
-	}
-
-	public JafsSuper(Jafs vfs, int blockSize, File myFIle, JafsUnusedMap unusedMap) throws JafsException, IOException {
-		this.vfs = vfs;
-		this.blockSize = blockSize;
-		rootBlock = new JafsBlock(vfs, -1, blockSize);
-		Set<Long> blockList = new TreeSet<>();
-		rootBlock.writeBytes(blockList, "JAFS".getBytes());
-		rootBlock.writeByte(blockList, 0);
-		rootBlock.writeByte(blockList, VERSION);
-		setBlockSize(blockList, blockSize);
-		lock(myFIle, unusedMap);
+	public JafsSuper(RandomAccessFile raf, int blockSize) throws JafsException, IOException {
+		this.raf = raf;
+		if (raf.length() == 0) {
+			if (blockSize <= 0) {
+				throw new JafsException("Unable to create new jafs file with supplied blockSize " + blockSize);
+			}
+			this.blockSize = blockSize;
+			buf = new byte[this.blockSize];
+			flush();
+		}
+		else {
+			read();
+			if (this.blockSize > 0 && blockSize > 0 && this.blockSize != blockSize) {
+				throw new JafsException("Supplied block size [" + blockSize + "] does not match header block size [" + this.blockSize + "]");
+			}
+			if (raf.length() < this.blockSize) {
+				throw new JafsException("Malformed jafs file, file length (" + raf.length() + ") < block size (" + blockSize + ")");
+			}
+			buf = new byte[this.blockSize];
+		}
 	}
 
 	public long getBlocksTotal() {
@@ -80,18 +74,13 @@ public class JafsSuper {
 		incBlocksTotal();
 		incBlocksUsed();
 	}
-	
+
 	public void incBlocksTotal() {
 		blocksTotal++;
-		rootBlock.seekSet(POS_BLOCKS_TOTAL);
-		Set<Long> blockList = new TreeSet<>();
-		rootBlock.writeInt(blockList, blocksTotal);
 	}
 
-	void writeBlocksUsed() {
-		rootBlock.seekSet(POS_BLOCKS_USED);
-		Set<Long> blockList = new TreeSet<>();
-		rootBlock.writeInt(blockList, blocksUsed);
+	void setBlocksUsed() {
+		Util.intToArray(buf, POS_BLOCKS_USED, blocksUsed);
 	}
 
 	public void incBlocksUsed() {
@@ -99,7 +88,6 @@ public class JafsSuper {
 		if (blocksUsed > blocksTotal) {
 			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
 		}
-		writeBlocksUsed();
 	}
 
 	void decBlocksUsed() {
@@ -107,44 +95,47 @@ public class JafsSuper {
 		if (blocksUsed < 0) {
 			throw new RuntimeException("blocksUsed < 0!!!");
 		}
-		writeBlocksUsed();
+		setBlocksUsed();
 	}
 
 	public int getBlockSize() {
 		return blockSize;
 	}
 
-	void setBlockSize(Set<Long> blockList, int blockSize) {
-		rootBlock.seekSet(POS_BLOCK_SIZE);
-		rootBlock.writeInt(blockList, blockSize);
-	}
-
-//	public long getMaxFileSize() {
-//		return maxFileSize;
-//	}
-	
-//	public void setMaxFileSize(Set<Long> blockList, long maxFileSize) {
-//		this.maxFileSize = maxFileSize;
-//		rootBlock.seekSet(10);
-//		rootBlock.writeInt(blockList, maxFileSize);
-//	}
-
-	public void read() throws IOException {
-		rootBlock.seekSet(0);
-		rootBlock.readFromDisk();
-		rootBlock.readBytes(buf, 0, 19);
+	public void read() throws IOException, JafsException {
+		if (raf.length() < HEADER_SIZE) {
+			throw new JafsException("File too small, only " + raf.length() + " bytes");
+		}
+		raf.seek(0);
+		if (HEADER_SIZE != raf.read(buf, 0, HEADER_SIZE)) {
+			throw new JafsException("Could not read header");
+		}
+		if (buf[0] != 'J' || buf[1] != 'A' || buf[2] != 'F' || buf[3] != 'S') {
+			throw new JafsException("Magic is incorrect");
+		}
+		int version = ((buf[4] & 0xff) << 8) | (buf[5] & 0xff);
+		if (version != VERSION) {
+			throw new JafsException("Version is incorrect, shoud be " + VERSION + " but got " + version);
+		}
 		blockSize = (int) Util.arrayToInt(buf, POS_BLOCK_SIZE);
 		blocksUsed =  Util.arrayToInt(buf, POS_BLOCKS_USED);
 		blocksTotal = Util.arrayToInt(buf, POS_BLOCKS_TOTAL);
 		isLocked = buf[POS_IS_LOCKED];
 	}
 
-//	void writeToDisk() throws IOException, JafsException {
-//		rootBlock.writeToDiskIfNeeded();
-//	}
-	
-	void setRafSize() throws IOException {
-		vfs.getRaf().setLength((1 + blocksTotal) * blockSize);
+	private void flush() throws IOException {
+		buf[0] = 'J';
+		buf[1] = 'A';
+		buf[2] = 'F';
+		buf[3] = 'S';
+		buf[4] = 0;
+		buf[5] = VERSION;
+		Util.intToArray(buf, POS_BLOCK_SIZE, blockSize);
+		Util.intToArray(buf, POS_BLOCKS_USED, blocksUsed);
+		Util.intToArray(buf, POS_BLOCKS_TOTAL, blocksTotal);
+		buf[POS_IS_LOCKED] = (byte)isLocked;
+		raf.seek(0);
+		raf.write(buf, 0, blockSize);
 	}
 
 	public void setBlocksTotal(File myFile) {
