@@ -6,7 +6,6 @@ import nl.v4you.jafs.JafsException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
-import java.util.TreeSet;
 
 /*
  * An inode header is structured as follows:

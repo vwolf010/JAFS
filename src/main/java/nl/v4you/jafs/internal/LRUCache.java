@@ -3,7 +3,7 @@ package nl.v4you.jafs.internal;
 import java.util.HashMap;
 import java.util.Map;
 
-class GenericCache<K, V> {
+class LRUCache<K, V> {
 
     private class GenericCacheEntry {
         K key;
@@ -24,7 +24,7 @@ class GenericCache<K, V> {
     private long cntMiss = 0;
     private long cntRemoved = 0;
 
-    GenericCache(int size) {
+    LRUCache(int size) {
         mostLeft = null;
         mostRight = null;
         if (size < 3) {

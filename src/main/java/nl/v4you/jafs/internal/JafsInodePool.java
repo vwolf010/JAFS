@@ -1,7 +1,6 @@
 package nl.v4you.jafs.internal;
 
 import nl.v4you.jafs.Jafs;
-import nl.v4you.jafs.internal.JafsInode;
 
 import java.util.LinkedList;
 

@@ -5,12 +5,12 @@ import nl.v4you.jafs.JafsException;
 
 public class JafsDirEntryCache {
 
-    private GenericCache<OneAtATimeHash, JafsDirEntry> gcache;
+    private LRUCache<OneAtATimeHash, JafsDirEntry> gcache;
 
     OneAtATimeHash hs = new OneAtATimeHash(null);
 
     public JafsDirEntryCache(int size) throws JafsException {
-        gcache = new GenericCache<>(size);
+        gcache = new LRUCache<>(size);
     }
 
     public void add(String dirName, JafsDirEntry entry) throws JafsException {

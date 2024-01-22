@@ -42,7 +42,6 @@ public class JafsInodeContext {
 		level0MaxSize = (ptrsPerInode - 2) * blockSize;
 		level1MaxSize = level0MaxSize + ptrsPerPtrBlock * blockSize;
 		maxFileSizeReal = calcMaxFileSize(blockSize);
-		System.out.print(this);
 	}
 
 	int getPtrsPerInode() {

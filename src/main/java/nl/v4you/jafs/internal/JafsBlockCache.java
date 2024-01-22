@@ -2,26 +2,20 @@ package nl.v4you.jafs.internal;
 
 import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
-import nl.v4you.jafs.internal.GenericCache;
-import nl.v4you.jafs.internal.JafsBlock;
 
 import java.io.IOException;
 import java.util.Set;
 
 public class JafsBlockCache {
-
 	private Jafs vfs;
-
-	private GenericCache<Long, JafsBlock> gcache;
-
+	private LRUCache<Long, JafsBlock> gcache;
     private JafsBlock free = null;
-
     public int cacheMaxSize;
 
 	public JafsBlockCache(Jafs vfs, int size) {
 	    this.vfs = vfs;
 	    cacheMaxSize = size;
-	    gcache = new GenericCache<>(size);
+	    gcache = new LRUCache<>(size);
     }
 
 	public JafsBlock get(Set<Long> bl, long bpos) throws JafsException, IOException {
@@ -34,14 +28,14 @@ public class JafsBlockCache {
 		}
 
         JafsBlock blk = gcache.get(bpos);
-        if (blk==null) {
-            if (free==null) {
+        if (blk == null) {
+            if (free == null) {
                 blk = new JafsBlock(vfs, bpos);
             }
             else {
                 blk = free;
-                free = null;
                 blk.setBpos(bpos);
+                free = null;
             }
             blk.readFromDisk();
             JafsBlock evicted = gcache.add(bpos, blk);

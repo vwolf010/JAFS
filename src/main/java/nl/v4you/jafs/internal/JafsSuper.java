@@ -1,6 +1,5 @@
 package nl.v4you.jafs.internal;
 
-import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
 
 import java.io.File;
@@ -115,7 +114,7 @@ public class JafsSuper {
 		}
 		int version = ((buf[4] & 0xff) << 8) | (buf[5] & 0xff);
 		if (version != VERSION) {
-			throw new JafsException("Version is incorrect, shoud be " + VERSION + " but got " + version);
+			throw new JafsException("Version is incorrect, should be " + VERSION + " but got " + version);
 		}
 		blockSize = (int) Util.arrayToInt(buf, POS_BLOCK_SIZE);
 		blocksUsed =  Util.arrayToInt(buf, POS_BLOCKS_USED);
