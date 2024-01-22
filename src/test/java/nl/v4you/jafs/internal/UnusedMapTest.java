@@ -116,7 +116,7 @@ public class UnusedMapTest {
             }
             jos.close();
         }
-        System.err.println(jafs.stats());
+        System.out.println(jafs.stats());
         jafs.close();
 
         g = new File(TEST_ARCHIVE);
@@ -129,49 +129,44 @@ public class UnusedMapTest {
     public void setUnused() throws JafsException, IOException {
         Jafs jafs = new Jafs(TEST_ARCHIVE, 128);
 
-        Set<Long> blockList = new TreeSet<>();
-        JafsBlock block = jafs.getCacheBlockForWrite(blockList, 0);
+        JafsBlock block = jafs.getCacheBlock(0);
         for (int n = 0; n < 8; n++) {
             int mask = 0b10000000 >> n;
             int invMask = mask ^ 0xff;
 
             block.seekSet(1);
-            block.writeByte(blockList, 0);
+            block.writeByte(0);
             block.writeToDiskIfNeeded();
             JafsUnusedMap um = jafs.getUnusedMap();
-            um.setAvailable(blockList, 8 + n);
-            jafs.getBlockCache().flushBlocks(blockList);
-            blockList.clear();
+            um.setAvailable(8 + n);
+            jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
             block.seekSet(1);
             assertEquals(mask, block.readByte());
 
             block.seekSet(1);
-            block.writeByte(blockList, 0b11111111);
+            block.writeByte(0b11111111);
             block.writeToDiskIfNeeded();
-            um.setAvailable(blockList, 8 + n);
-            jafs.getBlockCache().flushBlocks(blockList);
-            blockList.clear();
+            um.setAvailable(8 + n);
+            jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
             block.seekSet(1);
             assertEquals(0b11111111, block.readByte());
 
             block.seekSet(1);
-            block.writeByte(blockList, 0b11111111);
+            block.writeByte(0b11111111);
             block.writeToDiskIfNeeded();
-            um.setUnavailable(blockList, 8 + n);
-            jafs.getBlockCache().flushBlocks(blockList);
-            blockList.clear();
+            um.setUnavailable(8 + n);
+            jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
             block.seekSet(1);
             assertEquals( invMask, block.readByte());
 
             block.seekSet(1);
-            block.writeByte(blockList, 0);
+            block.writeByte(0);
             block.writeToDiskIfNeeded();
-            um.setUnavailable(blockList, 8 + n);
-            jafs.getBlockCache().flushBlocks(blockList);
-            blockList.clear();
+            um.setUnavailable(8 + n);
+            jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
             block.seekSet(1);
             assertEquals( 0, block.readByte());

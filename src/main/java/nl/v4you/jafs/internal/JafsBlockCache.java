@@ -4,7 +4,7 @@ import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.TreeSet;
 
 public class JafsBlockCache {
 	private Jafs vfs;
@@ -12,13 +12,15 @@ public class JafsBlockCache {
     private JafsBlock free = null;
     public int cacheMaxSize;
 
+    private TreeSet<Long> flushList = new TreeSet<>();
+
 	public JafsBlockCache(Jafs vfs, int size) {
 	    this.vfs = vfs;
 	    cacheMaxSize = size;
 	    gcache = new LRUCache<>(size);
     }
 
-	public JafsBlock get(Set<Long> bl, long bpos) throws JafsException, IOException {
+	public JafsBlock get(long bpos) throws JafsException, IOException {
 		if (bpos < 0) {
 			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
 		}
@@ -41,7 +43,7 @@ public class JafsBlockCache {
             JafsBlock evicted = gcache.add(bpos, blk);
             if (evicted != null) {
                 evicted.writeToDiskIfNeeded();
-                bl.remove(evicted.bpos);
+                flushList.remove(evicted.bpos);
                 free = evicted;
             }
         }
@@ -49,14 +51,18 @@ public class JafsBlockCache {
 		return blk;
 	}
 
-	public void flushBlocks(Set<Long> bl) throws JafsException, IOException {
-	    for (long bpos : bl) {
+    public void addToFlushList(long bpos) {
+        flushList.add(bpos);
+    }
+
+	public void flushBlocks() throws JafsException, IOException {
+	    for (long bpos : flushList) {
 	        if (bpos >= 0) {
-                JafsBlock block = get(bl, bpos);
+                JafsBlock block = get(bpos);
                 block.writeToDiskIfNeeded();
             }
         }
-        bl.clear();
+        flushList.clear();
     }
 
 	public String stats() {

@@ -4,7 +4,6 @@ import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
-import java.util.Set;
 
 public class JafsInodeContext {
 	public static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
@@ -48,18 +47,18 @@ public class JafsInodeContext {
 		return ptrsPerInode;
 	}
 
-	private void createNewBlock(Set<Long> blockList, JafsInode inode, int n, boolean isPtrBlock) throws JafsException, IOException {
-		long ptr = vfs.getAvailableBpos(blockList);
+	private void createNewBlock(JafsInode inode, int n, boolean isPtrBlock) throws JafsException, IOException {
+		long ptr = vfs.getAvailableBpos();
 		if (isPtrBlock) {
-			JafsBlock block = vfs.getCacheBlockForWrite(blockList, ptr);
-			block.initZeros(blockList);
+			JafsBlock block = vfs.getCacheBlock(ptr);
+			block.initZeros();
 		}
 		inode.ptrs[n] = ptr;
-		inode.flushInode(blockList);
+		inode.flushInode();
 	}
 
-	private long getBlkPos(Set<Long> blockList, int level, long bpos, long off, long len, long fpos) throws JafsException, IOException {
-		JafsBlock block = vfs.getCacheBlockForWrite(blockList, bpos);
+	private long getBlkPos(int level, long bpos, long off, long len, long fpos) throws JafsException, IOException {
+		JafsBlock block = vfs.getCacheBlock(bpos);
 		if (level == 0) {
 			// data block is reached
 			return bpos;
@@ -71,18 +70,18 @@ public class JafsInodeContext {
 			block.seekSet(idx << 2);
 			long ptr = block.readInt();
 			if (ptr == 0) {
-				ptr = vfs.getAvailableBpos(blockList);
+				ptr = vfs.getAvailableBpos();
 				block.seekSet(idx << 2);
-				block.writeInt(blockList, ptr);
+				block.writeInt(ptr);
 				// init ptr block with zeros
-				block = vfs.getCacheBlockForWrite(blockList, ptr);
-				block.initZeros(blockList);
+				block = vfs.getCacheBlock(ptr);
+				block.initZeros();
 			}
-			return getBlkPos(blockList, level - 1, ptr, off + idx * nextLen, nextLen, fpos);
+			return getBlkPos(level - 1, ptr, off + idx * nextLen, nextLen, fpos);
 		}
 	}
 
-	long getBlkPos(Set<Long> blockList, JafsInode inode, long fpos) throws JafsException, IOException {
+	long getBlkPos(JafsInode inode, long fpos) throws JafsException, IOException {
 		if (fpos < 0) {
 			throw new JafsException("file position cannot be negative, got: " + fpos);
 		}
@@ -96,7 +95,7 @@ public class JafsInodeContext {
 			int idx = (int)(fpos / blockSize);
 			if (inode.ptrs[idx] == 0) {
 				// Create new data block (ptr in inode)
-				createNewBlock(blockList, inode, idx, false);
+				createNewBlock(inode, idx, false);
 			}
 			return inode.ptrs[idx];
 		}
@@ -104,30 +103,30 @@ public class JafsInodeContext {
 			int idx = ptrsPerInode - 2;
 			if (inode.ptrs[idx] == 0) {
 				// Create new ptr block
-				createNewBlock(blockList, inode, idx, true);
+				createNewBlock(inode, idx, true);
 			}
 			long lengthRemaining = level1MaxSize - level0MaxSize;
-			return getBlkPos(blockList, 1, inode.ptrs[idx], level0MaxSize, lengthRemaining, fpos);
+			return getBlkPos(1, inode.ptrs[idx], level0MaxSize, lengthRemaining, fpos);
 		}
 		int idx = ptrsPerInode - 1;
 		if (inode.ptrs[idx] == 0) {
 			// Create new ptr block
-			createNewBlock(blockList, inode, idx, true);
+			createNewBlock(inode, idx, true);
 		}
 		long lengthRemaining = maxFileSizeReal - level1MaxSize;
-		return getBlkPos(blockList, 2, inode.ptrs[idx], level1MaxSize, lengthRemaining, fpos);
+		return getBlkPos(2, inode.ptrs[idx], level1MaxSize, lengthRemaining, fpos);
 	}
 
-	void freeBlock(Set<Long> blockList, long bpos) throws JafsException, IOException {
+	void freeBlock(long bpos) throws JafsException, IOException {
 		JafsUnusedMap um = vfs.getUnusedMap();
-		um.setAvailable(blockList, bpos);
+		um.setAvailable(bpos);
 		vfs.getSuper().decBlocksUsed();
 	}
 	
-	boolean free(Set<Long> blockList, long size, long bpos, long fPosStart, long levelSize) throws JafsException, IOException {
+	boolean free(long size, long bpos, long fPosStart, long levelSize) throws JafsException, IOException {
 		if (levelSize == blockSize) {
 			if (size <= fPosStart) {
-				freeBlock(blockList, bpos);
+				freeBlock(bpos);
 				return true;
 			}
 			return false;
@@ -135,7 +134,7 @@ public class JafsInodeContext {
 		else {
 		    // this is a pointer block
 			levelSize /= ptrsPerPtrBlock;
-			JafsBlock dum = vfs.getCacheBlockForWrite(blockList, bpos);
+			JafsBlock dum = vfs.getCacheBlock(bpos);
 			dum.seekSet(0);
 			boolean allHasBeenDeleted = true;
 			for (int n = 0; n < ptrsPerPtrBlock; n++) {
@@ -143,9 +142,9 @@ public class JafsInodeContext {
 				if (ptr != 0) {
 					long posStart = fPosStart + n * levelSize;
 					if (size <= posStart) {
-						if (free(blockList, size, ptr, posStart, levelSize)) {
+						if (free(size, ptr, posStart, levelSize)) {
 							dum.seekSet(n * 4);
-							dum.writeInt(blockList, 0);
+							dum.writeInt(0);
 						}
 						else {
 							allHasBeenDeleted = false;
@@ -159,7 +158,7 @@ public class JafsInodeContext {
 		}
 	}
 
-	void freeDataAndPtrBlocks(Set<Long> blockList, JafsInode inode) throws JafsException, IOException {
+	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
 		boolean flushInode = false;
 		for (int n = 0; n < ptrsPerInode && inode.ptrs[n] != 0; n++) {
 			long fPosStart = 0;
@@ -177,20 +176,20 @@ public class JafsInodeContext {
 				fPosEnd = maxFileSizeReal;
 			}
 			if (inode.size <= fPosStart) {
-				if (free(blockList, inode.size, inode.ptrs[n], fPosStart, fPosEnd - fPosStart)) {
+				if (free(inode.size, inode.ptrs[n], fPosStart, fPosEnd - fPosStart)) {
 					inode.ptrs[n] = 0;
 					flushInode = true;
 				}
 			}
 		}
 		if (flushInode) {
-			inode.flushInode(blockList);
+			inode.flushInode();
 		}
 	}
 
 	long check(long bpos, int level) throws JafsException, IOException {
 		long size = 0;
-		JafsBlock dum = vfs.getCacheBlockForRead(bpos);
+		JafsBlock dum = vfs.getCacheBlock(bpos);
 		if (level != 0) {
 			// this is a pointer block, check all it's entries
 			dum.seekSet(0);

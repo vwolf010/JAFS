@@ -5,7 +5,6 @@ import nl.v4you.jafs.JafsException;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Set;
 
 public class JafsSuper {
 	private static final int VERSION = 1;
@@ -69,7 +68,7 @@ public class JafsSuper {
 		return blocksUsed;
 	}
 
-	public void incBlocksTotalAndUsed(Set<Long> blockList) {
+	public void incBlocksTotalAndUsed() {
 		incBlocksTotal();
 		incBlocksUsed();
 	}

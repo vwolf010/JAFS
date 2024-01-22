@@ -6,7 +6,6 @@ import nl.v4you.jafs.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
-import java.util.Set;
 
 /*
  * <ushort: entry size> = filename length + filename checksum + type + inode bpos + filename
@@ -29,14 +28,14 @@ public class JafsDir {
 	private static final int MAX_FILE_NAME_LENGTH = 0x7FFF;
 	private final byte[] bb = new byte[BB_LEN];
 
-	public static void createRootDir(Set<Long> blockList, Jafs vfs) throws JafsException, IOException {
+	public static void createRootDir(Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().claim();
         JafsDir dir = vfs.getDirPool().claim();
         try {
-            rootInode.createInode(blockList, JafsInode.INODE_DIR);
-            rootInode.flushInode(blockList);
+            rootInode.createInode(JafsInode.INODE_DIR);
+            rootInode.flushInode();
             dir.setInode(rootInode);
-            dir.initDir(blockList);
+            dir.initDir();
         }
         finally {
             vfs.getInodePool().release(rootInode);
@@ -118,7 +117,7 @@ public class JafsDir {
 		}
 	}
 
-	public void deleteEntry(Set<Long> blockList, String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
+	public void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
 		// Test the next entry to see if we can merge with it
 		// in an attempt to avoid fragmentation of the directory list
 		inode.seekSet(entry.startPos - 2);
@@ -131,22 +130,24 @@ public class JafsDir {
 				// we can merge with this entry
 				entrySize += ENTRY_SIZE_LENGTH + entrySizeNextEntry;
 				inode.seekSet(entry.startPos - 2);
-				inode.writeShort(blockList, entrySize);
+				inode.writeShort(entrySize);
 			}
 		}
 
 		// Update the deleted entry
         vfs.getDirCache().remove(canonicalPath);
         inode.seekSet(entry.startPos);
-		inode.writeByte(blockList,0); // name length
+		inode.writeByte(0); // name length
 	}
 
-	public void entryClearInodePtr(Set<Long> blockList, JafsDirEntry entry) throws JafsException, IOException {
+	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
 		inode.seekSet(entry.startPos + 1 + 1 + 1);
-		inode.writeByte(blockList, 0);
-		inode.writeByte(blockList, 0);
-		inode.writeByte(blockList, 0);
-		inode.writeByte(blockList, 0);
+		inode.writeShort(0);
+		inode.writeShort(0);
+		//inode.writeByte(0);
+		//inode.writeByte(0);
+		//inode.writeByte(0);
+		//inode.writeByte(0);
 	}
 
 	public boolean hasActiveEntries() throws JafsException, IOException {
@@ -164,7 +165,7 @@ public class JafsDir {
 		return false;
 	}
 
-	private void createEntry(Set<Long> blockList, JafsDirEntry entry) throws JafsException, IOException {
+	private void createEntry(JafsDirEntry entry) throws JafsException, IOException {
 		if (Util.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
 				throw new JafsException("Directory name [" + new String(entry.name, StandardCharsets.UTF_8) + "] should not contain a slash (/)");
@@ -234,12 +235,12 @@ public class JafsDir {
 
                 // adjust the size of this entry
 				inode.seekCur(-2);
-				inode.writeShort(blockList, overhead + nameBuf.length);
+				inode.writeShort(overhead + nameBuf.length);
 
 				// create a new entry
 				inode.seekCur(overhead + nameBuf.length);
-				inode.writeShort(blockList, entrySize - (overhead + nameBuf.length + ENTRY_SIZE_LENGTH));
-				inode.writeByte(blockList, 0);
+				inode.writeShort(entrySize - (overhead + nameBuf.length + ENTRY_SIZE_LENGTH));
+				inode.writeByte( 0);
 				inode.seekSet(reuseEntryStartPos);
 			}
             entry.startPos = reuseEntryStartPos;
@@ -267,24 +268,24 @@ public class JafsDir {
             tLen += nameBuf.length;
         }
         else {
-            inode.writeBytes(blockList, bb, tLen);
+            inode.writeBytes(bb, tLen);
             tLen = 0;
-            inode.writeBytes(blockList, nameBuf, nameBuf.length);
+            inode.writeBytes(nameBuf, nameBuf.length);
         }
 		if (reuseEntryStartPos == 0) {
 			// write zero length to mark end of the directory entries list
 			Util.shortToArray(bb, tLen, 0);
 			tLen+=2;
 		}
-		inode.writeBytes(blockList, bb, 0, tLen);
+		inode.writeBytes(bb, 0, tLen);
 	}
 
-	private void initDir(Set<Long> blockList) throws JafsException, IOException {
+	private void initDir() throws JafsException, IOException {
 		inode.seekSet(0);
-		inode.writeShort(blockList,0);
+		inode.writeShort(0);
 	}
 	
-	public void createNewEntry(Set<Long> blockList, String canonicalPath, byte[] name, int type, long bpos) throws JafsException, IOException {
+	public void createNewEntry(String canonicalPath, byte[] name, int type, long bpos) throws JafsException, IOException {
 	    if (name == null || name.length == 0) {
 	        throw new JafsException("Name not suppied");
         }
@@ -308,11 +309,11 @@ public class JafsDir {
 		entry.bpos = bpos;
 		entry.type = type;
 		entry.name = name;
-		createEntry(blockList, entry);
+		createEntry(entry);
 		vfs.getDirCache().add(canonicalPath, entry);
 	}
 
-    public void mkinode(Set<Long> blockList, JafsDirEntry entry, int type) throws JafsException, IOException {
+    public void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
         if (entry == null) {
             throw new JafsException("entry cannot be null");
         }
@@ -320,10 +321,10 @@ public class JafsDir {
             JafsInode newInode = vfs.getInodePool().claim();
             JafsDir dir = vfs.getDirPool().claim();
             try {
-                newInode.createInode(blockList, type);
+                newInode.createInode(type);
                 if ((type & JafsInode.INODE_DIR) != 0) {
                     dir.setInode(newInode);
-                    dir.initDir(blockList);
+                    dir.initDir();
                 }
                 entry.bpos = newInode.getBpos();
             }
@@ -339,7 +340,7 @@ public class JafsDir {
             }
 
             Util.intToArray(bb, 0, (int)entry.bpos);
-            inode.writeBytes(blockList, bb, 0, 4); // this is where the bpos is added to the directory entry
+            inode.writeBytes(bb, 0, 4); // this is where the bpos is added to the directory entry
         }
     }
 

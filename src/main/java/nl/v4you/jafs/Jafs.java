@@ -5,8 +5,6 @@ import nl.v4you.jafs.internal.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Set;
-import java.util.TreeSet;
 
 // https://www.linuxjournal.com/article/2151
 
@@ -112,12 +110,8 @@ public class Jafs implements AutoCloseable {
 		return superBlock;
 	}
 
-	public JafsBlock getCacheBlockForRead(long bpos) throws JafsException, IOException {
-		return blockCache.get(null, bpos);
-	}
-
-	public JafsBlock getCacheBlockForWrite(Set<Long> bl, long bpos) throws JafsException, IOException {
-		return blockCache.get(bl, bpos);
+	public JafsBlock getCacheBlock(long bpos) throws JafsException, IOException {
+		return blockCache.get(bpos);
 	}
 
 	public JafsBlockCache getBlockCache() {
@@ -128,23 +122,23 @@ public class Jafs implements AutoCloseable {
 		return dirCache;
 	}
 
-	private long appendNewBlockToArchive(Set<Long> blockList) throws JafsException, IOException {
+	private long appendNewBlockToArchive() throws JafsException, IOException {
 		superBlock.incBlocksTotal();
 		long bpos = (superBlock.getBlocksTotal() - 1);
 		long unusedMapBpos = um.getUnusedMapBpos(bpos);
 		if (bpos == unusedMapBpos) {
-			superBlock.incBlocksTotalAndUsed(blockList);
-			um.initializeUnusedMap(blockList, unusedMapBpos);
+			superBlock.incBlocksTotalAndUsed();
+			um.initializeUnusedMap(unusedMapBpos);
 			bpos++;
 		}
 		return bpos;
 	}
 
-	public long getAvailableBpos(Set<Long> blockList) throws JafsException, IOException {
-		long bpos = getUnusedMap().getUnusedBpos(blockList);
-		if (bpos == 0) bpos = appendNewBlockToArchive(blockList);
+	public long getAvailableBpos() throws JafsException, IOException {
+		long bpos = getUnusedMap().getUnusedBpos();
+		if (bpos == 0) bpos = appendNewBlockToArchive();
 		getSuper().incBlocksUsed();
-		um.setUnavailable(blockList, bpos);
+		um.setUnavailable(bpos);
 		return bpos;
 	}
 
@@ -183,9 +177,8 @@ public class Jafs implements AutoCloseable {
 		superBlock = new JafsSuper(raf, blockSize);
 		initInodeContext(superBlock.getBlockSize());
 		if (isNewFile) {
-			Set<Long> blockList = new TreeSet<>();
-			JafsDir.createRootDir(blockList, this);
-			blockCache.flushBlocks(blockList);
+			JafsDir.createRootDir(this);
+			blockCache.flushBlocks();
 		}
 		superBlock.lock(myFile, getUnusedMap());
 	}

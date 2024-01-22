@@ -6,18 +6,17 @@ import nl.v4you.jafs.JafsException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
-import java.util.Set;
 
 public class JafsBlock {
 	private static final int SUPERBLOCK_SIZE = 1;
-
 	private final int blockSize;
 	private final byte[] buf;
-	public long bpos = -1;
+	public long bpos;
 	private final RandomAccessFile raf;
-	public int byteIdx = 0;
+	public int byteIdx;
 	boolean needsFlush = false;
 	final Jafs vfs;
+	final JafsBlockCache blockCache;
 
 	int bytesLeft() {
 		return blockSize-byteIdx;
@@ -29,6 +28,7 @@ public class JafsBlock {
 	
 	JafsBlock(Jafs vfs, long bpos, int blockSize) {
 		this.vfs = vfs;
+		this.blockCache = vfs.getBlockCache();
 		raf = vfs.getRaf();
 		if (blockSize < 0) {
 			blockSize = vfs.getSuper().getBlockSize();
@@ -44,26 +44,28 @@ public class JafsBlock {
         byteIdx = 0;
     }
 
-	void initZeros(Set<Long> blockList) {
+	void initZeros() {
 		Arrays.fill(buf, (byte)0);
-        markForFlush(blockList);
+        markForFlush();
 	}
 
-	void initOnes(Set<Long> blockList) {
+	void initOnes() {
 		Arrays.fill(buf, (byte)0xff);
-		markForFlush(blockList);
+		markForFlush();
 	}
 	
 	void seekSet(int b) {
 		byteIdx = b;
 	}
 		
-	void readFromDisk() throws IOException {
+	void readFromDisk() throws IOException, JafsException {
+		if (needsFlush) {
+			throw new JafsException("cannot read from disk when needsFlush == true");
+		}
 		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
 		raf.seek(start);
 		raf.read(buf);
 		byteIdx = 0;
-		needsFlush = false;
 	}
 	
 	private void writeToDisk() throws IOException {
@@ -74,7 +76,9 @@ public class JafsBlock {
 	}
 
 	void writeToDiskIfNeeded() throws IOException, JafsException {
-	    if (needsFlush) writeToDisk();
+	    if (needsFlush) {
+			writeToDisk();
+		}
     }
 
 //	void dumpBlock(File f) {
@@ -97,36 +101,36 @@ public class JafsBlock {
 		return buf[0] & 0xff;
 	}
 
-	void pokeSkipMapByte(Set<Long> blockList, int b) {
+	void pokeSkipMapByte(int b) {
 		buf[0] = (byte)b;
-        markForFlush(blockList);
+        markForFlush();
 	}
 
 	int readByte() {
 		return buf[byteIdx++] & 0xff;
 	}
 
-	void writeByte(Set<Long> blockList, int b) {
+	void writeByte(int b) {
 		buf[byteIdx++] = (byte)b;
-        markForFlush(blockList);
+        markForFlush();
 	}
 
 	int peekByte() {
 		return buf[byteIdx];
 	}
 
-	void pokeByte(Set<Long> blockList, int b) {
+	void pokeByte(int b) {
 		buf[byteIdx] = (byte)b;
-        markForFlush(blockList);
+        markForFlush();
 	}
 
 	int peekByte(int idx) {
 		return buf[idx] & 0xff;
 	}
 
-	void pokeByte(Set<Long> blockList, int idx, int b) {
+	void pokeByte(int idx, int b) {
 		buf[idx] = (byte)b;
-        markForFlush(blockList);
+        markForFlush();
 	}
 
 	void readBytes(byte[] b, int off, int len) {
@@ -145,26 +149,26 @@ public class JafsBlock {
 		byteIdx += len;
 	}
 
-	void writeBytes(Set<Long> blockList, byte[] b) {
-		writeBytes(blockList, b, b.length);
+	void writeBytes(byte[] b) {
+		writeBytes(b, b.length);
 	}
 
-	void writeBytes(Set<Long> blockList, byte[] b, int off, int len) {
+	void writeBytes(byte[] b, int off, int len) {
 		if (len == 0) {
 			return;
 		}
 		System.arraycopy(b, off, buf, byteIdx, len);
 		byteIdx += len;
-        markForFlush(blockList);
+        markForFlush();
 	}
 
-	void writeBytes(Set<Long> blockList, byte[] b, int len) {
+	void writeBytes(byte[] b, int len) {
 		if (len == 0) {
 			return;
 		}
 		System.arraycopy(b, 0, buf, byteIdx, len);
 		byteIdx += len;
-		markForFlush(blockList);
+		markForFlush();
 	}
 	long readInt() {
 		long i = 0;
@@ -175,17 +179,17 @@ public class JafsBlock {
 		return i;
 	}
 
-	void writeInt(Set<Long> blockList, long l) {
+	void writeInt(long l) {
 		buf[byteIdx++] = (byte)((l >>> 24) & 0xffL);
 		buf[byteIdx++] = (byte)((l >>> 16) & 0xffL);
 		buf[byteIdx++] = (byte)((l >>>  8) & 0xffL);
 		buf[byteIdx++] = (byte)(l & 0xffL);
-		markForFlush(blockList);
+		markForFlush();
 	}
 
-	void markForFlush(Set<Long> blockList) {
+	void markForFlush() {
         if (!needsFlush) {
-            blockList.add(bpos);
+            blockCache.addToFlushList(bpos);
             needsFlush = true;
         }
     }

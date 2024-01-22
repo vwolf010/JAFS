@@ -6,8 +6,6 @@ import nl.v4you.jafs.internal.JafsInode;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Set;
-import java.util.TreeSet;
 
 public class JafsOutputStream extends OutputStream {
 	private final Jafs vfs;
@@ -31,9 +29,8 @@ public class JafsOutputStream extends OutputStream {
 				inode.seekEnd(0);
 			}
 			else {
-				Set<Long> blockList = new TreeSet<>();
-				inode.resetSize(blockList);
-				vfs.getBlockCache().flushBlocks(blockList);
+				inode.resetSize();
+				vfs.getBlockCache().flushBlocks();
 			}
 		}
 	}
@@ -43,7 +40,7 @@ public class JafsOutputStream extends OutputStream {
 		super.flush();
 	}
 
-	private void createInode(Set<Long> blockList) throws IOException {
+	private void createInode() throws IOException {
 		try {
 			JafsFile f = new JafsFile(vfs, path);
 			JafsInode inodeDirectory = vfs.getInodePool().claim();
@@ -55,7 +52,7 @@ public class JafsOutputStream extends OutputStream {
 				if (entry == null) {
 					throw new JafsException("No entry found for [" + path + "]");
 				}
-				dir.mkinode(blockList, entry, JafsInode.INODE_FILE);
+				dir.mkinode(entry, JafsInode.INODE_FILE);
 				inode = new JafsInode(vfs);
 				inode.openInode(entry.getBpos());
 			}
@@ -72,12 +69,11 @@ public class JafsOutputStream extends OutputStream {
 	@Override
 	public void write(int arg0) throws IOException {
 		try {
-			Set<Long> blockList = new TreeSet<>();
 			if (inode == null) {
-				createInode(blockList);
+				createInode();
 			}
-			inode.writeByte(blockList, arg0);
-			vfs.getBlockCache().flushBlocks(blockList);
+			inode.writeByte(arg0);
+			vfs.getBlockCache().flushBlocks();
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
@@ -87,12 +83,11 @@ public class JafsOutputStream extends OutputStream {
 	@Override
 	public void write(byte[] buf, int start, int len) throws IOException {
 		try {
-			Set<Long> blockList = new TreeSet<>();
 			if (inode == null) {
-				createInode(blockList);
+				createInode();
 			}
-			inode.writeBytes(blockList, buf, start, len);
-			vfs.getBlockCache().flushBlocks(blockList);
+			inode.writeBytes(buf, start, len);
+			vfs.getBlockCache().flushBlocks();
 		} catch (JafsException e) {
 			e.printStackTrace();
 			throw new IOException("VFSExcepion wrapper: "+e.getMessage());
@@ -107,7 +102,6 @@ public class JafsOutputStream extends OutputStream {
 	@Override
 	public void close() throws IOException {
 		try {
-			Set<Long> blockList = new TreeSet<>();
 			if (inode.getSize() == 0) {
 				try {
 					JafsFile f = new JafsFile(vfs, path);
@@ -120,7 +114,7 @@ public class JafsOutputStream extends OutputStream {
 						if (entry == null) {
 							throw new JafsException("No entry found for [" + path + "]");
 						}
-						dir.entryClearInodePtr(blockList, entry);
+						dir.entryClearInodePtr(entry);
 					}
 					finally {
 						vfs.getInodePool().release(inodeDirectory);
@@ -131,8 +125,8 @@ public class JafsOutputStream extends OutputStream {
 					throw new IOException("VFSExcepion wrapper: "+e.getMessage());
 				}
 			}
-			inode.free(blockList, oldSize);
-			vfs.getBlockCache().flushBlocks(blockList);
+			inode.free(oldSize);
+			vfs.getBlockCache().flushBlocks();
 		} catch (JafsException e) {
 			throw new RuntimeException(e);
 		}
