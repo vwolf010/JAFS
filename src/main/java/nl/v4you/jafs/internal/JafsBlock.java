@@ -5,6 +5,7 @@ import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Arrays;
 
 public class JafsBlock {
 	private final int blockSize = 4096;
@@ -31,16 +32,14 @@ public class JafsBlock {
     }
 
 	void initZeros(int len) {
-		for (int i = 0; i < len; i++) {
-			buf[byteIdx++] = 0;
-		}
+		Arrays.fill(buf, byteIdx, byteIdx + len, (byte)0);
+		byteIdx += len;
         markForFlush();
 	}
 
 	void initOnes(int len) {
-		for (int i = 0; i < len; i++) {
-			buf[byteIdx++] = 1;
-		}
+		Arrays.fill(buf, byteIdx, byteIdx + len, (byte)0xff);
+		byteIdx += len;
 		markForFlush();
 	}
 	
