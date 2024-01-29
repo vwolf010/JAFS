@@ -123,48 +123,49 @@ public class UnusedMapTest {
 
     @Test
     public void setUnused() throws JafsException, IOException {
-        Jafs jafs = new Jafs(TEST_ARCHIVE, 128);
+        int blockSize = 128;
+        Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsBlock block = jafs.getCacheBlock(0);
         for (int n = 0; n < 8; n++) {
             int mask = 0b10000000 >> n;
             int invMask = mask ^ 0xff;
 
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             block.writeByte(0);
             block.writeToDisk();
             JafsUnusedMap um = jafs.getUnusedMap();
             um.setAvailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             assertEquals(mask, block.readByte());
 
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             block.writeByte(0b11111111);
             block.writeToDisk();
             um.setAvailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             assertEquals(0b11111111, block.readByte());
 
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             block.writeByte(0b11111111);
             block.writeToDisk();
             um.setUnavailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             assertEquals( invMask, block.readByte());
 
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             block.writeByte(0);
             block.writeToDisk();
             um.setUnavailable(8 + n);
             jafs.getBlockCache().flushBlocks();
             block.readFromDisk();
-            block.seekSet(1);
+            block.seekSet(blockSize + 1);
             assertEquals( 0, block.readByte());
         }
 
