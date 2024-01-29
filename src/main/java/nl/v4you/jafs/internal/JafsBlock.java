@@ -5,11 +5,9 @@ import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
 
 public class JafsBlock {
-	private static final int SUPERBLOCK_SIZE = 1;
-	private final int blockSize;
+	private final int blockSize = 4096;
 	private final byte[] buf;
 	public long bpos;
 	private final RandomAccessFile raf;
@@ -18,22 +16,10 @@ public class JafsBlock {
 	final Jafs vfs;
 	final JafsBlockCache blockCache;
 
-	int bytesLeft() {
-		return blockSize-byteIdx;
-	}
-
 	JafsBlock(Jafs vfs, long bpos) {
-		this(vfs, bpos, -1);
-	}
-	
-	JafsBlock(Jafs vfs, long bpos, int blockSize) {
 		this.vfs = vfs;
 		this.blockCache = vfs.getBlockCache();
 		raf = vfs.getRaf();
-		if (blockSize < 0) {
-			blockSize = vfs.getSuper().getBlockSize();
-		}
-		this.blockSize = blockSize;
 		buf = new byte[blockSize];
 		this.bpos = bpos;
 		byteIdx = 0;
@@ -44,13 +30,17 @@ public class JafsBlock {
         byteIdx = 0;
     }
 
-	void initZeros() {
-		Arrays.fill(buf, (byte)0);
+	void initZeros(int len) {
+		for (int i = 0; i < len; i++) {
+			buf[byteIdx++] = 0;
+		}
         markForFlush();
 	}
 
-	void initOnes() {
-		Arrays.fill(buf, (byte)0xff);
+	void initOnes(int len) {
+		for (int i = 0; i < len; i++) {
+			buf[byteIdx++] = 1;
+		}
 		markForFlush();
 	}
 	
@@ -62,7 +52,7 @@ public class JafsBlock {
 		if (needsFlush) {
 			throw new JafsException("cannot read from disk when needsFlush == true");
 		}
-		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
+		long start = bpos * blockSize;
 		raf.seek(start);
 		raf.read(buf);
 		byteIdx = 0;
@@ -75,7 +65,7 @@ public class JafsBlock {
 		}
 	}
 	void writeToDisk() throws IOException {
-		long start = (SUPERBLOCK_SIZE + bpos) * blockSize;
+		long start = bpos * blockSize;
 		raf.seek(start);
 		raf.write(buf);
 		needsFlush = false;
@@ -96,16 +86,6 @@ public class JafsBlock {
 //		File f = new File("c:/data/temp/inode_block_"+bpos+".dmp");
 //		dumpBlock(f);
 //	}
-
-	int peekSkipMapByte() {
-		return buf[0] & 0xff;
-	}
-
-	void pokeSkipMapByte(int b) {
-		buf[0] = (byte)b;
-        markForFlush();
-	}
-
 	int readByte() {
 		return buf[byteIdx++] & 0xff;
 	}

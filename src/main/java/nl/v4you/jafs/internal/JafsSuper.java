@@ -122,6 +122,7 @@ public class JafsSuper {
 	}
 
 	private void flush() throws IOException {
+		if (raf.length() < 4096) raf.setLength(4096);
 		buf[0] = 'J';
 		buf[1] = 'A';
 		buf[2] = 'F';

@@ -102,7 +102,7 @@ public class JafsDir {
 			JafsDirEntry entry = new JafsDirEntry();
 			entry.startPos = startPos;
 			entry.name = name;
-			entry.parentBpos = inode.getBpos();
+			entry.parentBpos = inode.getVpos();
 
 			// skip length + checksum
             if (name.length < 0x80) {
@@ -305,7 +305,7 @@ public class JafsDir {
 		}
 
 		JafsDirEntry entry = new JafsDirEntry();
-	    entry.parentBpos = inode.getBpos();
+	    entry.parentBpos = inode.getVpos();
 		entry.bpos = bpos;
 		entry.type = type;
 		entry.name = name;
@@ -326,7 +326,7 @@ public class JafsDir {
                     dir.setInode(newInode);
                     dir.initDir();
                 }
-                entry.bpos = newInode.getBpos();
+                entry.bpos = newInode.getVpos();
             }
             finally {
                 vfs.getInodePool().release(newInode);

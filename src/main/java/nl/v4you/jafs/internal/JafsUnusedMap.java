@@ -40,7 +40,8 @@ public class JafsUnusedMap {
 
     private long getBposFromUnusedMap(long mapNumber) throws JafsException, IOException {
         long curBpos = mapNumber * blocksPerUnusedMap;
-        JafsBlock block = vfs.getCacheBlock(curBpos);
+        JafsBlockView block = new JafsBlockView(vfs, curBpos);
+        block.seekSet(0);
         if ((block.peekSkipMapByte() & SKIP_MAP) != 0) {
             return 0;
         }
@@ -60,6 +61,7 @@ public class JafsUnusedMap {
             curBpos += BLOCKS_PER_BYTE;
         }
         // skip this unusedMap next time it gets visited
+        block.seekSet(0);
         block.pokeSkipMapByte(0x80);
         return 0;
     }
@@ -98,7 +100,7 @@ public class JafsUnusedMap {
     }
 
     public void setUnavailable(long bpos) throws JafsException, IOException {
-        JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
+        JafsBlockView block = new JafsBlockView(vfs, getUnusedMapBpos(bpos));
         // Set to 0
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
@@ -107,7 +109,7 @@ public class JafsUnusedMap {
     }
 
     public void setAvailable(long bpos) throws JafsException, IOException {
-        JafsBlock block = vfs.getCacheBlock(getUnusedMapBpos(bpos));
+        JafsBlockView block = new JafsBlockView(vfs, getUnusedMapBpos(bpos));
         // Set to 1
         int idx = getUnusedIdx(bpos);
         int b = block.peekByte(idx);
@@ -125,14 +127,14 @@ public class JafsUnusedMap {
         if (unusedMapBpos != getUnusedMapBpos(unusedMapBpos)) {
             throw new JafsException("supplied bpos is not an unused map bpos");
         }
-        JafsBlock block = vfs.getCacheBlock(unusedMapBpos);
+        JafsBlockView block = new JafsBlockView(vfs, unusedMapBpos);
         block.initOnes();
         block.pokeSkipMapByte(0b01111111);
     }
 
     public int countUsedBlocks(int mapNumber) throws JafsException, IOException {
         long curBpos = mapNumber * blocksPerUnusedMap;
-        JafsBlock block = vfs.getCacheBlock(curBpos);
+        JafsBlockView block = new JafsBlockView(vfs, curBpos);
         block.seekSet(0);
 
         int count = 1; // unused block itself

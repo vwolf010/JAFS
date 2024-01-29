@@ -46,7 +46,7 @@ public class Jafs implements AutoCloseable {
 	}
 
 	public Jafs(String fname, int blockSize) throws JafsException, IOException {
-		if (!isSupportedSize(blockSize, 64, 8192)) {
+		if (!isSupportedSize(blockSize, 64, 4096)) {
 			throw new JafsException("block size " + blockSize + " not supported");
 		}
 		init(fname, blockSize);
@@ -134,7 +134,7 @@ public class Jafs implements AutoCloseable {
 		return bpos;
 	}
 
-	public long getAvailableBpos() throws JafsException, IOException {
+	public long getAvailableVpos() throws JafsException, IOException {
 		long bpos = getUnusedMap().getUnusedBpos();
 		if (bpos == 0) bpos = appendNewBlockToArchive();
 		getSuper().incBlocksUsed();

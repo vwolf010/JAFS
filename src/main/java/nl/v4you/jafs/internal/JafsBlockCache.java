@@ -18,14 +18,6 @@ public class JafsBlockCache {
     }
 
 	public JafsBlock get(long bpos) throws JafsException, IOException {
-		if (bpos < 0) {
-			throw new JafsException("bpos should be 0 or greater, got: "+bpos);
-		}
-
-		if (bpos >= vfs.getSuper().getBlocksTotal()) {
-			throw new JafsException("bpos ("+bpos+") >= blocks total ("+vfs.getSuper().getBlocksTotal()+")");
-		}
-
         JafsBlock blk = gcache.get(bpos);
         if (blk == null) {
             if (free == null) {

@@ -1,8 +1,6 @@
 package nl.v4you.jafs.internal;
 
 import nl.v4you.jafs.*;
-import nl.v4you.jafs.internal.JafsBlock;
-import nl.v4you.jafs.internal.JafsUnusedMap;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -12,8 +10,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
 
 import static junit.framework.TestCase.assertTrue;
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
