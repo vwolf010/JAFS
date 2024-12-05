@@ -5,6 +5,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Random;
@@ -79,11 +80,32 @@ public class DirectoriesTest {
         vfs.close();
     }
 
+    private void creFile(Jafs vfs, JafsFile f) throws Exception {
+        JafsFile p = vfs.getFile(f.getParent());
+        p.mkdirs();
+        JafsOutputStream os = vfs.getOutputStream(f);
+        os.write("ieoiwoiwoeijewiohweoihweoihfweoihweoiwehof".getBytes(StandardCharsets.UTF_8));
+        os.close();
+    }
+
     @Test
-    public void bbb() throws JafsException, IOException {
+    public void bbb() throws Exception {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
-        JafsFile f = vfs.getFile("/dateStamp/2018/11/10/04/42/05.000Z");
-        f.mkdirs();
+        JafsFile f1 = vfs.getFile("/aa/bb/cc/dd/000000001.xml");
+        JafsFile f2 = vfs.getFile("/aa/bb/cc/dd/000000002.xml");
+        JafsFile f3 = vfs.getFile("/aa/bb/cc/dd/000000003.xml");
+        JafsFile f4 = vfs.getFile("/aa/bb/cc/dd/000000004.xml");
+
+        creFile(vfs, f1);
+        creFile(vfs, f2);
+        creFile(vfs, f3);
+        creFile(vfs, f4);
+
+        f3.delete();
+        f2.delete();
+
+        creFile(vfs, f3);
+
         vfs.close();
     }
 

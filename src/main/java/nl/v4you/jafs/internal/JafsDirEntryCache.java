@@ -3,6 +3,8 @@ package nl.v4you.jafs.internal;
 import nl.v4you.hash.OneAtATimeHash;
 import nl.v4you.jafs.JafsException;
 
+import java.nio.charset.StandardCharsets;
+
 public class JafsDirEntryCache {
 
     private LRUCache<OneAtATimeHash, JafsDirEntry> gcache;
@@ -14,18 +16,18 @@ public class JafsDirEntryCache {
     }
 
     public void add(String dirName, JafsDirEntry entry) throws JafsException {
-        if (gcache.get(hs.set(dirName.getBytes(Util.UTF8)))!=null) {
-            throw new JafsException("directory "+dirName+" already in cache");
+        if (gcache.get(hs.set(dirName.getBytes(StandardCharsets.UTF_8))) != null) {
+            throw new JafsException("directory " + dirName + " already in cache");
         }
         gcache.add(hs.clone(), entry);
     }
 
     public JafsDirEntry get(String dirName) {
-        return gcache.get(hs.set(dirName.getBytes(Util.UTF8)));
+        return gcache.get(hs.set(dirName.getBytes(StandardCharsets.UTF_8)));
     }
 
     void remove(String dirName) {
-        gcache.remove(hs.set(dirName.getBytes(Util.UTF8)));
+        gcache.remove(hs.set(dirName.getBytes(StandardCharsets.UTF_8)));
     }
 
     public String stats() {

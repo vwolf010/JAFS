@@ -31,7 +31,7 @@ class LRUCache<K, V> {
             throw new IllegalStateException("Cache size minimum is 3");
         }
         cacheMaxSize = size;
-        cache = new HashMap<>(2 * cacheMaxSize);
+        cache = new HashMap<>(2 * cacheMaxSize, 0.5f);
     }
 
     V add(K key, V value) {

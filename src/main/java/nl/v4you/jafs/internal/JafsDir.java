@@ -141,13 +141,13 @@ public class JafsDir {
 	}
 
 	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
-		inode.seekSet(entry.startPos + 1 + 1 + 1);
-		inode.writeShort(0);
-		inode.writeShort(0);
-		//inode.writeByte(0);
-		//inode.writeByte(0);
-		//inode.writeByte(0);
-		//inode.writeByte(0);
+		if (entry.name.length < 0x80) {
+			inode.seekSet(entry.startPos + 1 + 1 + 1);
+		}
+		else {
+			inode.seekSet(entry.startPos + 2 + 1 + 1);
+		}
+		inode.writeInt(0);
 	}
 
 	public boolean hasActiveEntries() throws JafsException, IOException {
@@ -338,8 +338,7 @@ public class JafsDir {
                 inode.seekSet(entry.startPos + 2 + 1 + 1); // skip len + checksum + type
             }
 
-            Util.intToArray(bb, 0, (int)entry.bpos);
-            inode.writeBytes(bb, 0, 4); // this is where the bpos is added to the directory entry
+			inode.writeInt((int)entry.bpos); // this is where the bpos is added to the directory entry
         }
     }
 

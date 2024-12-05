@@ -3,28 +3,30 @@ package nl.v4you.jafs;
 import nl.v4you.jafs.internal.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 public class JafsFile {
-    public static final String separator = "/";
+    public static final String SEPARATOR = "/";
+	public static final char SEPARATOR_CHAR = '/';
 
     private Jafs vfs;
 	private String path;
 	private String canonicalPath;
     private JafsDirEntryCache dc;
 
-    private static final Pattern SLASH = Pattern.compile("/");
+    private static final Pattern SLASH = Pattern.compile(SEPARATOR);
     private static final Pattern MULTIPLE_SLASH = Pattern.compile("/+/");
     private static final Pattern FILENAME_IN_PATH = Pattern.compile("/[^/]*$");
     private static final Pattern SLASH_DOT_SLASH = Pattern.compile("/[.]/");
 	private static final Pattern FILE_CANCELS_ITSELF = Pattern.compile("[^/]+/[.][.]/");
 
 	JafsFile(Jafs vfs, String path) throws JafsException {
-		if (path==null) {
+		if (path == null) {
 			throw new NullPointerException("path cannot be null");
 		}
 		path = path.trim();
-		if (!path.startsWith("/")) {
+		if (!path.startsWith(SEPARATOR)) {
 		    throw new JafsException("Path must always start with /");
 		}
 		this.vfs = vfs;
@@ -34,11 +36,11 @@ public class JafsFile {
     }
 
     JafsFile(Jafs vfs, JafsFile parent, String child) throws JafsException {
-        this(vfs, parent.getCanonicalPath()+JafsFile.separator +child);
+        this(vfs, parent.getCanonicalPath()+JafsFile.SEPARATOR +child);
     }
 
     JafsFile(Jafs vfs, String parent, String child) throws JafsException {
-        this(vfs, parent+JafsFile.separator +child);
+        this(vfs, parent+JafsFile.SEPARATOR +child);
     }
 
 	/*
@@ -117,7 +119,7 @@ public class JafsFile {
 			try {
                 inode.openInode(parent.getBpos());
                 dir.setInode(inode);
-                dir.createNewEntry(canonicalPath, getName().getBytes(Util.UTF8), JafsInode.INODE_FILE, 0);
+                dir.createNewEntry(canonicalPath, getName().getBytes(StandardCharsets.UTF_8), JafsInode.INODE_FILE, 0);
                 return true;
             }
             catch (Throwable t) {
@@ -148,7 +150,7 @@ public class JafsFile {
 		
 	public String[] list() throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(canonicalPath);
-		if (entry!=null) {
+		if (entry != null) {
 			if (entry.getBpos() == 0) {
 				return new String[0];
 			}
@@ -235,11 +237,11 @@ public class JafsFile {
 	
 	public JafsFile[] listFiles() throws JafsException, IOException {
 		String parent = canonicalPath;
-		if (!parent.endsWith("/")) {
-		    parent += "/";
+		if (!parent.endsWith(SEPARATOR)) {
+		    parent += SEPARATOR;
         }
 		JafsDirEntry entry = getEntry(canonicalPath);
-		if (entry!=null) {
+		if (entry != null) {
 			if (entry.getBpos() == 0) {
 				return new JafsFile[0];
 			}
@@ -248,11 +250,11 @@ public class JafsFile {
                 JafsDir dir = vfs.getDirPool().claim();
 			    try {
                     inode.openInode(entry.getBpos());
-                    String l[];
+                    String[] l;
                     dir.setInode(inode);
                     l = dir.list();
-                    JafsFile fl[] = new JafsFile[l.length];
-                    for (int n=0; n<fl.length; n++) {
+                    JafsFile[] fl = new JafsFile[l.length];
+                    for (int n = 0; n < fl.length; n++) {
                         fl[n] = new JafsFile(vfs, parent + l[n]);
                     }
                     return fl;
@@ -282,10 +284,12 @@ public class JafsFile {
                         srcDir.setInode(inodeSrc);
                         dstDir.setInode(inodeDst);
                         srcDir.deleteEntry(canonicalPath, entry);
-                        entry.setName(target.getName().getBytes(Util.UTF8));
+                        entry.setName(target.getName().getBytes(StandardCharsets.UTF_8));
                         dstDir.createNewEntry(
                                 target.canonicalPath,
-                                target.getName().getBytes(Util.UTF8), entry.getType(),  entry.getBpos());
+                                target.getName().getBytes(StandardCharsets.UTF_8),
+								entry.getType(),
+								entry.getBpos());
                     }
                     finally {
 					    vfs.getBlockCache().flushBlocks();
@@ -299,25 +303,22 @@ public class JafsFile {
 		}
 	}
 
-	/* 
-	 * default 
-	 */
 	JafsDirEntry getEntry(String path) throws JafsException, IOException {
 	    String normPath = getCanonicalPath(normalizePath(path));
 
-        if (normPath.equals("/")) {
+        if (normPath.equals(SEPARATOR)) {
             return vfs.getRootEntry();
         }
 
-        String[] parts = SLASH.split(normPath);// first entry is always empty
+        String[] parts = SLASH.split(normPath); // first entry is always empty
         int n = parts.length;
 
-        JafsDirEntry entry=null;
+        JafsDirEntry entry = null;
 
         String curPath = normPath;
         while (n > 0) {
             entry = dc.get(curPath);
-            if (entry!=null) {
+            if (entry != null) {
                 break;
             }
             curPath = getParent(curPath);
@@ -331,7 +332,7 @@ public class JafsFile {
         if (n == 0) {
             entry = vfs.getRootEntry();
             curPath = "";
-            n=1;
+            n = 1;
         }
 
         if (entry.getBpos() == 0) {
@@ -346,8 +347,8 @@ public class JafsFile {
             for (; n < parts.length; n++) {
                 String part = parts[n];
                 if (!part.isEmpty()) {
-                    curPath += "/" + part;
-                    entry = dir.getEntry(part.getBytes(Util.UTF8));
+                    curPath += SEPARATOR + part;
+                    entry = dir.getEntry(part.getBytes(StandardCharsets.UTF_8));
                     if (entry == null) {
                         break;
                     } else {
@@ -380,17 +381,14 @@ public class JafsFile {
 		return entry;
 	}
 	
-	/*
-	 * private
-	 */	
 	private static String normalizePath(String path) {
 		path = path.trim();
-		path = MULTIPLE_SLASH.matcher(path).replaceAll("/");
+		path = MULTIPLE_SLASH.matcher(path).replaceAll(SEPARATOR);
 		int len = path.length();
-		if (len>1) {
+		if (len > 1) {
 			// Remove trailing slash except when it is the root slash
-            if (path.charAt(len-1)=='/') {
-                path = path.substring(0, len-1);
+            if (path.charAt(len - 1) == SEPARATOR_CHAR) {
+                path = path.substring(0, len - 1);
             }
 		}
 		return path;
@@ -398,36 +396,35 @@ public class JafsFile {
 		
 	private String getName(String path) {
 		path = normalizePath(path);
-		if (path.length()==1 && path.charAt(0)=='/') {
+		if (path.length() == 1 && path.charAt(0) == SEPARATOR_CHAR) {
 			return "";
 		}
-		String names[] = SLASH.split(path);
-		return names[names.length-1];
+		String[] names = SLASH.split(path);
+		return names[names.length - 1];
 	}
 	
 	private String getParent(String path) {
 		boolean hasRoot = false;
 		path = normalizePath(path);
-		if (path.length()==1 && path.charAt(0)=='/') {
+		if (path.length() == 1 && path.charAt(0) == SEPARATOR_CHAR) {
 		    return null;
         }
-		if (path.startsWith("/")) {
+		if (path.startsWith(SEPARATOR)) {
 			hasRoot = true;
 			path = path.substring(1);
 		}
-		if (!path.contains("/")) {
+		if (!path.contains(SEPARATOR)) {
 			if (hasRoot) {
-				return "/";
+				return SEPARATOR;
 			}
 			else {
 				return null;
 			}
 		}
 		if (hasRoot) {
-			return "/" + FILENAME_IN_PATH.matcher(path).replaceAll("");
+			return SEPARATOR + FILENAME_IN_PATH.matcher(path).replaceAll("");
 		}
 		else {
-
 			return FILENAME_IN_PATH.matcher(path).replaceAll("");
 		}
 	}
@@ -435,31 +432,31 @@ public class JafsFile {
 	private String getAbsolutePath(String path) {
 		path = normalizePath(path);
 		// The working dir is always the root (/)
-		if (!path.startsWith("/")) {
-			path = "/" + path;
+		if (!path.startsWith(SEPARATOR)) {
+			path = SEPARATOR + path;
 		}
 		return path;
 	}
 		
 	private static String getCanonicalPath(String path) throws JafsException {
 	    // only call this method with a normalized path!
-	    if (path.charAt(path.length()-1)!='/') {
-	        path = path + "/";
+	    if (path.charAt(path.length() - 1) != SEPARATOR_CHAR) {
+	        path = path + SEPARATOR;
         }
 		int len = 0;
-		while (len!=path.length()) {
+		while (len != path.length()) {
 			len = path.length();
-			path = SLASH_DOT_SLASH.matcher(path).replaceAll("/");
+			path = SLASH_DOT_SLASH.matcher(path).replaceAll(SEPARATOR);
 		}
 		len = 0;
-		while (len!=path.length()) {
+		while (len != path.length()) {
 			len = path.length();
 			path = FILE_CANCELS_ITSELF.matcher(path).replaceAll("");
 		}
-		if (path.startsWith("/../")) {
+		if (path.startsWith(SEPARATOR + ".." + SEPARATOR)) {
 		    throw new JafsException("Parent directory (..) must not go beyond root");
         }
-        if (path.equals("/")) {
+        if (path.equals(SEPARATOR)) {
 		    return path;
         }
         else {
@@ -474,7 +471,7 @@ public class JafsFile {
 	private boolean mkdir(String path) throws JafsException, IOException {
 		String parent = getParent(path);
 		JafsDirEntry entry = getEntry(parent);
-		if (entry!=null) {
+		if (entry != null) {
 			if (entry.getBpos() == 0) {
 				// Parent exists but has no inode yet
                 JafsInode inode = vfs.getInodePool().claim();
@@ -496,7 +493,7 @@ public class JafsFile {
                 dir.setInode(inode);
                 dir.createNewEntry(
                         getCanonicalPath(normalizePath(path)),
-                        getName(path).getBytes(Util.UTF8),
+                        getName(path).getBytes(StandardCharsets.UTF_8),
                         JafsInode.INODE_DIR,
                         0);
                 return true;

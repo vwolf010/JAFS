@@ -310,6 +310,11 @@ public class JafsInode {
 		return Util.arrayToInt(bb1, 0);
 	}
 
+	void writeInt(int i) throws JafsException, IOException {
+		Util.intToArray(bb1, 0, i);
+		writeBytes(bb1, 0, 4);
+	}
+
 	long calcBlocksUsed(long size) {
 		long blocksUsed = size / blockSize;
 		if ((size & (blockSize - 1)) != 0) blocksUsed++;
