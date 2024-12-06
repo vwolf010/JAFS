@@ -88,8 +88,7 @@ public class JafsFile {
         JafsInode inode = vfs.getInodePool().claim();
 		try {
             inode.openInode(entry.getBpos());
-            long inodeSize = inode.getSize();
-            return inodeSize;
+            return inode.getSize();
         }
         finally {
             vfs.getInodePool().release(inode);
@@ -101,7 +100,7 @@ public class JafsFile {
 		JafsDirEntry parent = getEntry(parentPath);
 		if (parent != null) {
 			if (parent.getBpos() == 0) {
-				// Parent exists but has no inode yet, let's create it
+				// Parent directory exists but has no inode yet, let's create it
                 JafsInode inode = vfs.getInodePool().claim();
                 JafsDir dir = vfs.getDirPool().claim();
                 try {
@@ -126,7 +125,7 @@ public class JafsFile {
 			    return false;
             }
             finally {
-			    vfs.getBlockCache().flushBlocks();
+				vfs.flushBlockCache();
                 vfs.getInodePool().release(inode);
                 vfs.getDirPool().release(dir);
             }
@@ -136,7 +135,7 @@ public class JafsFile {
 
 	public boolean mkdir() throws JafsException, IOException {
         boolean b = mkdir(canonicalPath);
-        vfs.getBlockCache().flushBlocks();
+		vfs.flushBlockCache();
 		return b;
 	}
 
@@ -144,7 +143,7 @@ public class JafsFile {
 		String parent = getParent(canonicalPath);
         mkParentDirs(parent);
 		boolean b = mkdir(canonicalPath);
-		vfs.getBlockCache().flushBlocks();
+		vfs.flushBlockCache();
 		return b;
 	}
 		
@@ -222,11 +221,11 @@ public class JafsFile {
 				if (entry.getBpos() != 0) {
 					inode.openInode(entry.getBpos());
 					inode.resetSize();
-					inode.free(0);
+					inode.freeBlocksAndDeleteInode();
 				}
             }
             finally {
-			    vfs.getBlockCache().flushBlocks();
+				vfs.flushBlockCache();
                 vfs.getInodePool().release(inode);
                 vfs.getDirPool().release(parentDir);
             }
@@ -292,7 +291,7 @@ public class JafsFile {
 								entry.getBpos());
                     }
                     finally {
-					    vfs.getBlockCache().flushBlocks();
+						vfs.flushBlockCache();
 					    vfs.getInodePool().release(inodeSrc);
 					    vfs.getInodePool().release(inodeDst);
                         vfs.getDirPool().release(srcDir);

@@ -18,20 +18,20 @@ public class JafsInode {
     public static final int INODE_DIR     = 0x2;
 	public static final int INODE_INLINED = 0x4;
 
-	private Jafs vfs;
-	private JafsInodeContext ctx;
+	private final Jafs vfs;
+	private final JafsInodeContext ctx;
 
 	private final long maxInlinedSize;
 	private long vpos = 0; // Position of this block in the archive
 	private long fpos = 0; // Position of the file pointer
-	long ptrs[];
+	final long[] ptrs;
 
-    long maxFileSizeReal;
-	int blockSize;
-	int blockSizeMask;
+    final long maxFileSizeReal;
+	final int blockSize;
+	final int blockSizeMask;
 
-	private byte[] bb1;
-	private byte[] bb2; // used by undoinlined()
+	private final byte[] bb1;
+	private final byte[] bb2; // used by undoinlined()
 
 	/* INode header */
 	int type = 0;
@@ -50,9 +50,6 @@ public class JafsInode {
 	public void resetSize() throws JafsException, IOException {
 		size = 0;
 		flushInode();
-	}
-	public int getType() {
-		return type;
 	}
 
 	public JafsInode(Jafs vfs) {
@@ -79,18 +76,18 @@ public class JafsInode {
 	    JafsBlockView iblock = new JafsBlockView(vfs, vpos);
         iblock.seekSet(0);
 
-        int offset = 0;
-        bb1[offset++] = (byte)type;
-        Util.longToArray(bb1, offset, size);
-        offset += 8;
+        int idx = 0;
+        bb1[idx++] = (byte)type;
+        Util.longToArray(bb1, idx, size);
+        idx += 8;
         if (!isInlined()) {
         	int ptrsPerInode = ctx.getPtrsPerInode();
             for (int n = 0; n < ptrsPerInode; n++) {
-                Util.intToArray(bb1, offset, ptrs[n]);
-                offset += 4;
+                Util.intToArray(bb1, idx, ptrs[n]);
+                idx += 4;
             }
         }
-        iblock.writeBytes(bb1, offset);
+        iblock.writeBytes(bb1, idx);
 	}
 
 	public void openInode(long vpos) throws JafsException, IOException {
@@ -103,9 +100,9 @@ public class JafsInode {
 		if (!isInlined()) {
 			iblock.readBytes(bb1, ctx.getPtrsPerInode() << 2);
             int ptrsPerInode = ctx.getPtrsPerInode();
-            for (int off=0, n=0; n<ptrsPerInode; n++) {
+            for (int off= 0 , n = 0; n<ptrsPerInode; n++) {
                 ptrs[n] = Util.arrayToInt(bb1, off);
-                off+=4;
+                off += 4;
             }
 		}
 		fpos = 0;
@@ -121,21 +118,21 @@ public class JafsInode {
 	void seekSet(long offset) throws JafsException {
 		fpos = offset;
         if (fpos < 0) {
-            throw new JafsException("fpos must be >=0");
+            throw new JafsException("fpos must be >= 0");
         }
 	}
 
 	void seekCur(long offset) throws JafsException {
 		fpos += offset;
         if (fpos < 0) {
-            throw new JafsException("fpos must be >=0");
+            throw new JafsException("fpos must be >= 0");
         }
 	}
 
 	public void seekEnd(long offset) throws JafsException {
 		fpos = size - offset;
         if (fpos < 0) {
-            throw new JafsException("fpos must be >=0");
+            throw new JafsException("fpos must be >= 0");
         }
 	}
 
@@ -149,26 +146,24 @@ public class JafsInode {
 		type &= ~INODE_INLINED; // Turn inlined mode off
 		flushInode();
 		if (size != 0) {
-			long remember = fpos;
-			seekSet(0);
+			fpos = 0;
 			writeBytes(bb2, (int)size);
-			fpos = remember;
 		}
 	}
 
 	private void redoInlined() throws IOException, JafsException {
 		if (size != 0) {
-			seekSet(0);
+			fpos = 0;
 			readBytes(bb2, 0, (int)size);
 		}
 		if (ptrs[0] != 0) {
-			// free before pointer gets overwritten
 			ctx.freeBlock(ptrs[0]);
+			ptrs[0] = 0;
 		}
 		type |= INODE_INLINED; // Turn inlined mode on
 		flushInode();
 		if (size != 0) {
-			seekSet(0);
+			fpos = 0;
 			writeBytes(bb2, (int)size);
 		}
 	}
@@ -196,7 +191,7 @@ public class JafsInode {
 			dum.writeByte(b & 0xff);
 			fpos++;
 		}
-		if (fpos>size) {
+		if (fpos > size) {
 			size = fpos;
 			flushInode();
 		}
@@ -266,8 +261,8 @@ public class JafsInode {
 		if (fpos >= size) {
 			return -1;
 		}
-		if (len > (int)(size-fpos)) {
-			len = (int)(size-fpos);
+		if (len > (int)(size - fpos)) {
+			len = (int)(size - fpos);
 		}
 		if (isInlined()) {
             JafsBlockView iblock = new JafsBlockView(vfs, vpos);
@@ -317,16 +312,18 @@ public class JafsInode {
 
 	long calcBlocksUsed(long size) {
 		long blocksUsed = size / blockSize;
-		if ((size & (blockSize - 1)) != 0) blocksUsed++;
+		if ((size & (blockSize - 1)) != 0) {
+			blocksUsed++;
+		}
 		return blocksUsed;
 	}
 
-	public void free(long oldSize) throws JafsException, IOException {
-		if (size == 0) {
-			ctx.freeDataAndPtrBlocks(this);
-			ctx.freeBlock(vpos);
-			return;
-		}
+	public void freeBlocksAndDeleteInode() throws JafsException, IOException {
+		ctx.freeDataAndPtrBlocks(this);
+		ctx.freeBlock(vpos);
+	}
+
+	public void freeBlocks(long oldSize) throws JafsException, IOException {
         if (!isInlined()) {
 			if (calcBlocksUsed(size) < calcBlocksUsed(oldSize)) {
 				ctx.freeDataAndPtrBlocks(this);

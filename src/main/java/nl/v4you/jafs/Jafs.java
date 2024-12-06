@@ -118,6 +118,10 @@ public class Jafs implements AutoCloseable {
 		return blockCache;
 	}
 
+	public void flushBlockCache() throws JafsException, IOException {
+		blockCache.flushBlocks();
+	}
+
 	public JafsDirEntryCache getDirCache() {
 		return dirCache;
 	}
@@ -183,14 +187,6 @@ public class Jafs implements AutoCloseable {
 		superBlock.lock(myFile, getUnusedMap());
 	}
 
-	public void setBlocksTotal() {
-		superBlock.setBlocksTotal(myFile);
-	}
-
-	public void setBlocksUsed() throws IOException, JafsException {
-		superBlock.setBlocksUsed(getUnusedMap());
-	}
-
 	private void init(String fname, int blockSize) throws JafsException, IOException {
 		myFile = new File(fname);
 		open(blockSize);
@@ -202,6 +198,14 @@ public class Jafs implements AutoCloseable {
 
 	public JafsDirPool getDirPool() {
 		return dirPool;
+	}
+
+	public long getBlocksUsed() {
+		return superBlock.getBlocksUsed();
+	}
+
+	public long getBlocksTotal() {
+		return superBlock.getBlocksTotal();
 	}
 
 	public String stats() {
