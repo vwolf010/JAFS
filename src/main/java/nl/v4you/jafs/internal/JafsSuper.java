@@ -16,7 +16,7 @@ public class JafsSuper {
 	private static final int TRUE = 1;
 	private static final int HEADER_SIZE = 19;
 	private final RandomAccessFile raf;
-	private byte[] buf = new byte[64]; // not redundant
+	private final byte[] buf;
 
 	private int blockSize = 0;
 	private long blocksTotal = 0;
@@ -99,25 +99,26 @@ public class JafsSuper {
 		return blockSize;
 	}
 
-	public void read() throws IOException, JafsException {
+	private void read() throws IOException, JafsException {
 		if (raf.length() < HEADER_SIZE) {
 			throw new JafsException("File too small, only " + raf.length() + " bytes");
 		}
+		final byte[] header = new byte[HEADER_SIZE];
 		raf.seek(0);
-		if (HEADER_SIZE != raf.read(buf, 0, HEADER_SIZE)) {
+		if (HEADER_SIZE != raf.read(header, 0, HEADER_SIZE)) {
 			throw new JafsException("Could not read header");
 		}
-		if (buf[0] != 'J' || buf[1] != 'A' || buf[2] != 'F' || buf[3] != 'S') {
+		if (!(header[0] == 'J' && header[1] == 'A' && header[2] == 'F' && header[3] == 'S')) {
 			throw new JafsException("Magic is incorrect");
 		}
-		int version = ((buf[4] & 0xff) << 8) | (buf[5] & 0xff);
+		int version = ((header[4] & 0xff) << 8) | (header[5] & 0xff);
 		if (version != VERSION) {
 			throw new JafsException("Version is incorrect, should be " + VERSION + " but got " + version);
 		}
-		blockSize = (int) Util.arrayToInt(buf, POS_BLOCK_SIZE);
-		blocksUsed =  Util.arrayToInt(buf, POS_BLOCKS_USED);
-		blocksTotal = Util.arrayToInt(buf, POS_BLOCKS_TOTAL);
-		isLocked = buf[POS_IS_LOCKED];
+		blockSize = (int)Util.arrayToInt(header, POS_BLOCK_SIZE);
+		blocksUsed =  Util.arrayToInt(header, POS_BLOCKS_USED);
+		blocksTotal = Util.arrayToInt(header, POS_BLOCKS_TOTAL);
+		isLocked = header[POS_IS_LOCKED];
 	}
 
 	private void flush() throws IOException {
