@@ -21,7 +21,7 @@ public class JafsDir {
     static final int ENTRY_OVERHEAD = 1 + 1 + 1 + 4; // length + checksum + type + bpos
     static final byte[] SLASH = {'/'};
 
-	Jafs vfs;
+	final Jafs vfs;
 	JafsInode inode;
 
 	private static final int BB_LEN = 512;
@@ -93,8 +93,7 @@ public class JafsDir {
 		}
 		if (inode == null) {
 			return null;
-		}
-		else {
+		} else {
 			long startPos = this.getEntryPos(name);
 			if (startPos < 0) {
 				return null;
@@ -143,8 +142,7 @@ public class JafsDir {
 	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
 		if (entry.name.length < 0x80) {
 			inode.seekSet(entry.startPos + 1 + 1 + 1);
-		}
-		else {
+		} else {
 			inode.seekSet(entry.startPos + 2 + 1 + 1);
 		}
 		inode.writeInt(0);
@@ -169,13 +167,12 @@ public class JafsDir {
 		if (Util.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
 				throw new JafsException("Directory name [" + new String(entry.name, StandardCharsets.UTF_8) + "] should not contain a slash (/)");
-			}
-			else {
+			} else {
 				throw new JafsException("File name [" + new String(entry.name, StandardCharsets.UTF_8) + "] should not contain a slash (/)");
 			}
 		}
 
-		byte[] nameBuf = entry.name;
+		final byte[] nameBuf = entry.name;
 		final int nameLen = nameBuf.length;
 		final int nameChecksum = OneAtATimeHash.calcHash(entry.name) & 0xff;
 		final int overhead = nameLen < 0x80 ? ENTRY_OVERHEAD : ENTRY_OVERHEAD + 1;
@@ -197,8 +194,7 @@ public class JafsDir {
 					reuseEntryStartPos = startPos;
 					reuseEntryNameLen = curNameLen;
 				}
-			}
-			else {
+			} else {
 				if ((curLength & 0x80) != 0) {
 			        curLength &= 0x7f;
 			        curLength |= inode.readByte() << 7;
@@ -227,7 +223,7 @@ public class JafsDir {
 			// Re-use an existing entry
 			inode.seekSet(reuseEntryStartPos - ENTRY_SIZE_LENGTH);
 			entrySize = inode.readShort();
-			int sizeForTwo = overhead + nameLen + ENTRY_SIZE_LENGTH + ENTRY_OVERHEAD + 1; /* name is minimal 1 byte */
+			int sizeForTwo = overhead + nameLen + ENTRY_SIZE_LENGTH + ENTRY_OVERHEAD + 1; /* name is 1 byte minimal */
 			if (entrySize >= sizeForTwo) {
 			    // split this entry if it is too big for us
 
@@ -241,8 +237,7 @@ public class JafsDir {
 				inode.writeByte( 0);
 				inode.seekSet(reuseEntryStartPos);
 			}
-		}
-		else {
+		} else {
 			// Append to the end
 			inode.seekCur(-2);
 			inode.writeShort(overhead + nameLen);
@@ -250,8 +245,7 @@ public class JafsDir {
 		entry.startPos = inode.getFpos();
 		if (nameLen < 0x80) {
             bb[tLen++] = (byte)nameLen;
-        }
-        else {
+        } else {
             bb[tLen++] = (byte)(0x80 | (nameLen & 0x7f));
             bb[tLen++] = (byte)((nameLen >>> 7) & 0xff);
         }
@@ -262,8 +256,7 @@ public class JafsDir {
         if (nameLen < 256) {
             System.arraycopy(nameBuf, 0, bb, tLen, nameLen);
             tLen += nameLen;
-        }
-        else {
+        } else {
             inode.writeBytes(bb, tLen);
             tLen = 0;
             inode.writeBytes(nameBuf, nameBuf.length);
@@ -293,8 +286,7 @@ public class JafsDir {
         if (name[0] == '.') {
 	        if (name.length == 1) {
                 throw new JafsException("Name '.' not allowed");
-            }
-            else if (name.length == 2 && name[1] == '.') {
+            } else if (name.length == 2 && name[1] == '.') {
                 throw new JafsException("Name '..' not allowed");
             }
         }
@@ -314,8 +306,7 @@ public class JafsDir {
     public void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
         if (entry == null) {
             throw new JafsException("entry cannot be null");
-        }
-        else {
+        } else {
             JafsInode newInode = vfs.getInodePool().claim();
             JafsDir dir = vfs.getDirPool().claim();
             try {
@@ -333,8 +324,7 @@ public class JafsDir {
 
             if (entry.name.length < 0x80) {
                 inode.seekSet(entry.startPos + 1 + 1 + 1); // skip len + checksum + type
-            }
-			else {
+            } else {
                 inode.seekSet(entry.startPos + 2 + 1 + 1); // skip len + checksum + type
             }
 

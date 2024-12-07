@@ -5,7 +5,6 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Random;
@@ -100,16 +99,10 @@ public class DirectoriesTest {
         vfs.close();
     }
 
-    @Test
+    @Test(expected = JafsException.class)
     public void parentDirIndicatorMustNotGoBeyondRoot1() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
-        try {
-            JafsFile f = vfs.getFile("/..");
-            assertTrue("must not reach this line", false);
-        }
-        catch (JafsException je) {}
-        finally {
-            vfs.close();
+        try (Jafs vfs = new Jafs(TEST_ARCHIVE, 256)) {
+            vfs.getFile("/..");
         }
     }
 
@@ -125,29 +118,17 @@ public class DirectoriesTest {
         vfs.close();
     }
 
-    @Test
+    @Test(expected = JafsException.class)
     public void parentDirIndicatorMustNotGoBeyondRoot2() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
-        try {
-            JafsFile f = vfs.getFile("/abc/../..");
-            assertTrue("must not reach this line", false);
-        }
-        catch (JafsException je) {}
-        finally {
-            vfs.close();
+        try (Jafs vfs = new Jafs(TEST_ARCHIVE, 256)) {
+            vfs.getFile("/abc/../..");
         }
     }
 
-    @Test
+    @Test(expected = JafsException.class)
     public void rootSlashMandatory() throws JafsException, IOException {
-        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
-        try {
-            JafsFile f = vfs.getFile("abc");
-            assertTrue("should not reach this line", false);
-        }
-        catch (JafsException je) {}
-        finally {
-            vfs.close();
+        try (Jafs vfs = new Jafs(TEST_ARCHIVE, 256)) {
+            vfs.getFile("abc");
         }
     }
 
@@ -181,31 +162,29 @@ public class DirectoriesTest {
         JafsOutputStream jos = vfs.getOutputStream(f);
         jos.write("12345".getBytes());
         jos.close();
-        assertTrue(f.length()==5);
+        assertEquals(5, f.length());
         f.delete();
-        assertTrue(f.length()==0);
+        assertEquals(0, f.length());
         vfs.close();
     }
 
     @Test
     public void veryLongDirectoryNameSupported() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
-        byte longFileName[] = new byte[512];
+        byte[] longFileName = new byte[512];
         Arrays.fill(longFileName, (byte)65);
 
         JafsFile f = vfs.getFile("/"+new String(longFileName));
         JafsOutputStream jos = vfs.getOutputStream(f);
         jos.write("12345".getBytes());
         jos.close();
-        assertTrue(f.length()==5);
+        assertEquals(5, f.length());
         vfs.close();
     }
 
     @Test
     public void getParentTests() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
-        byte longFileName[] = new byte[512];
-        Arrays.fill(longFileName, (byte)65);
 
         JafsFile f = vfs.getFile("/");
         assertNull(f.getParent());

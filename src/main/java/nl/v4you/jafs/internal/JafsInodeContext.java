@@ -10,10 +10,10 @@ public class JafsInodeContext {
 
 	public static final int BYTES_PER_PTR = 4;
 
-	private Jafs vfs;
+	private final Jafs vfs;
 
-	private int ptrsPerInode;
-	private int ptrsPerPtrBlock;
+	private final int ptrsPerInode;
+	private final int ptrsPerPtrBlock;
 	
 	//private long[] levelSizes = new long[50];
 
@@ -38,8 +38,8 @@ public class JafsInodeContext {
 		this.blockSize = blockSize;
 		ptrsPerInode = (blockSize - JafsInode.INODE_HEADER_SIZE) / BYTES_PER_PTR;
 		ptrsPerPtrBlock = blockSize / BYTES_PER_PTR;
-		level0MaxSize = (ptrsPerInode - 2) * blockSize;
-		level1MaxSize = level0MaxSize + ptrsPerPtrBlock * blockSize;
+		level0MaxSize = (ptrsPerInode - 2) * (long)blockSize;
+		level1MaxSize = level0MaxSize + ptrsPerPtrBlock * (long)blockSize;
 		maxFileSizeReal = calcMaxFileSize(blockSize);
 	}
 
@@ -62,8 +62,7 @@ public class JafsInodeContext {
 		if (level == 0) {
 			// data block is reached
 			return bpos;
-		}
-		else {
+		} else {
 			// Create new data block (ptr in ptr block)
 			long nextLen = len / ptrsPerPtrBlock;
 			int idx = (int)((fpos - off) / nextLen);
@@ -130,8 +129,7 @@ public class JafsInodeContext {
 				return true;
 			}
 			return false;
-		}
-		else {
+		} else {
 		    // this is a pointer block
 			levelSize /= ptrsPerPtrBlock;
 			JafsBlockView dum = new JafsBlockView(vfs, bpos);
@@ -145,8 +143,7 @@ public class JafsInodeContext {
 						if (free(size, ptr, posStart, levelSize)) {
 							dum.seekSet(n * 4);
 							dum.writeInt(0);
-						}
-						else {
+						} else {
 							allHasBeenDeleted = false;
 						}
 					}
@@ -164,8 +161,8 @@ public class JafsInodeContext {
 			long fPosStart = 0;
 			long fPosEnd = 0;
 			if (n < (ptrsPerInode - 2)) {
-				fPosStart = n * blockSize;
-				fPosEnd = (n + 1) * blockSize;
+				fPosStart = n * (long)blockSize;
+				fPosEnd = (n + 1) * (long)blockSize;
 			}
 			if (n == (ptrsPerInode - 2)) {
 				fPosStart = level0MaxSize;
@@ -186,42 +183,6 @@ public class JafsInodeContext {
 			inode.flushInode();
 		}
 	}
-
-	long check(long bpos, int level) throws JafsException, IOException {
-		long size = 0;
-		JafsBlockView dum = new JafsBlockView(vfs, bpos);
-		if (level != 0) {
-			// this is a pointer block, check all it's entries
-			dum.seekSet(0);
-			for (int n=0; n<ptrsPerPtrBlock; n++) {
-				long ptr = dum.readInt();
-				if (ptr!=0) {
-					size += check(ptr, level - 1);
-				}
-			}
-		}
-		else {
-			size += blockSize;
-		}
-		return size;
-	}
-
-//	public void checkDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
-//		long expectedSize = inode.size;
-//		if (expectedSize % blockSize!=0) {
-//			expectedSize -= expectedSize % blockSize;
-//			expectedSize += blockSize;
-//		}
-//		long realSize = 0;
-//		for (int n=0; n<ptrsPerInode; n++) {
-//			if (inode.ptrs[n]!=0) {
-//				realSize += check(inode.ptrs[n], ptrInfo[n].depth);
-//			}
-//		}
-//		if (realSize!=expectedSize) {
-//			throw new JafsException("CheckFs: expected size: "+expectedSize+", real size: "+realSize);
-//		}
-//	}
 
 	@Override
 	public String toString() {

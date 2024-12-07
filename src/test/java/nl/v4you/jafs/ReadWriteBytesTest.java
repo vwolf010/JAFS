@@ -108,9 +108,6 @@ public class ReadWriteBytesTest {
         //assertEquals(blockSize, f.length());
         jafs.close();
 
-        File g = new File(TEST_ARCHIVE);
-        long len = g.length();
-
         jafs = new Jafs(TEST_ARCHIVE);
 
         f = jafs.getFile("/f2.txt");
@@ -141,7 +138,7 @@ public class ReadWriteBytesTest {
 
         jafs.close();
 
-        g = new File(TEST_ARCHIVE);
+        File g = new File(TEST_ARCHIVE);
         assertEquals(7 * blockSize, g.length());
     }
 
@@ -174,9 +171,6 @@ public class ReadWriteBytesTest {
         //assertEquals(blockSize, f.length());
         jafs.close();
 
-        File g = new File(TEST_ARCHIVE);
-        long len = g.length();
-
         jafs = new Jafs(TEST_ARCHIVE);
 
         f = jafs.getFile("/f2.txt");
@@ -207,7 +201,7 @@ public class ReadWriteBytesTest {
 
         jafs.close();
 
-        g = new File(TEST_ARCHIVE);
+        File g = new File(TEST_ARCHIVE);
         assertEquals(7 * blockSize, g.length());
     }
 
@@ -418,11 +412,10 @@ public class ReadWriteBytesTest {
     public void writeReadBytesUsingMaxFileSize() throws JafsException, IOException {
         int blockSize = 64;
         long maxFileSize = 4_474_432;
-        long bufSize = maxFileSize;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
         System.err.println(jafs.getINodeContext().toString());
         JafsFile f = jafs.getFile("/abc.txt");
-        byte[] content = new byte[(int)bufSize];
+        byte[] content = new byte[(int)maxFileSize];
 
         long blocksUsed = jafs.getSuper().getBlocksUsed();
         System.err.println("blocksUsed: " + blocksUsed);
@@ -471,7 +464,7 @@ public class ReadWriteBytesTest {
 
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
         JafsFile f = jafs.getFile("/a.txt");
-        byte content[] = new byte[blockSize];
+        byte[] content = new byte[blockSize];
 
         JafsOutputStream jos = jafs.getOutputStream(f);
         jos.write(content);

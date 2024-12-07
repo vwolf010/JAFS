@@ -26,13 +26,11 @@ public class JafsOutputStream extends OutputStream {
 			oldSize = inode.getSize();
 			if (append) {
 				inode.seekEnd(0);
-			}
-			else {
+			} else {
 				inode.resetSize();
 				vfs.flushBlockCache();
 			}
-		}
-		else {
+		} else {
 			oldSize = 0;
 		}
 	}
@@ -144,8 +142,7 @@ public class JafsOutputStream extends OutputStream {
 				if (inode.getSize() == 0) {
 					deleteDirEntry();
 					inode.freeBlocksAndDeleteInode();
-				}
-				else {
+				} else {
 					inode.freeBlocks(oldSize);
 				}
 				vfs.flushBlockCache();

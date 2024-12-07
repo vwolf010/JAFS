@@ -5,10 +5,10 @@ import nl.v4you.jafs.Jafs;
 import java.util.LinkedList;
 
 public class JafsDirPool {
-    private LinkedList<JafsDir> free = new LinkedList<>();
-    private LinkedList<JafsDir> busy = new LinkedList<>();
+    private final LinkedList<JafsDir> free = new LinkedList<>();
+    private final LinkedList<JafsDir> busy = new LinkedList<>();
 
-    private Jafs vfs;
+    private final Jafs vfs;
 
     public JafsDirPool(Jafs vfs) {
         this.vfs = vfs;
@@ -19,13 +19,11 @@ public class JafsDirPool {
         if (free.isEmpty()) {
             dir = new JafsDir(vfs);
             busy.add(dir);
-        }
-        else {
+        } else {
             dir = free.removeFirst();
             busy.add(dir);
         }
         return dir;
-//        return new JafsDir(vfs);
     }
 
     public void release(JafsDir dir) {

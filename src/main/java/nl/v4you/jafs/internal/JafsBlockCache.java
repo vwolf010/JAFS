@@ -7,10 +7,11 @@ import java.io.IOException;
 import java.util.TreeSet;
 
 public class JafsBlockCache {
-	private Jafs vfs;
-	private LRUCache<Long, JafsBlock> gcache;
+	private final Jafs vfs;
+	private final LRUCache<Long, JafsBlock> gcache;
+    private final TreeSet<Long> flushList = new TreeSet<>();
+
     private JafsBlock free = null;
-    private TreeSet<Long> flushList = new TreeSet<>();
 
 	public JafsBlockCache(Jafs vfs, int size) {
 	    this.vfs = vfs;
@@ -22,8 +23,7 @@ public class JafsBlockCache {
         if (blk == null) {
             if (free == null) {
                 blk = new JafsBlock(vfs, bpos);
-            }
-            else {
+            } else {
                 blk = free;
                 blk.setBpos(bpos);
                 free = null;
@@ -38,7 +38,6 @@ public class JafsBlockCache {
                 free = evicted;
             }
         }
-
 		return blk;
 	}
 

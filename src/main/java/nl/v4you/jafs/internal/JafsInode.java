@@ -100,7 +100,7 @@ public class JafsInode {
 		if (!isInlined()) {
 			iblock.readBytes(bb1, ctx.getPtrsPerInode() << 2);
             int ptrsPerInode = ctx.getPtrsPerInode();
-            for (int off= 0 , n = 0; n<ptrsPerInode; n++) {
+            for (int off = 0, n = 0; n < ptrsPerInode; n++) {
                 ptrs[n] = Util.arrayToInt(bb1, off);
                 off += 4;
             }
@@ -184,8 +184,7 @@ public class JafsInode {
             iblock.seekSet((int)(INODE_HEADER_SIZE + fpos));
 			iblock.writeByte(b & 0xff);
 			fpos++;
-		}
-		else {
+		} else {
 			JafsBlockView dum = new JafsBlockView(vfs, ctx.getBlkPos(this, fpos));
 			dum.seekSet((int)(fpos & blockSizeMask));
 			dum.writeByte(b & 0xff);
@@ -210,8 +209,7 @@ public class JafsInode {
             iblock.seekSet((int)(INODE_HEADER_SIZE + fpos));
             iblock.writeBytes(b, off, len);
             fpos += len;
-		}
-		else {
+		} else {
             int todo = len;
             while (todo > 0) {
                 JafsBlockView dum = new JafsBlockView(vfs, ctx.getBlkPos(this, fpos));
@@ -245,8 +243,7 @@ public class JafsInode {
             iblock.seekSet((int)(INODE_HEADER_SIZE+fpos));
 			fpos++;
 			return iblock.readByte();
-		}
-		else {
+		} else {
 			JafsBlockView block = new JafsBlockView(vfs, ctx.getBlkPos(this, fpos));
 			block.seekSet((int)(fpos & blockSizeMask));
 			fpos++;
@@ -269,8 +266,7 @@ public class JafsInode {
             iblock.seekSet((int)(INODE_HEADER_SIZE + fpos));
             iblock.readBytes(b, off, len);
             fpos += len;
-		}
-		else {
+		} else {
             int todo = len;
             int done;
             while (todo > 0) {

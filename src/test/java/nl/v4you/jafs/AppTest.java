@@ -14,6 +14,7 @@ import java.util.Random;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 @RunWith(Parameterized.class)
 public class AppTest {
@@ -88,7 +89,7 @@ public class AppTest {
         fos.write("1234567890".getBytes());
         fos.close();
 
-        byte buf[] = new byte[(int)f.length()];
+        byte[] buf = new byte[(int)f.length()];
         JafsInputStream fis = vfs.getInputStream(f);
         int bread = fis.read(buf);
         assertEquals(f.length(), bread);
@@ -118,7 +119,7 @@ public class AppTest {
 
     @Test
     public void fileInputStream() throws Exception {
-        byte content[] = "12345678901234567890123456789012345678901234567890".getBytes();
+        byte[] content = "12345678901234567890123456789012345678901234567890".getBytes();
 
         Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
@@ -128,7 +129,7 @@ public class AppTest {
         fos.write(content);
         fos.close();
 
-        byte buf[] = new byte[(int)f.length()];
+        byte[] buf = new byte[(int)f.length()];
         JafsInputStream fis = vfs.getInputStream(f);
         fis.read(buf);
         fis.close();
@@ -157,19 +158,19 @@ public class AppTest {
         Jafs vfs = new Jafs(TEST_ARCHIVE, blockSize);
 
         JafsFile f = vfs.getFile("/sub1");
-        assertEquals(false, f.exists());
+        assertFalse(f.exists());
         f.mkdir();
-        assertEquals(true, f.exists());
+        assertTrue(f.exists());
 
         f = vfs.getFile("/sub1/sub2");
-        assertEquals(false, f.exists());
+        assertFalse(f.exists());
         f.mkdir();
-        assertEquals(true, f.exists());
+        assertTrue(f.exists());
 
         f = vfs.getFile("/sub1/sub2/sub3");
-        assertEquals(false, f.exists());
+        assertFalse(f.exists());
         f.mkdir();
-        assertEquals(true, f.exists());
+        assertTrue(f.exists());
 
         vfs.close();
     }
@@ -187,7 +188,7 @@ public class AppTest {
         f = vfs.getFile("/sub1/sub2/sub3");
         f.mkdir();
 
-        byte content[] = "1234567890".getBytes();
+        byte[] content = "1234567890".getBytes();
 
         f = vfs.getFile("/sub1/sub2/sub3/test123.file");
         JafsOutputStream fos = vfs.getOutputStream(f);
@@ -195,7 +196,7 @@ public class AppTest {
 
         assertTrue(f.exists());
 
-        byte buf[] = new byte[(int)f.length()];
+        byte[] buf = new byte[(int)f.length()];
         JafsInputStream fis = vfs.getInputStream(f);
         fis.read(buf, 0, (int)f.length());
 
@@ -226,7 +227,7 @@ public class AppTest {
         f = vfs.getFile("/sub1");
         assertTrue(f.exists());
         f = vfs.getFile("/sub2");
-        assertTrue(!f.exists());
+        assertFalse(f.exists());
         f = vfs.getFile("/sub3");
         assertTrue(f.exists());
 

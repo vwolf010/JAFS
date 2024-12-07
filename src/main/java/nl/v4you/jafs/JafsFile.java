@@ -10,10 +10,10 @@ public class JafsFile {
     public static final String SEPARATOR = "/";
 	public static final char SEPARATOR_CHAR = '/';
 
-    private Jafs vfs;
-	private String path;
-	private String canonicalPath;
-    private JafsDirEntryCache dc;
+    private final Jafs vfs;
+	private final String path;
+	private final String canonicalPath;
+    private final JafsDirEntryCache dc;
 
     private static final Pattern SLASH = Pattern.compile(SEPARATOR);
     private static final Pattern MULTIPLE_SLASH = Pattern.compile("/+/");
@@ -152,15 +152,13 @@ public class JafsFile {
 		if (entry != null) {
 			if (entry.getBpos() == 0) {
 				return new String[0];
-			}
-			else {
+			} else {
 			    JafsInode inode = vfs.getInodePool().claim();
                 JafsDir dir = vfs.getDirPool().claim();
 			    try {
                     inode.openInode(entry.getBpos());
                     dir.setInode(inode);
-                    String[] lst = dir.list();
-                    return lst;
+                    return dir.list();
                 }
                 finally {
                     vfs.getInodePool().release(inode);
@@ -243,8 +241,7 @@ public class JafsFile {
 		if (entry != null) {
 			if (entry.getBpos() == 0) {
 				return new JafsFile[0];
-			}
-			else {
+			} else {
 			    JafsInode inode = vfs.getInodePool().claim();
                 JafsDir dir = vfs.getDirPool().claim();
 			    try {
@@ -415,15 +412,13 @@ public class JafsFile {
 		if (!path.contains(SEPARATOR)) {
 			if (hasRoot) {
 				return SEPARATOR;
-			}
-			else {
+			} else {
 				return null;
 			}
 		}
 		if (hasRoot) {
 			return SEPARATOR + FILENAME_IN_PATH.matcher(path).replaceAll("");
-		}
-		else {
+		} else {
 			return FILENAME_IN_PATH.matcher(path).replaceAll("");
 		}
 	}
@@ -457,8 +452,7 @@ public class JafsFile {
         }
         if (path.equals(SEPARATOR)) {
 		    return path;
-        }
-        else {
+        } else {
             return path.substring(0, path.length() - 1);
         }
 	}

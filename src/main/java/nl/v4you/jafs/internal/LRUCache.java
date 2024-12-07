@@ -12,9 +12,9 @@ class LRUCache<K, V> {
         GenericCacheEntry r;
     }
 
-    private int cacheMaxSize; // 3 is the minimum size!
+    private final int cacheMaxSize; // 3 is the minimum size!
 
-    private Map<K, GenericCacheEntry> cache;
+    private final Map<K, GenericCacheEntry> cache;
     private GenericCacheEntry mostLeft;
     private GenericCacheEntry mostRight;
 
@@ -86,10 +86,6 @@ class LRUCache<K, V> {
             cache.remove(ce.key);
             cntRemoved++;
         }
-    }
-
-    int size() {
-        return cache.size();
     }
 
     private void addEntry(GenericCacheEntry ce) {

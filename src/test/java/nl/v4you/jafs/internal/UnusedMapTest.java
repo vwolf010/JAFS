@@ -14,6 +14,7 @@ import java.util.Random;
 import static junit.framework.TestCase.assertTrue;
 import static nl.v4you.jafs.AppTest.TEST_ARCHIVE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class UnusedMapTest {
 
@@ -59,7 +60,7 @@ public class UnusedMapTest {
     public void reuseDataBlockAsInodeBlock() throws JafsException, IOException {
         int blockSize = 128;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
-        byte content[] = new byte[blockSize];
+        byte[] content = new byte[blockSize];
         Arrays.fill(content, (byte)0xff); // if this were an inode record, all flags would be set
 
         JafsFile f = jafs.getFile("/abc1.txt");
@@ -205,13 +206,11 @@ public class UnusedMapTest {
                     jos.write(buf);
                     jos.close();
                     assertEquals(fileLen + blockSize, f.length());
-                }
-                else {
+                } else {
                     if (rnd.nextInt(100) < 20) {
                         assertTrue(f.delete());
-                        assertTrue(!f.exists());
-                    }
-                    else {
+                        assertFalse(f.exists());
+                    } else {
                         fileLen = 0;
                         jos = jafs.getOutputStream(f);
                         jos.write(buf);

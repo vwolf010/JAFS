@@ -5,10 +5,9 @@ import nl.v4you.jafs.Jafs;
 import java.util.LinkedList;
 
 public class JafsInodePool {
-    private LinkedList<JafsInode> free = new LinkedList<>();
-    private LinkedList<JafsInode> busy = new LinkedList<>();
-
-    private Jafs vfs;
+    private final Jafs vfs;
+    private final LinkedList<JafsInode> free = new LinkedList<>();
+    private final LinkedList<JafsInode> busy = new LinkedList<>();
 
     public JafsInodePool(Jafs vfs) {
         this.vfs = vfs;
@@ -19,8 +18,7 @@ public class JafsInodePool {
         if (free.isEmpty()) {
             inode = new JafsInode(vfs);
             busy.add(inode);
-        }
-        else {
+        } else {
             inode = free.removeFirst();
             busy.add(inode);
         }

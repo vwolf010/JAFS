@@ -32,12 +32,18 @@ public class JafsBlock {
     }
 
 	void initZeros(int len) {
+		if (len == 0) {
+			return;
+		}
 		Arrays.fill(buf, byteIdx, byteIdx + len, (byte)0);
 		byteIdx += len;
         markForFlush();
 	}
 
 	void initOnes(int len) {
+		if (len == 0) {
+			return;
+		}
 		Arrays.fill(buf, byteIdx, byteIdx + len, (byte)0xff);
 		byteIdx += len;
 		markForFlush();
@@ -70,21 +76,6 @@ public class JafsBlock {
 		needsFlush = false;
 	}
 
-//	void dumpBlock(File f) {
-//		try {
-//			FileOutputStream fos = new FileOutputStream(f);
-//			fos.write(buf);
-//			fos.close();
-//		}
-//		catch (Exception e) {
-//			System.err.println("Failed to dump block "+f.getAbsolutePath());
-//		}
-//	}
-//
-//	void dumpBlock() {
-//		File f = new File("c:/data/temp/inode_block_"+bpos+".dmp");
-//		dumpBlock(f);
-//	}
 	int readByte() {
 		return buf[byteIdx++] & 0xff;
 	}
@@ -120,18 +111,6 @@ public class JafsBlock {
 		byteIdx += len;
 	}
 
-	void readBytes(byte[] b, int len) {
-		if (len == 0) {
-			return;
-		}
-		System.arraycopy(buf, byteIdx, b, 0, len);
-		byteIdx += len;
-	}
-
-	void writeBytes(byte[] b) {
-		writeBytes(b, b.length);
-	}
-
 	void writeBytes(byte[] b, int off, int len) {
 		if (len == 0) {
 			return;
@@ -141,19 +120,10 @@ public class JafsBlock {
         markForFlush();
 	}
 
-	void writeBytes(byte[] b, int len) {
-		if (len == 0) {
-			return;
-		}
-		System.arraycopy(b, 0, buf, byteIdx, len);
-		byteIdx += len;
-		markForFlush();
-	}
 	long readInt() {
-		long i = 0;
-		i |= (buf[byteIdx++] & 0xffL)<<24;
-		i |= (buf[byteIdx++] & 0xffL)<<16;
-		i |= (buf[byteIdx++] & 0xffL)<< 8;
+		long i = (buf[byteIdx++] & 0xffL) << 24;
+		i |= (buf[byteIdx++] & 0xffL) << 16;
+		i |= (buf[byteIdx++] & 0xffL) << 8;
 		i |= (buf[byteIdx++] & 0xffL);
 		return i;
 	}

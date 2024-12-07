@@ -8,32 +8,32 @@ import java.io.RandomAccessFile;
 
 public class JafsSuper {
 	private static final int VERSION = 1;
-	private static int POS_BLOCK_SIZE = 6;
-	private static int POS_BLOCKS_USED = 10;
-	private static int POS_BLOCKS_TOTAL = 14;
-	private static int POS_IS_LOCKED = 18;
-	private static int FALSE = 0;
-	private static int TRUE = 1;
-	private static int HEADER_SIZE = 19;
+	private static final int POS_BLOCK_SIZE = 6;
+	private static final int POS_BLOCKS_USED = 10;
+	private static final int POS_BLOCKS_TOTAL = 14;
+	private static final int POS_IS_LOCKED = 18;
+	private static final int FALSE = 0;
+	private static final int TRUE = 1;
+	private static final int HEADER_SIZE = 19;
 	private final RandomAccessFile raf;
+	private final byte[] buf;
+
 	private int blockSize = 0;
 	private long blocksTotal = 0;
 	private long blocksUsed = 0;
-	byte[] buf = new byte[HEADER_SIZE];
 	int isLocked = FALSE;
 
 	public void lock(File myFile, JafsUnusedMap unusedMap) throws JafsException, IOException {
 		if (isLocked == TRUE) {
 			setBlocksTotal(myFile);
 			setBlocksUsed(unusedMap);
-		}
-		else {
+		} else {
 			isLocked = TRUE;
 			flush();
 		}
 	}
 
-	public void close() throws JafsException, IOException {
+	public void close() throws IOException {
 		isLocked = FALSE;
 		flush();
 	}
@@ -47,8 +47,7 @@ public class JafsSuper {
 			this.blockSize = blockSize;
 			buf = new byte[this.blockSize];
 			flush();
-		}
-		else {
+		} else {
 			read();
 			if (this.blockSize > 0 && blockSize > 0 && this.blockSize != blockSize) {
 				throw new JafsException("Supplied block size [" + blockSize + "] does not match header block size [" + this.blockSize + "]");

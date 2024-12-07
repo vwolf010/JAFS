@@ -7,16 +7,15 @@ import java.io.IOException;
 import java.util.TreeSet;
 
 public class JafsUnusedMap {
-
     static final int SKIP_MAP = 0x80;
     static final int BLOCKS_PER_BYTE = 8;
-
     final Jafs vfs;
     final JafsSuper superBlock;
     final int blocksPerUnusedMap; // blocksPerUnusedMap includes the unusedMap itself
     final int blockSize;
-    private long startAtMapNumber = 0;
     private final TreeSet<Long> availableMaps = new TreeSet<>(); // alleen free() mag hier aan toevoegen
+
+    private long startAtMapNumber = 0;
 
     public JafsUnusedMap(Jafs vfs) {
         this.vfs = vfs;
@@ -133,7 +132,7 @@ public class JafsUnusedMap {
     }
 
     public int countUsedBlocks(int mapNumber) throws JafsException, IOException {
-        long curBpos = mapNumber * blocksPerUnusedMap;
+        long curBpos = mapNumber * (long)blocksPerUnusedMap;
         JafsBlockView block = new JafsBlockView(vfs, curBpos);
         block.seekSet(0);
 
@@ -150,15 +149,4 @@ public class JafsUnusedMap {
         }
         return count;
     }
-
-//	void dumpLastVisited() {
-//        long blockPos = lastVisitedMapForDump*blocksPerUnusedMap;
-//        File f = new File(Util.DUMP_DIR+"/unused_"+lastVisitedMapForDump+"_block_"+blockPos+".dmp");
-//        try {
-//            //vfs.getCacheBlock(blockPos).dumpBlock(f);
-//        }
-//        catch(Exception e) {
-//            System.err.println("unable to dump unusedmap "+lastVisitedMapForDump+" block "+blockPos);
-//        }
-//    }
 }

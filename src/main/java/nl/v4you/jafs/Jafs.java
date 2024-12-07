@@ -10,8 +10,8 @@ import java.io.RandomAccessFile;
 
 public class Jafs implements AutoCloseable {
 
-	private static int CACHE_BLOCK_MAX = 16 * 1024;
-	private static int CACHE_DIR_MAX   = 256 * 256;
+	private static final int CACHE_BLOCK_MAX = 16 * 1024;
+	private static final int CACHE_DIR_MAX   = 256 * 256;
 
 	private JafsBlockCache blockCache;
 	private JafsDirEntryCache dirCache;
@@ -235,8 +235,7 @@ public class Jafs implements AutoCloseable {
 					}
 					fsize.lost[n] += bs - mod;
 				}
-			}
-			else {
+			} else {
 				adviceBlockSizeScan(fsize, g);
 			}
 		}
