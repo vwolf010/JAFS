@@ -16,7 +16,7 @@ public class JafsSuper {
 	private static final int TRUE = 1;
 	private static final int HEADER_SIZE = 19;
 	private final RandomAccessFile raf;
-	private final byte[] buf;
+	private byte[] buf = new byte[64]; // not redundant
 
 	private int blockSize = 0;
 	private long blocksTotal = 0;
