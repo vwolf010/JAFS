@@ -7,12 +7,14 @@ import java.io.IOException;
 
 public class JafsBlockView {
     private static final int SUPERBLOCK_SIZE = 1;
-    private long blockId;
-    JafsBlock diskBlock;
+
+    private final long blockId;
     private final int viewSize;
-    private int byteOffset;
-    private int byteIdx;
     private final JafsBlockCache blockCache;
+    private final int byteOffset;
+
+    private JafsBlock diskBlock;
+    private int byteIdx;
 
     JafsBlockView(Jafs vfs, long vpos) {
         blockCache = vfs.getBlockCache();

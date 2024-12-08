@@ -115,13 +115,13 @@ class LRUCache<K, V> {
     String stats() {
         StringBuilder sb = new StringBuilder();
         int used = (int) Math.round((cache.size() * 100.0) / cacheMaxSize);
-        sb.append("   size    : " + cache.size() + " (" + used + "%)\n");
-        sb.append("   added   : " + cntAdded + "\n");
-        sb.append("   evicted : " + cntEvicted + "\n");
-        sb.append("   removed : " + cntRemoved + "\n");
+        sb.append("   size    : ").append(cache.size()).append(" (").append(used).append("%)\n");
+        sb.append("   added   : ").append(cntAdded).append("\n");
+        sb.append("   evicted : ").append(cntEvicted).append("\n");
+        sb.append("   removed : ").append(cntRemoved).append("\n");
         int hit = (int)Math.round((cntHit * 100.0) / (cntHit + cntMiss));
-        sb.append("   hit     : " + cntHit + " (" + hit + "%)\n");
-        sb.append("   miss    : " + cntMiss + " (" + (100 - hit) + "%)\n");
+        sb.append("   hit     : ").append(cntHit).append(" (").append(hit).append("%)\n");
+        sb.append("   miss    : ").append(cntMiss).append(" (").append(100 - hit).append("%)\n");
         return sb.toString();
     }
 }

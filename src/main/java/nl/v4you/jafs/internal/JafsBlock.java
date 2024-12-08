@@ -10,15 +10,14 @@ import java.util.Arrays;
 public class JafsBlock {
 	private final int blockSize = 4096;
 	private final byte[] buf;
-	public long bpos;
 	private final RandomAccessFile raf;
-	public int byteIdx;
-	boolean needsFlush = false;
-	final Jafs vfs;
-	final JafsBlockCache blockCache;
+	private final JafsBlockCache blockCache;
+
+	private long bpos;
+	private int byteIdx;
+	private boolean blockNeedsFlush = false;
 
 	JafsBlock(Jafs vfs, long bpos) {
-		this.vfs = vfs;
 		this.blockCache = vfs.getBlockCache();
 		raf = vfs.getRaf();
 		buf = new byte[blockSize];
@@ -30,6 +29,14 @@ public class JafsBlock {
 	    this.bpos = bpos;
         byteIdx = 0;
     }
+
+	long getBpos() {
+		return bpos;
+	}
+
+	boolean needsFlush() {
+		return blockNeedsFlush;
+	}
 
 	void initZeros(int len) {
 		if (len == 0) {
@@ -54,7 +61,7 @@ public class JafsBlock {
 	}
 		
 	void readFromDisk() throws IOException, JafsException {
-		if (needsFlush) {
+		if (blockNeedsFlush) {
 			throw new JafsException("cannot read from disk when needsFlush == true");
 		}
 		long start = bpos * blockSize;
@@ -64,16 +71,16 @@ public class JafsBlock {
 	}
 
 	void markForFlush() {
-		if (!needsFlush) {
+		if (!blockNeedsFlush) {
 			blockCache.addToFlushList(bpos);
-			needsFlush = true;
+			blockNeedsFlush = true;
 		}
 	}
 	void writeToDisk() throws IOException {
 		long start = bpos * blockSize;
 		raf.seek(start);
 		raf.write(buf);
-		needsFlush = false;
+		blockNeedsFlush = false;
 	}
 
 	int readByte() {

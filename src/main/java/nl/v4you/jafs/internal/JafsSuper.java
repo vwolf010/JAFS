@@ -48,7 +48,7 @@ public class JafsSuper {
 			buf = new byte[this.blockSize];
 			flush();
 		} else {
-			read();
+			readHeader();
 			if (this.blockSize > 0 && blockSize > 0 && this.blockSize != blockSize) {
 				throw new JafsException("Supplied block size [" + blockSize + "] does not match header block size [" + this.blockSize + "]");
 			}
@@ -99,7 +99,7 @@ public class JafsSuper {
 		return blockSize;
 	}
 
-	private void read() throws IOException, JafsException {
+	private void readHeader() throws IOException, JafsException {
 		if (raf.length() < HEADER_SIZE) {
 			throw new JafsException("File too small, only " + raf.length() + " bytes");
 		}
