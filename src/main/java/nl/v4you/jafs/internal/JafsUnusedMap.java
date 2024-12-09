@@ -45,19 +45,44 @@ public class JafsUnusedMap {
             return 0;
         }
         block.seekSet(0);
-        for (int m = 0; m < blockSize; m++) {
-            int b = block.readByte();
+        int blockSizeDiv4 = blockSize / 4;
+        for (int m = 0; m < blockSizeDiv4; m++) {
+            long b = block.readInt();
             if (b != 0) {
-                if ((b & 0x80) != 0) return curBpos;
-                if ((b & 0x40) != 0) return curBpos + 1;
-                if ((b & 0x20) != 0) return curBpos + 2;
-                if ((b & 0x10) != 0) return curBpos + 3;
-                if ((b & 0x8) != 0) return curBpos + 4;
-                if ((b & 0x4) != 0) return curBpos + 5;
-                if ((b & 0x2) != 0) return curBpos + 6;
-                if ((b & 0x1) != 0) return curBpos + 7;
+                if ((b & 0x80000000L) != 0) return curBpos;
+                if ((b & 0x40000000L) != 0) return curBpos + 1;
+                if ((b & 0x20000000L) != 0) return curBpos + 2;
+                if ((b & 0x10000000L) != 0) return curBpos + 3;
+                if ((b & 0x8000000L) != 0) return curBpos + 4;
+                if ((b & 0x4000000L) != 0) return curBpos + 5;
+                if ((b & 0x2000000L) != 0) return curBpos + 6;
+                if ((b & 0x1000000L) != 0) return curBpos + 7;
+                if ((b & 0x800000L) != 0) return curBpos + 8;
+                if ((b & 0x400000L) != 0) return curBpos + 9;
+                if ((b & 0x200000L) != 0) return curBpos + 10;
+                if ((b & 0x100000L) != 0) return curBpos + 11;
+                if ((b & 0x80000L) != 0) return curBpos + 12;
+                if ((b & 0x40000L) != 0) return curBpos + 13;
+                if ((b & 0x20000L) != 0) return curBpos + 14;
+                if ((b & 0x10000L) != 0) return curBpos + 15;
+                if ((b & 0x8000L) != 0) return curBpos + 16;
+                if ((b & 0x4000L) != 0) return curBpos + 17;
+                if ((b & 0x2000L) != 0) return curBpos + 18;
+                if ((b & 0x1000L) != 0) return curBpos + 19;
+                if ((b & 0x800L) != 0) return curBpos + 20;
+                if ((b & 0x400L) != 0) return curBpos + 21;
+                if ((b & 0x200L) != 0) return curBpos + 22;
+                if ((b & 0x100L) != 0) return curBpos + 23;
+                if ((b & 0x80L) != 0) return curBpos + 24;
+                if ((b & 0x40L) != 0) return curBpos + 25;
+                if ((b & 0x20L) != 0) return curBpos + 26;
+                if ((b & 0x10L) != 0) return curBpos + 27;
+                if ((b & 0x8L) != 0) return curBpos + 28;
+                if ((b & 0x4L) != 0) return curBpos + 29;
+                if ((b & 0x2L) != 0) return curBpos + 30;
+                if ((b & 0x1L) != 0) return curBpos + 31;
             }
-            curBpos += BLOCKS_PER_BYTE;
+            curBpos += 4 * BLOCKS_PER_BYTE;
         }
         // skip this unusedMap next time it gets visited
         block.seekSet(0);
