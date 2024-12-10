@@ -1,6 +1,7 @@
 package nl.v4you.jafs.internal;
 
 public class JafsDirEntry {
+	long prevStartPos;
 	long startPos;
 	long parentBpos;
 	long bpos;

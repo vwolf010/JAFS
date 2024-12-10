@@ -29,6 +29,9 @@ public class JafsDir {
 	private static final int MAX_FILE_NAME_LENGTH = 0x7FFF;
 	private final byte[] bb = new byte[BB_LEN];
 
+	private long prevStartPos;
+	private long foundStartPos;
+
 	public static void createRootDir(Jafs vfs) throws JafsException, IOException {
         JafsInode rootInode = vfs.getInodePool().claim();
         JafsDir dir = vfs.getDirPool().claim();
@@ -57,7 +60,9 @@ public class JafsDir {
         }
     }
 
-	long getEntryPos(byte[] name) throws JafsException, IOException {
+	void getEntryPos(byte[] name) throws JafsException, IOException {
+		prevStartPos = 0;
+		foundStartPos = 0;
 		int nameLen = name.length;
 		int nameChecksum = OneAtATimeHash.calcHash(name) & 0xff;
 		inode.seekSet(0);
@@ -78,14 +83,15 @@ public class JafsDir {
 						n++;
 					}
 					if (n == nameLen) {
-						return startPos;
+						foundStartPos = startPos;
+						return;
 					}
                 }
             }
 			inode.seekSet(startPos + entrySize);
 			entrySize = inode.readShort();
 		}
-		return -1;
+		return;
 	}
 	
 	public JafsDirEntry getEntry(byte[] name) throws JafsException, IOException {
@@ -95,20 +101,21 @@ public class JafsDir {
 		if (inode == null) {
 			return null;
 		} else {
-			long startPos = this.getEntryPos(name);
-			if (startPos < 0) {
+			getEntryPos(name);
+			if (foundStartPos == 0) {
 				return null;
 			}
 			JafsDirEntry entry = new JafsDirEntry();
-			entry.startPos = startPos;
+			entry.prevStartPos = prevStartPos;
+			entry.startPos = foundStartPos;
 			entry.name = name;
 			entry.parentBpos = inode.getVpos();
 
 			// skip length + checksum
             if (name.length < 0x80) {
-                inode.seekSet(startPos + 1 + 1);
+                inode.seekSet(foundStartPos + 1 + 1);
             } else {
-                inode.seekSet(startPos + 2 + 1);
+                inode.seekSet(foundStartPos + 2 + 1);
             }
 			// then read data
 			entry.type = inode.readByte();
@@ -117,27 +124,38 @@ public class JafsDir {
 		}
 	}
 
-	public void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
-		// Test the next entry to see if we can merge with it
-		// in an attempt to avoid fragmentation of the directory list
-		inode.seekSet(entry.startPos - 2);
-		int entrySize = inode.readShort();
-		inode.seekCur(entrySize);
-		int entrySizeNextEntry = inode.readShort();
-		if (entrySizeNextEntry != 0) {
-			int len = inode.readByte();
-			if (len == 0) {
-				// we can merge with this entry
-				entrySize += ENTRY_SIZE_LENGTH + entrySizeNextEntry;
-				inode.seekSet(entry.startPos - 2);
-				inode.writeShort(entrySize);
+	private void mergeEntries(long startPosA) throws JafsException, IOException {
+		inode.seekSet(startPosA - 2);
+		int entrySizeA = inode.readShort();
+		int lenA = inode.readByte();
+		if (lenA == 0) {
+			inode.seekCur(entrySizeA);
+			int entrySizeB = inode.readShort();
+			if (entrySizeB != 0) {
+				int lenB = inode.readByte();
+				if (lenB == 0) {
+					// we can merge with this entry
+					entrySizeA += ENTRY_SIZE_LENGTH + entrySizeB;
+					inode.seekSet(startPosA - 2);
+					inode.writeShort(entrySizeA);
+				}
 			}
 		}
+	}
 
+	public void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
 		// Update the deleted entry
-        vfs.getDirCache().remove(canonicalPath);
-        inode.seekSet(entry.startPos);
+		vfs.getDirCache().remove(canonicalPath);
+		inode.seekSet(entry.startPos);
 		inode.writeByte(0); // name length
+
+		// Can we merge with the previous entry? To prevent directory fragmentation
+		if (entry.prevStartPos != 0) {
+			mergeEntries(entry.prevStartPos);
+		}
+
+		// Can we merge with the next entry? To prevent directory fragmentation
+		mergeEntries(entry.startPos);
 	}
 
 	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
