@@ -322,13 +322,13 @@ public class ReadWriteBytesTest {
     public void outputStreamEmptyByteArray() throws JafsException, IOException {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
-        assertBlocks(jafs, 2, 2); // unusedMap + rootDir
+        assertBlocks(jafs, 1, 1); // rootDir
 
         JafsFile f = jafs.getFile("/abc.txt");
         JafsOutputStream os = jafs.getOutputStream(f);
         os.write(new byte[0]);
         os.close();
-        assertBlocks(jafs, 2, 2); // unusedMap + rootDir
+        assertBlocks(jafs, 1, 1); // rootDir
         assertEquals(0, f.length());
     }
 
