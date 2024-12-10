@@ -19,6 +19,7 @@ import java.util.LinkedList;
 public class JafsDir {
 	static final int ENTRY_SIZE_LENGTH = 2;
     static final int ENTRY_OVERHEAD = 1 + 1 + 1 + 4; // length + checksum + type + bpos
+	static final int POS_BPOS = 1 + 1 + 1; // length + checksum + type
     static final byte[] SLASH = {'/'};
 
 	final Jafs vfs;
@@ -141,11 +142,12 @@ public class JafsDir {
 
 	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
 		if (entry.name.length < 0x80) {
-			inode.seekSet(entry.startPos + 1 + 1 + 1);
+			inode.seekSet(entry.startPos + POS_BPOS);
 		} else {
-			inode.seekSet(entry.startPos + 2 + 1 + 1);
+			inode.seekSet(entry.startPos + POS_BPOS + 1);
 		}
-		inode.writeInt(0);
+		entry.bpos = 0;
+		inode.writeInt(entry.bpos);
 	}
 
 	public boolean hasActiveEntries() throws JafsException, IOException {

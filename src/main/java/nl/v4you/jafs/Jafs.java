@@ -19,20 +19,16 @@ public class Jafs implements AutoCloseable {
 	private File myFile;
 	private RandomAccessFile raf;
 	private JafsInodeContext ctx;
-	private JafsUnusedMap um;
 	private JafsDirEntry rootEntry = null;
 	private JafsInodePool inodePool = null;
 	private JafsDirPool dirPool = null;
 
-	/*
-	 * Public
-	 */
 	boolean isSupportedSize(int size, int sizeMin, int sizeMax) {
 		boolean supported = false;
 		int n;
-		for (n=1; n<=16; n++) {
+		for (n = 1; n <= 16; n++) {
 			int pow = 2 << n;
-			if (size==pow && sizeMin<=size && size<=sizeMax) {
+			if (size == pow && sizeMin <= size && size <= sizeMax) {
 				supported = true;
 				break;
 			}
@@ -98,10 +94,6 @@ public class Jafs implements AutoCloseable {
 		return ctx;
 	}
 
-	public JafsUnusedMap getUnusedMap() {
-		return um;
-	}
-
 	public RandomAccessFile getRaf() {
 		return raf;
 	}
@@ -126,23 +118,19 @@ public class Jafs implements AutoCloseable {
 		return dirCache;
 	}
 
-	private long appendNewBlockToArchive() throws JafsException, IOException {
+	public long appendNewBlockToArchive() {
 		superBlock.incBlocksTotal();
-		long bpos = (superBlock.getBlocksTotal() - 1);
-		long unusedMapBpos = um.getUnusedMapBpos(bpos);
-		if (bpos == unusedMapBpos) {
-			superBlock.incBlocksTotalAndUsed();
-			um.initializeUnusedMap(unusedMapBpos);
-			bpos++;
-		}
-		return bpos;
+		return (superBlock.getBlocksTotal());
 	}
 
 	public long getAvailableVpos() throws JafsException, IOException {
-		long bpos = getUnusedMap().getUnusedBpos();
-		if (bpos == 0) bpos = appendNewBlockToArchive();
+		long bpos = superBlock.getUnusedStackEnd();
+		if (bpos == 0) {
+			bpos = appendNewBlockToArchive();
+		} else {
+			superBlock.setUnavailable(bpos);
+		}
 		getSuper().incBlocksUsed();
-		um.setUnavailable(bpos);
 		return bpos;
 	}
 
@@ -159,14 +147,9 @@ public class Jafs implements AutoCloseable {
 		}
 	}
 
-	/*
-	 * Private
-	 */
 	private void initInodeContext(int blockSize) {
-		um = new JafsUnusedMap(this);
 		ctx = new JafsInodeContext(this, blockSize);
 	}
-
 
 	private void open(int blockSize) throws IOException, JafsException {
 		if (!myFile.exists() && blockSize < 0) {
@@ -178,13 +161,12 @@ public class Jafs implements AutoCloseable {
 		inodePool = new JafsInodePool(this);
 		dirPool = new JafsDirPool(this);
 		boolean isNewFile = myFile.length() == 0;
-		superBlock = new JafsSuper(raf, blockSize);
+		superBlock = new JafsSuper(this, blockSize);
 		initInodeContext(superBlock.getBlockSize());
 		if (isNewFile) {
 			JafsDir.createRootDir(this);
 			blockCache.flushBlocks();
 		}
-		superBlock.lock(myFile, getUnusedMap());
 	}
 
 	private void init(String fname, int blockSize) throws JafsException, IOException {
@@ -209,15 +191,13 @@ public class Jafs implements AutoCloseable {
 	}
 
 	public String stats() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("blocksUsed         : "+superBlock.getBlocksUsed()+"\n");
-		sb.append("blocksTotal        : "+superBlock.getBlocksTotal()+"\n\n");
-		sb.append(ctx.toString()+"\n");
-		sb.append("blockCache:\n"+ blockCache.stats());
-		sb.append("inodePool:\n"+inodePool.stats());
-		sb.append("dirPool:\n"+dirPool.stats());
-		sb.append("dirCache:\n"+dirCache.stats());
-		return sb.toString();
+        return "blocksUsed         : " + superBlock.getBlocksUsed() + "\n" +
+                "blocksTotal        : " + superBlock.getBlocksTotal() + "\n\n" +
+                ctx.toString() + "\n" +
+                "blockCache:\n" + blockCache.stats() +
+                "inodePool:\n" + inodePool.stats() +
+                "dirPool:\n" + dirPool.stats() +
+                "dirCache:\n" + dirCache.stats();
 	}
 
 	private void adviceBlockSizeScan(Fsize fsize, JafsFile f) throws JafsException, IOException {

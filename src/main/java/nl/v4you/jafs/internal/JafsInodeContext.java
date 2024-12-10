@@ -110,8 +110,7 @@ public class JafsInodeContext {
 	}
 
 	void freeBlock(long bpos) throws JafsException, IOException {
-		JafsUnusedMap um = vfs.getUnusedMap();
-		um.setAvailable(bpos);
+		vfs.getSuper().setAvailable(bpos);
 		vfs.getSuper().decBlocksUsed();
 	}
 	

@@ -169,24 +169,6 @@ public class JafsFile {
 		return new String[0];
 	}
 
-	public boolean resetSize() throws JafsException, IOException{
-		JafsDirEntry entry = getEntry(canonicalPath);
-		if (entry != null) {
-			if (entry.getBpos() != 0) {
-				JafsInode inode = vfs.getInodePool().claim();
-				try {
-					inode.openInode(entry.getBpos());
-					inode.resetSize();
-				}
-				finally {
-					vfs.getInodePool().release(inode);
-				}
-			}
-			return true;
-		}
-		return false;
-	}
-
 	public boolean delete() throws JafsException, IOException {
 		JafsDirEntry entry = getEntry(canonicalPath);
 		if (entry != null) {

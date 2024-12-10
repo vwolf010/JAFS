@@ -47,15 +47,6 @@ public class JafsBlock {
         markForFlush();
 	}
 
-	void initOnes(int len) {
-		if (len == 0) {
-			return;
-		}
-		Arrays.fill(buf, byteIdx, byteIdx + len, (byte)0xff);
-		byteIdx += len;
-		markForFlush();
-	}
-	
 	void seekSet(int b) {
 		byteIdx = b;
 	}
@@ -89,24 +80,6 @@ public class JafsBlock {
 
 	void writeByte(int b) {
 		buf[byteIdx++] = (byte)b;
-        markForFlush();
-	}
-
-	int peekByte() {
-		return buf[byteIdx];
-	}
-
-	void pokeByte(int b) {
-		buf[byteIdx] = (byte)b;
-        markForFlush();
-	}
-
-	int peekByte(int idx) {
-		return buf[idx] & 0xff;
-	}
-
-	void pokeByte(int idx, int b) {
-		buf[idx] = (byte)b;
         markForFlush();
 	}
 

@@ -31,16 +31,6 @@ public class JafsBlockView {
         }
     }
 
-    int peekByte(int i) throws JafsException, IOException {
-        loadDiskBlockIfNeeded();
-        return diskBlock.peekByte(byteOffset + i);
-    }
-
-    void pokeByte(int i, int b) throws JafsException, IOException {
-        loadDiskBlockIfNeeded();
-        diskBlock.pokeByte(byteOffset + i, b);
-    }
-
     void seekSet(int b) {
         byteIdx = b;
     }
@@ -91,12 +81,6 @@ public class JafsBlockView {
         diskBlock.initZeros(viewSize);
     }
 
-    void initOnes() throws JafsException, IOException {
-        loadDiskBlockIfNeeded();
-        diskBlock.seekSet(byteOffset);
-        diskBlock.initOnes(viewSize);
-    }
-
     long readInt() throws JafsException, IOException {
         loadDiskBlockIfNeeded();
         diskBlock.seekSet(byteOffset + byteIdx);
@@ -109,17 +93,5 @@ public class JafsBlockView {
         diskBlock.seekSet(byteOffset + byteIdx);
         diskBlock.writeInt(l);
         byteIdx += 4;
-    }
-
-    int peekSkipMapByte() throws JafsException, IOException {
-        loadDiskBlockIfNeeded();
-        diskBlock.seekSet(byteOffset);
-        return diskBlock.peekByte();
-    }
-
-    void pokeSkipMapByte(int b) throws JafsException, IOException {
-        loadDiskBlockIfNeeded();
-        diskBlock.seekSet(byteOffset);
-        diskBlock.pokeByte(b);
     }
 }

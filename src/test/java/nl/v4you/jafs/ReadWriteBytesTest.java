@@ -252,7 +252,7 @@ public class ReadWriteBytesTest {
     public void switchBackToInlined() throws JafsException, IOException {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
-        assertBlocks(jafs, 2, 2);
+        assertBlocks(jafs, 1, 1); // root dir
 
         JafsFile f = jafs.getFile("/abc.txt");
 
@@ -260,7 +260,7 @@ public class ReadWriteBytesTest {
         JafsOutputStream jos = jafs.getOutputStream(f);
         jos.write(content);
         jos.close();
-        assertBlocks(jafs, 8, 8);
+        assertBlocks(jafs, 7, 7); // root dir + inode + 5 blocks
         assertEquals(4 * blockSize + 20, f.length());
 
         content = new byte[2];
@@ -270,7 +270,7 @@ public class ReadWriteBytesTest {
         jos = jafs.getOutputStream(f);
         jos.write(content);
         jos.close();
-        assertBlocks(jafs, 3, 8);
+        assertBlocks(jafs, 2, 7); // root dir + inode (with inlined data)
         assertEquals(2, f.length());
 
         JafsInputStream jis = jafs.getInputStream(f);
@@ -286,11 +286,11 @@ public class ReadWriteBytesTest {
     public void createEmptyFile() throws JafsException, IOException {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
-        assertBlocks(jafs, 2, 2); // unusedMap + rootDir
+        assertBlocks(jafs, 1, 1); // rootDir
 
         JafsFile f = jafs.getFile("/abc.txt");
         f.createNewFile();
-        assertBlocks(jafs, 2, 2); // unusedMap + rootDir
+        assertBlocks(jafs, 1, 1); // rootDir
         assertTrue(f.exists());
         assertEquals(0, f.length());
     }
@@ -299,22 +299,22 @@ public class ReadWriteBytesTest {
     public void createDirAndFile() throws JafsException, IOException {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
-        assertBlocks(jafs, 2, 2); // unusedMap + rootDir
+        assertBlocks(jafs, 1, 1); // rootDir
 
         JafsFile d = jafs.getFile("/111");
         assertTrue(d.mkdir());
         assertTrue(d.exists());
-        assertBlocks(jafs, 2, 2); // unusedMap + rootDir
+        assertBlocks(jafs, 1, 1); // rootDir
 
         JafsFile f = jafs.getFile("/111/abc.txt");
         f.createNewFile();
-        assertBlocks(jafs, 3, 3); // unusedMap + rootDir + dir /111
+        assertBlocks(jafs, 2, 2); // rootDir + dir /111
         assertEquals(0, f.length());
 
         JafsOutputStream os = jafs.getOutputStream(f);
         os.write(1);
         os.close();
-        assertBlocks(jafs, 4, 4); // unusedMap + rootDir + dir /111 + file /111/abc.txt
+        assertBlocks(jafs, 3, 3); // rootDir + dir /111 + file /111/abc.txt
         assertEquals(1, f.length());
     }
 
@@ -336,18 +336,18 @@ public class ReadWriteBytesTest {
     public void outputStreamDeleteInode() throws JafsException, IOException {
         int blockSize = 256;
         Jafs jafs = new Jafs(TEST_ARCHIVE, blockSize);
-        assertBlocks(jafs, 2, 2);
+        assertBlocks(jafs, 1, 1);
 
         JafsFile f = jafs.getFile("/abc.txt");
         JafsOutputStream jos = jafs.getOutputStream(f);
         jos.write(new byte[5]);
         jos.close();
-        assertBlocks(jafs, 3, 3);
+        assertBlocks(jafs, 2, 2);
         assertEquals(5, f.length());
 
         jos = jafs.getOutputStream(f);
         jos.close();
-        assertBlocks(jafs, 2, 3);
+        assertBlocks(jafs, 1, 2);
         assertEquals(0, f.length());
     }
 

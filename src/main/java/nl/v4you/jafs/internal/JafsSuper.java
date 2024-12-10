@@ -1,8 +1,8 @@
 package nl.v4you.jafs.internal;
 
+import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
@@ -11,35 +11,21 @@ public class JafsSuper {
 	private static final int POS_BLOCK_SIZE = 6;
 	private static final int POS_BLOCKS_USED = 10;
 	private static final int POS_BLOCKS_TOTAL = 14;
-	private static final int POS_IS_LOCKED = 18;
-	private static final int FALSE = 0;
-	private static final int TRUE = 1;
-	private static final int HEADER_SIZE = 19;
+	private static final int POS_UNUSED_STACK_START = 18;
+	private static final int HEADER_SIZE = 26;
 	private final RandomAccessFile raf;
 	private final byte[] buf;
 
 	private int blockSize = 0;
 	private long blocksTotal = 0;
 	private long blocksUsed = 0;
-	int isLocked = FALSE;
+	private long unusedStackEnd = 0;
 
-	public void lock(File myFile, JafsUnusedMap unusedMap) throws JafsException, IOException {
-		if (isLocked == TRUE) {
-			setBlocksTotal(myFile);
-			setBlocksUsed(unusedMap);
-		} else {
-			isLocked = TRUE;
-			flush();
-		}
-	}
+	private final Jafs vfs;
 
-	public void close() throws IOException {
-		isLocked = FALSE;
-		flush();
-	}
-
-	public JafsSuper(RandomAccessFile raf, int blockSize) throws JafsException, IOException {
-		this.raf = raf;
+	public JafsSuper(Jafs vfs, int blockSize) throws JafsException, IOException {
+		this.vfs = vfs;
+		this.raf = vfs.getRaf();
 		if (raf.length() == 0) {
 			if (blockSize <= 0) {
 				throw new JafsException("Unable to create new jafs file with supplied blockSize " + blockSize);
@@ -59,6 +45,10 @@ public class JafsSuper {
 		}
 	}
 
+	public void close() throws IOException {
+		flush();
+	}
+
 	public long getBlocksTotal() {
 		return blocksTotal;
 	}
@@ -67,9 +57,13 @@ public class JafsSuper {
 		return blocksUsed;
 	}
 
-	public void incBlocksTotalAndUsed() {
-		incBlocksTotal();
-		incBlocksUsed();
+	public void setUnusedStackEnd(long unusedStack) throws IOException {
+		this.unusedStackEnd = unusedStack;
+		flush();
+	}
+
+	public long getUnusedStackEnd() {
+		return unusedStackEnd;
 	}
 
 	public void incBlocksTotal() {
@@ -118,7 +112,7 @@ public class JafsSuper {
 		blockSize = (int)Util.arrayToInt(header, POS_BLOCK_SIZE);
 		blocksUsed =  Util.arrayToInt(header, POS_BLOCKS_USED);
 		blocksTotal = Util.arrayToInt(header, POS_BLOCKS_TOTAL);
-		isLocked = header[POS_IS_LOCKED];
+		unusedStackEnd = Util.arrayToInt(header, POS_UNUSED_STACK_START);
 	}
 
 	private void flush() throws IOException {
@@ -132,26 +126,21 @@ public class JafsSuper {
 		Util.intToArray(buf, POS_BLOCK_SIZE, blockSize);
 		Util.intToArray(buf, POS_BLOCKS_USED, blocksUsed);
 		Util.intToArray(buf, POS_BLOCKS_TOTAL, blocksTotal);
-		buf[POS_IS_LOCKED] = (byte)isLocked;
+		Util.intToArray(buf, POS_UNUSED_STACK_START, unusedStackEnd);
 		raf.seek(0);
 		raf.write(buf, 0, blockSize);
 	}
 
-	public void setBlocksTotal(File myFile) {
-		blocksTotal = (int)(myFile.length() / blockSize) - 1 /* minus superblock */;
+	public void setUnavailable(long bpos) throws JafsException, IOException {
+		JafsBlockView block = new JafsBlockView(vfs, bpos);
+		block.seekSet(0);
+		setUnusedStackEnd(block.readInt());
 	}
 
-	public void setBlocksUsed(JafsUnusedMap unusedMap) throws JafsException, IOException {
-		int count = 0;
-		long mapNumber = 0;
-		while (true) {
-			long mapBlockNumber = mapNumber * blockSize * 8;
-			if (mapBlockNumber >= blocksTotal) {
-				break;
-			}
-			count += unusedMap.countUsedBlocks((int)mapNumber);
-			mapNumber++;
-		}
-		blocksUsed = count;
+	public void setAvailable(long bpos) throws JafsException, IOException {
+		JafsBlockView block = new JafsBlockView(vfs, bpos);
+		block.seekSet(0);
+		block.writeInt(getUnusedStackEnd());
+		setUnusedStackEnd(bpos);
 	}
 }

@@ -4,12 +4,12 @@ import nl.v4you.jafs.Jafs;
 import nl.v4you.jafs.JafsException;
 
 import java.io.IOException;
-import java.util.TreeSet;
+import java.util.HashSet;
 
 public class JafsBlockCache {
 	private final Jafs vfs;
 	private final LRUCache<Long, JafsBlock> gcache;
-    private final TreeSet<Long> flushList = new TreeSet<>();
+    private final HashSet<Long> flushList = new HashSet<>(128, 0.5f);
 
     private JafsBlock free = null;
 
@@ -49,8 +49,11 @@ public class JafsBlockCache {
 	    for (long bpos : flushList) {
 	        if (bpos >= 0) {
                 JafsBlock block = get(bpos);
-                if (block == null || !block.needsFlush()) {
-                    throw new IllegalStateException("should not happen");
+                if (block == null) {
+                    throw new IllegalStateException("block == null, should not happen");
+                }
+                if (!block.needsFlush()) {
+                    throw new IllegalStateException("!needsFlush, should not happen");
                 }
                 block.writeToDisk();
             }
