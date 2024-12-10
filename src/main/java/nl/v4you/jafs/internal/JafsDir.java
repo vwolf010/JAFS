@@ -134,7 +134,7 @@ public class JafsDir {
 			if (entrySizeB != 0) {
 				int lenB = inode.readByte();
 				if (lenB == 0) {
-					// we can merge with this entry
+					// we can merge A and B
 					entrySizeA += ENTRY_SIZE_LENGTH + entrySizeB;
 					inode.seekSet(startPosA - 2);
 					inode.writeShort(entrySizeA);
@@ -149,13 +149,13 @@ public class JafsDir {
 		inode.seekSet(entry.startPos);
 		inode.writeByte(0); // name length
 
+		// Can we merge with the next entry? To prevent directory fragmentation
+		mergeEntries(entry.startPos);
+
 		// Can we merge with the previous entry? To prevent directory fragmentation
 		if (entry.prevStartPos != 0) {
 			mergeEntries(entry.prevStartPos);
 		}
-
-		// Can we merge with the next entry? To prevent directory fragmentation
-		mergeEntries(entry.startPos);
 	}
 
 	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
