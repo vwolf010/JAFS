@@ -4,6 +4,7 @@ import nl.v4you.jafs.internal.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
 import java.util.regex.Pattern;
 
 public class JafsFile {
@@ -96,6 +97,9 @@ public class JafsFile {
 	}
 
 	public boolean createNewFile() throws JafsException, IOException {
+		if (canonicalPath.equals("/")) {
+			return false;
+		}
 		String parentPath = getParent(canonicalPath);
 		JafsDirEntry parent = getEntry(parentPath);
 		if (parent != null) {
@@ -134,7 +138,10 @@ public class JafsFile {
 	}
 
 	public boolean mkdir() throws JafsException, IOException {
-        boolean b = mkdir(canonicalPath);
+        if (canonicalPath.equals("/")) {
+			return false;
+		}
+		boolean b = mkdir(canonicalPath);
 		vfs.flushBlockCache();
 		return b;
 	}
@@ -495,5 +502,16 @@ public class JafsFile {
 				mkdir(path);
 			}
 		}
+	}
+
+	public String dirTestString() throws JafsException, IOException {
+		JafsDirEntry entry = getEntry(path);
+		JafsDir dir = vfs.getDirPool().claim();
+		JafsInode inode = vfs.getInodePool().claim();
+		inode.openInode(entry.getBpos());
+		String result = dir.testString();
+		vfs.getInodePool().release(inode);
+		vfs.getDirPool().release(dir);
+		return result;
 	}
 }

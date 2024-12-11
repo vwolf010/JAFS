@@ -134,7 +134,7 @@ public class DirectoriesTest {
 
     @Test
     public void reusingDirEntryWorks() throws JafsException, IOException {
-        String fileName = "/aaaaaaaaaaaaaaaaaaaaaaaaa";
+        String fileName = "/aaaaa";
 
         Jafs vfs = new Jafs(TEST_ARCHIVE, 64);
         JafsFile f = vfs.getFile(fileName);
@@ -146,13 +146,14 @@ public class DirectoriesTest {
 
         vfs = new Jafs(TEST_ARCHIVE);
         f = vfs.getFile(fileName);
-        for (int i=0; i<20; i++) {
+        JafsFile d = vfs.getFile("/");
+        for (int i = 0; i < 5; i++) {
             assertTrue(f.delete());
+            assertEquals("12;2;0;", d.dirTestString());
             assertTrue(f.mkdir());
+            assertEquals("12;2;5;34;2;0;aaaaa;", d.dirTestString());
         }
         vfs.close();
-
-        assertEquals(fLen, a.length());
     }
 
     @Test
@@ -235,65 +236,159 @@ public class DirectoriesTest {
     @Test
     public void directoryEntryReuseWorks() throws JafsException, IOException {
         Jafs vfs = new Jafs(TEST_ARCHIVE, 64);
-        JafsFile f;
-        f = vfs.getFile("/home");
-        f.mkdir();
 
+        JafsFile d = vfs.getFile("/home");
+        d.mkdir();
+
+        JafsFile f;
         f = vfs.getFile("/home/aa.txt");
         f.createNewFile();
         assertTrue(f.exists());
+        assertEquals("13;2;6;245;1;0;aa.txt;", d.dirTestString());
         f = vfs.getFile("/home/bb.txt");
         f.createNewFile();
         assertTrue(f.exists());
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;6;120;1;0;bb.txt;", d.dirTestString());
         f = vfs.getFile("/home/cc.txt");
         f.createNewFile();
         assertTrue(f.exists());
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;6;120;1;0;bb.txt;13;32;6;49;1;0;cc.txt;", d.dirTestString());
 
-        f = vfs.getFile("/home");
-        assertEquals(3, f.list().length);
+        assertEquals(3, d.list().length);
 
         // reuse middle entry
         f = vfs.getFile("/home/bb.txt");
         f.delete();
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;0;13;32;6;49;1;0;cc.txt;", d.dirTestString());
         f = vfs.getFile("/home/dd.txt");
         f.createNewFile();
         assertTrue(f.exists());
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;6;179;1;0;dd.txt;13;32;6;49;1;0;cc.txt;", d.dirTestString());
 
         // reuse middle last entry
         f = vfs.getFile("/home/cc.txt");
         f.delete();
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;6;179;1;0;dd.txt;13;32;0;", d.dirTestString());
         f = vfs.getFile("/home/ee.txt");
         f.createNewFile();
         assertTrue(f.exists());
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;6;179;1;0;dd.txt;13;32;6;254;1;0;ee.txt;", d.dirTestString());
 
         // add to the end
         f = vfs.getFile("/home/dd.txt");
         f.delete();
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;0;13;32;6;254;1;0;ee.txt;", d.dirTestString());
         f = vfs.getFile("/home/fff.txt");
         f.createNewFile();
         assertTrue(f.exists());
+        assertEquals("13;2;6;245;1;0;aa.txt;13;17;0;13;32;6;254;1;0;ee.txt;14;47;7;96;1;0;fff.txt;", d.dirTestString());
 
-        f = vfs.getFile("/home");
-        assertEquals(3, f.list().length);
-        assertEquals("aa.txt", f.list()[0]);
-        assertEquals("ee.txt", f.list()[1]);
-        assertEquals("fff.txt", f.list()[2]);
+
+        assertEquals(3, d.list().length);
+        assertEquals("aa.txt", d.list()[0]);
+        assertEquals("ee.txt", d.list()[1]);
+        assertEquals("fff.txt", d.list()[2]);
 
         vfs.close();
     }
 
+    @Test
+    public void directoryDefragmentationWorks() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 64);
+        JafsFile d = vfs.getFile("/");
 
-//    @Test
-//    public void creatingRootDirAsFileShouldNotResultInANullPointerException() throws JafsException, IOException {
-//        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
-//        JafsFile f = vfs.getFile("/");
-//        f.createNewFile();
-//    }
-//
-//    @Test
-//    public void creatingRootDirAsDirShouldNotResultInANullPointerException() throws JafsException, IOException {
-//        Jafs vfs = new Jafs(TEST_ARCHIVE, 256, 256, 1024*1024);
-//        JafsFile f = vfs.getFile("/");
-//        f.mkdir();
-//    }
+        JafsFile f;
+        f = vfs.getFile("/aa");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;", d.dirTestString());
+        f = vfs.getFile("/bb");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;", d.dirTestString());
+        f = vfs.getFile("/cc");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;9;24;2;202;1;0;cc;", d.dirTestString());
+
+        f = vfs.getFile("/aa");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("9;2;0;9;13;2;203;1;0;bb;9;24;2;202;1;0;cc;", d.dirTestString());
+        f = vfs.getFile("/bb");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("20;2;0;9;24;2;202;1;0;cc;", d.dirTestString());
+        f = vfs.getFile("/cc");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("31;2;0;", d.dirTestString());
+
+        f = vfs.getFile("/aa");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;20;13;0;", d.dirTestString());
+        f = vfs.getFile("/bb");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;9;24;0;", d.dirTestString());
+        f = vfs.getFile("/cc");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;9;24;2;202;1;0;cc;", d.dirTestString());
+
+        f = vfs.getFile("/aa");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("9;2;0;9;13;2;203;1;0;bb;9;24;2;202;1;0;cc;", d.dirTestString());
+        f = vfs.getFile("/cc");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("9;2;0;9;13;2;203;1;0;bb;9;24;0;", d.dirTestString());
+        f = vfs.getFile("/bb");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("31;2;0;", d.dirTestString());
+
+        f = vfs.getFile("/aa");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;20;13;0;", d.dirTestString());
+        f = vfs.getFile("/bb");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;9;24;0;", d.dirTestString());
+        f = vfs.getFile("/cc");
+        f.createNewFile();
+        assertTrue(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;9;24;2;202;1;0;cc;", d.dirTestString());
+
+
+        f = vfs.getFile("/cc");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;9;13;2;203;1;0;bb;9;24;0;", d.dirTestString());
+        f = vfs.getFile("/bb");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("9;2;2;142;1;0;aa;20;13;0;", d.dirTestString());
+        f = vfs.getFile("/aa");
+        f.delete();
+        assertFalse(f.exists());
+        assertEquals("31;2;0;", d.dirTestString());
+    }
+
+    @Test
+    public void creatingRootDirAsFileShouldNotResultInANullPointerException() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
+        JafsFile f = vfs.getFile("/");
+        f.createNewFile();
+    }
+
+    @Test
+    public void creatingRootDirAsDirShouldNotResultInANullPointerException() throws JafsException, IOException {
+        Jafs vfs = new Jafs(TEST_ARCHIVE, 256);
+        JafsFile f = vfs.getFile("/");
+        f.mkdir();
+    }
 }

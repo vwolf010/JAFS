@@ -90,8 +90,8 @@ public class JafsDir {
             }
 			inode.seekSet(startPos + entrySize);
 			entrySize = inode.readShort();
+			prevStartPos = startPos;
 		}
-		return;
 	}
 	
 	public JafsDirEntry getEntry(byte[] name) throws JafsException, IOException {
@@ -129,7 +129,7 @@ public class JafsDir {
 		int entrySizeA = inode.readShort();
 		int lenA = inode.readByte();
 		if (lenA == 0) {
-			inode.seekCur(entrySizeA);
+			inode.seekCur(entrySizeA - 1);
 			int entrySizeB = inode.readShort();
 			if (entrySizeB != 0) {
 				int lenB = inode.readByte();
@@ -144,6 +144,10 @@ public class JafsDir {
 	}
 
 	public void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
+		// the entry parameter may have been found in cache, we have to locate
+		// the entry again to get a proper prevStartPos
+		entry = getEntry(entry.name);
+
 		// Update the deleted entry
 		vfs.getDirCache().remove(canonicalPath);
 		inode.seekSet(entry.startPos);
@@ -152,7 +156,7 @@ public class JafsDir {
 		// Can we merge with the next entry? To prevent directory fragmentation
 		mergeEntries(entry.startPos);
 
-		// Can we merge with the previous entry? To prevent directory fragmentation
+		// Can the previous entry merge with us? To prevent directory fragmentation
 		if (entry.prevStartPos != 0) {
 			mergeEntries(entry.prevStartPos);
 		}
@@ -374,5 +378,34 @@ public class JafsDir {
 		}
 		
 		return l.toArray(new String[0]);
+	}
+
+	public String testString() throws JafsException, IOException {
+		LinkedList<String> results = new LinkedList<>();
+		inode.seekSet(0);
+		int entrySize = inode.readShort();
+		StringBuilder sb = new StringBuilder();
+		while (entrySize != 0) {
+			sb.append(entrySize).append(";");
+			long startPos = inode.getFpos();
+			sb.append(startPos).append(";");
+			int nameLen = inode.readByte();
+			sb.append(nameLen).append(";");
+			if (nameLen != 0) {
+				if ((nameLen & 0x80) != 0) {
+					nameLen &= 0x7f;
+					nameLen |= inode.readByte() << 7;
+				}
+				sb.append(inode.readByte()).append(";"); // checksum
+				sb.append(inode.readByte()).append(";"); // type
+				sb.append(inode.readInt()).append(";"); // bpos
+				byte[] name = new byte[nameLen];
+				inode.readBytes(name, 0, nameLen);
+				sb.append(new String(name, StandardCharsets.UTF_8)).append(";");
+			}
+			inode.seekSet(startPos + entrySize);
+			entrySize = inode.readShort();
+		}
+		return sb.toString();
 	}
 }
