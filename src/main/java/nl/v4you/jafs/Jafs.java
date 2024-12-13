@@ -82,7 +82,9 @@ public class Jafs implements AutoCloseable {
 			try {
 				superBlock.close();
 			}
-			catch (Exception e) {}
+			catch (Exception e) {
+				throw new IOException("error when closing super blcok");
+			}
 		}
 		raf.close();
 	}

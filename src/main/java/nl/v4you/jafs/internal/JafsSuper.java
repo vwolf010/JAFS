@@ -13,9 +13,9 @@ public class JafsSuper {
 	private static final int POS_BLOCKS_TOTAL = 14;
 	private static final int POS_UNUSED_STACK_START = 18;
 	private static final int HEADER_SIZE = 26;
+
 	private final RandomAccessFile raf;
 	private final byte[] buf;
-
 	private int blockSize = 0;
 	private long blocksTotal = 0;
 	private long blocksUsed = 0;
@@ -45,10 +45,6 @@ public class JafsSuper {
 		}
 	}
 
-	public void close() throws IOException {
-		flush();
-	}
-
 	public long getBlocksTotal() {
 		return blocksTotal;
 	}
@@ -59,7 +55,6 @@ public class JafsSuper {
 
 	public void setUnusedStackEnd(long unusedStack) throws IOException {
 		this.unusedStackEnd = unusedStack;
-		flush();
 	}
 
 	public long getUnusedStackEnd() {
@@ -68,10 +63,6 @@ public class JafsSuper {
 
 	public void incBlocksTotal() {
 		blocksTotal++;
-	}
-
-	void setBlocksUsed() {
-		Util.intToArray(buf, POS_BLOCKS_USED, blocksUsed);
 	}
 
 	public void incBlocksUsed() {
@@ -86,7 +77,6 @@ public class JafsSuper {
 		if (blocksUsed < 0) {
 			throw new RuntimeException("blocksUsed < 0!!!");
 		}
-		setBlocksUsed();
 	}
 
 	public int getBlockSize() {
@@ -142,5 +132,9 @@ public class JafsSuper {
 		block.seekSet(0);
 		block.writeInt(getUnusedStackEnd());
 		setUnusedStackEnd(bpos);
+	}
+
+	public void close() throws IOException {
+		flush();
 	}
 }
