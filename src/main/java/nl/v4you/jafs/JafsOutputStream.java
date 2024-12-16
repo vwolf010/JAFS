@@ -1,9 +1,5 @@
 package nl.v4you.jafs;
 
-import nl.v4you.jafs.internal.JafsDir;
-import nl.v4you.jafs.internal.JafsDirEntry;
-import nl.v4you.jafs.internal.JafsInode;
-
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -11,7 +7,7 @@ public class JafsOutputStream extends OutputStream {
 	private final Jafs vfs;
 	private final String path;
 	private final long oldSize;
-	private JafsInode inode;
+	private ZFile zfile;
 
 	JafsOutputStream(Jafs vfs, JafsFile f, boolean append) throws JafsException, IOException {
 		this.vfs = vfs;
@@ -19,15 +15,15 @@ public class JafsOutputStream extends OutputStream {
 			throw new JafsException("Could not create new file: " + f.getCanonicalPath());
 		}
 		this.path = f.getCanonicalPath();
-		JafsDirEntry entry = f.getEntry(f.getCanonicalPath());
-		if (entry != null && entry.getBpos() != 0) {
-			inode = new JafsInode(vfs);
-			inode.openInode(entry.getBpos());
-			oldSize = inode.getSize();
+		ZDirEntry entry = f.getEntry(f.getCanonicalPath());
+		if (entry != null && entry.getVpos() != 0) {
+			zfile = new ZFile(vfs);
+			zfile.openInode(entry.getVpos());
+			oldSize = zfile.size;
 			if (append) {
-				inode.seekEnd(0);
+				zfile.seekEnd(0);
 			} else {
-				inode.resetSize();
+				zfile.resetSize();
 				vfs.flushBlockCache();
 			}
 		} else {
@@ -40,24 +36,24 @@ public class JafsOutputStream extends OutputStream {
 		super.flush();
 	}
 
-	private void createInode() throws IOException {
+	private void createFile() throws IOException {
 		try {
 			JafsFile f = new JafsFile(vfs, path);
-			JafsInode inodeDirectory = vfs.getInodePool().claim();
-			JafsDir dir = vfs.getDirPool().claim();
+			ZFile inodeDirectory = vfs.getZFilePool().claim();
+			ZDir dir = vfs.getDirPool().claim();
 			try {
-				inodeDirectory.openInode(f.getEntry(f.getParent()).getBpos());
+				inodeDirectory.openInode(f.getEntry(f.getParent()).getVpos());
 				dir.setInode(inodeDirectory);
-				JafsDirEntry entry = f.getEntry(path);
+				ZDirEntry entry = f.getEntry(path);
 				if (entry == null) {
 					throw new JafsException("No entry found for [" + path + "]");
 				}
-				dir.mkinode(entry, JafsInode.INODE_FILE);
-				inode = new JafsInode(vfs);
-				inode.openInode(entry.getBpos());
+				dir.mkinode(entry, ZFile.INODE_FILE);
+				zfile = new ZFile(vfs);
+				zfile.openInode(entry.getVpos());
 			}
 			finally {
-				vfs.getInodePool().release(inodeDirectory);
+				vfs.getZFilePool().release(inodeDirectory);
 				vfs.getDirPool().release(dir);
 			}
 		} catch (JafsException e) {
@@ -69,10 +65,10 @@ public class JafsOutputStream extends OutputStream {
 	@Override
 	public void write(int b) throws IOException {
 		try {
-			if (inode == null) {
-				createInode();
+			if (zfile == null) {
+				createFile();
 			}
-			inode.writeByte(b);
+			zfile.writeByte(b);
 			vfs.flushBlockCache();
 		} catch (JafsException e) {
 			e.printStackTrace();
@@ -95,10 +91,10 @@ public class JafsOutputStream extends OutputStream {
 			throw new IllegalStateException("length must be >= 0");
 		}
 		try {
-			if (inode == null) {
-				createInode();
+			if (zfile == null) {
+				createFile();
 			}
-			inode.writeBytes(buf, start, len);
+			zfile.writeBytes(buf, start, len);
 			vfs.flushBlockCache();
 		} catch (JafsException e) {
 			e.printStackTrace();
@@ -114,19 +110,19 @@ public class JafsOutputStream extends OutputStream {
 	private void deleteDirEntry() throws IOException{
 		try {
 			JafsFile f = new JafsFile(vfs, path);
-			JafsInode inodeDirectory = vfs.getInodePool().claim();
-			JafsDir dir = vfs.getDirPool().claim();
+			ZFile inodeDirectory = vfs.getZFilePool().claim();
+			ZDir dir = vfs.getDirPool().claim();
 			try {
-				inodeDirectory.openInode(f.getEntry(f.getParent()).getBpos());
+				inodeDirectory.openInode(f.getEntry(f.getParent()).getVpos());
 				dir.setInode(inodeDirectory);
-				JafsDirEntry entry = f.getEntry(path);
+				ZDirEntry entry = f.getEntry(path);
 				if (entry == null) {
 					throw new JafsException("No entry found for [" + path + "]");
 				}
 				dir.entryClearInodePtr(entry);
 			}
 			finally {
-				vfs.getInodePool().release(inodeDirectory);
+				vfs.getZFilePool().release(inodeDirectory);
 				vfs.getDirPool().release(dir);
 			}
 		} catch (JafsException e) {
@@ -137,13 +133,13 @@ public class JafsOutputStream extends OutputStream {
 
 	@Override
 	public void close() throws IOException {
-		if (inode != null) {
+		if (zfile != null) {
 			try {
-				if (inode.getSize() == 0) {
+				if (zfile.size == 0) {
 					deleteDirEntry();
-					inode.freeBlocksAndDeleteInode();
+					zfile.freeBlocksAndDeleteInode();
 				} else {
-					inode.freeBlocks(oldSize);
+					zfile.freeBlocks(oldSize);
 				}
 				vfs.flushBlockCache();
 			} catch (JafsException e) {

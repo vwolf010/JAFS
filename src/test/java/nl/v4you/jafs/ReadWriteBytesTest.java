@@ -81,10 +81,10 @@ public class ReadWriteBytesTest {
 
     @Test
     public void overWrite() throws JafsException, IOException {
-        // write 2 blocks to f1.txt -> super - unused - rootDir - inode f1 - data f1 - data f1
-        // write 1 block to f1.txt  -> super - unused - rootDir - inode f1 - data f1 - available block
-        // write 10 bytes to f2.txt -> super - unused - rootDir - inode f1 - data f1 - inode f2/inlined data
-        // write 10 bytes to f3.txt -> super - unused - rootDir - inode f1 - data f1 - inode f2/inlined data - inode f3/inlined data
+        // write 2 blocks to f1.txt -> super - rootDir - inode f1 - data f1 - data f1
+        // write 1 block to f1.txt  -> super - rootDir - inode f1 - data f1 - available block
+        // write 10 bytes to f2.txt -> super - rootDir - inode f1 - data f1 - inode f2/inlined data
+        // write 10 bytes to f3.txt -> super - rootDir - inode f1 - data f1 - inode f2/inlined data - inode f3/inlined data
         // total blocks in the end: 7
         int blockSize = 4096;
 
@@ -139,15 +139,15 @@ public class ReadWriteBytesTest {
         jafs.close();
 
         File g = new File(TEST_ARCHIVE);
-        assertEquals(7 * blockSize, g.length());
+        assertEquals(6 * blockSize, g.length());
     }
 
     @Test
     public void overWriteRedoInlined() throws JafsException, IOException {
-        // write 2 blocks to f1.txt -> super - unused - rootDir - inode f1 - data f1 - data f1
-        // write 1 byte to f1.txt   -> super - unused - rootDir - inode f1/inlined data - available block - available block
-        // write 1 block to f2.txt  -> super - unused - rootDir - inode f1/inlined data - inode f2 - data f2
-        // write 1 byte to f3.txt   -> super - unused - rootDir - inode f1/inlined data - inode f2 - data f2 - inode f3/inlined data
+        // write 2 blocks to f1.txt -> super - rootDir - inode f1 - data f1 - data f1
+        // write 1 byte to f1.txt   -> super - rootDir - inode f1/inlined data - available block - available block
+        // write 1 block to f2.txt  -> super - rootDir - inode f1/inlined data - inode f2 - data f2
+        // write 1 byte to f3.txt   -> super - rootDir - inode f1/inlined data - inode f2 - data f2 - inode f3/inlined data
         // total blocks in the end: 7
         int blockSize = 4096;
 
@@ -202,7 +202,7 @@ public class ReadWriteBytesTest {
         jafs.close();
 
         File g = new File(TEST_ARCHIVE);
-        assertEquals(7 * blockSize, g.length());
+        assertEquals(6 * blockSize, g.length());
     }
 
     @Test
@@ -363,14 +363,6 @@ public class ReadWriteBytesTest {
         int A = jis.read();
         jis.close();
         assertEquals('A', A);
-        jafs.close();
-    }
-
-    @Ignore
-    @Test
-    public void adviceBlockSize() throws JafsException, IOException {
-        Jafs jafs = new Jafs("/tmp/test.jafs");
-        jafs.adviceBlockSize();
         jafs.close();
     }
 

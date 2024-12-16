@@ -1,28 +1,27 @@
-package nl.v4you.jafs.internal;
+package nl.v4you.jafs;
 
 import nl.v4you.hash.OneAtATimeHash;
-import nl.v4you.jafs.JafsException;
 
 import java.nio.charset.StandardCharsets;
 
-public class JafsDirEntryCache {
+class ZDirEntryCache {
 
-    private LRUCache<OneAtATimeHash, JafsDirEntry> gcache;
+    private ZLRUCache<OneAtATimeHash, ZDirEntry> gcache;
 
     OneAtATimeHash hs = new OneAtATimeHash(null);
 
-    public JafsDirEntryCache(int size) throws JafsException {
-        gcache = new LRUCache<>(size);
+    ZDirEntryCache(int size) throws JafsException {
+        gcache = new ZLRUCache<>(size);
     }
 
-    public void add(String dirName, JafsDirEntry entry) throws JafsException {
+    void add(String dirName, ZDirEntry entry) throws JafsException {
         if (gcache.get(hs.set(dirName.getBytes(StandardCharsets.UTF_8))) != null) {
             throw new JafsException("directory " + dirName + " already in cache");
         }
         gcache.add(hs.clone(), entry);
     }
 
-    public JafsDirEntry get(String dirName) {
+    ZDirEntry get(String dirName) {
         return gcache.get(hs.set(dirName.getBytes(StandardCharsets.UTF_8)));
     }
 
@@ -30,7 +29,7 @@ public class JafsDirEntryCache {
         gcache.remove(hs.set(dirName.getBytes(StandardCharsets.UTF_8)));
     }
 
-    public String stats() {
+    String stats() {
         return gcache.stats();
     }
 }

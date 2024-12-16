@@ -1,13 +1,10 @@
-package nl.v4you.jafs.internal;
-
-import nl.v4you.jafs.Jafs;
-import nl.v4you.jafs.JafsException;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 
-public class JafsInodeContext {
-	public static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
-	public static final int BYTES_PER_PTR = 4;
+class ZInodeContext {
+	static final long MAX_FILE_SIZE = 4L * 1024L * 1024L * 1024L;
+	static final int BYTES_PER_PTR = 4;
 
 	private final Jafs vfs;
 	private final int ptrsPerInode;
@@ -18,20 +15,20 @@ public class JafsInodeContext {
 	final long level0MaxSize;
 	final long level1MaxSize;
 
-	public static long calcMaxFileSize(long blkSize) {
-		long pPerInode = (blkSize - JafsInode.INODE_HEADER_SIZE) / BYTES_PER_PTR;
-		long pPerBlock = blkSize / JafsInodeContext.BYTES_PER_PTR;
+	static long calcMaxFileSize(long blkSize) {
+		long pPerInode = (blkSize - ZFile.INODE_HEADER_SIZE) / BYTES_PER_PTR;
+		long pPerBlock = blkSize / ZInodeContext.BYTES_PER_PTR;
 		long maxSize = blkSize * ((pPerInode - 2) + pPerBlock + (pPerBlock * pPerBlock));
-		if (maxSize > JafsInodeContext.MAX_FILE_SIZE) {
-			maxSize = JafsInodeContext.MAX_FILE_SIZE;
+		if (maxSize > ZInodeContext.MAX_FILE_SIZE) {
+			maxSize = ZInodeContext.MAX_FILE_SIZE;
 		}
 		return maxSize;
 	}
 
-	public JafsInodeContext(Jafs vfs, int blockSize) {
+	ZInodeContext(Jafs vfs, int blockSize) {
 		this.vfs = vfs;
 		this.blockSize = blockSize;
-		ptrsPerInode = (blockSize - JafsInode.INODE_HEADER_SIZE) / BYTES_PER_PTR;
+		ptrsPerInode = (blockSize - ZFile.INODE_HEADER_SIZE) / BYTES_PER_PTR;
 		ptrsPerPtrBlock = blockSize / BYTES_PER_PTR;
 		level0MaxSize = (ptrsPerInode - 2) * (long)blockSize;
 		level1MaxSize = level0MaxSize + ptrsPerPtrBlock * (long)blockSize;
@@ -42,10 +39,10 @@ public class JafsInodeContext {
 		return ptrsPerInode;
 	}
 
-	private void createNewBlock(JafsInode inode, int n, boolean isPtrBlock) throws JafsException, IOException {
+	private void createNewBlock(ZFile inode, int n, boolean isPtrBlock) throws JafsException, IOException {
 		long ptr = vfs.getAvailableVpos();
 		if (isPtrBlock) {
-			JafsBlockView block = new JafsBlockView(vfs, ptr);
+			ZBlockView block = new ZBlockView(vfs, ptr);
 			block.initZeros();
 		}
 		inode.ptrs[n] = ptr;
@@ -53,7 +50,7 @@ public class JafsInodeContext {
 	}
 
 	private long getBlkPos(int level, long bpos, long off, long len, long fpos) throws JafsException, IOException {
-		JafsBlockView block = new JafsBlockView(vfs, bpos);
+		ZBlockView block = new ZBlockView(vfs, bpos);
 		if (level == 0) {
 			// data block is reached
 			return bpos;
@@ -68,14 +65,14 @@ public class JafsInodeContext {
 				block.seekSet(idx << 2);
 				block.writeInt(ptr);
 				// init ptr block with zeros
-				block = new JafsBlockView(vfs, ptr);
+				block = new ZBlockView(vfs, ptr);
 				block.initZeros();
 			}
 			return getBlkPos(level - 1, ptr, off + idx * nextLen, nextLen, fpos);
 		}
 	}
 
-	long getBlkPos(JafsInode inode, long fpos) throws JafsException, IOException {
+	long getBlkPos(ZFile inode, long fpos) throws JafsException, IOException {
 		if (fpos < 0) {
 			throw new JafsException("file position cannot be negative, got: " + fpos);
 		}
@@ -110,7 +107,7 @@ public class JafsInodeContext {
 	}
 
 	void freeBlock(long bpos) throws JafsException, IOException {
-		vfs.getSuper().setAvailable(bpos);
+		vfs.getSuper().pushAvailable(bpos);
 		vfs.getSuper().decBlocksUsed();
 	}
 	
@@ -124,7 +121,7 @@ public class JafsInodeContext {
 		} else {
 		    // this is a pointer block
 			levelSize /= ptrsPerPtrBlock;
-			JafsBlockView dum = new JafsBlockView(vfs, bpos);
+			ZBlockView dum = new ZBlockView(vfs, bpos);
 			dum.seekSet(0);
 			boolean allHasBeenDeleted = true;
 			for (int n = 0; n < ptrsPerPtrBlock; n++) {
@@ -147,7 +144,7 @@ public class JafsInodeContext {
 		}
 	}
 
-	void freeDataAndPtrBlocks(JafsInode inode) throws JafsException, IOException {
+	void freeDataAndPtrBlocks(ZFile inode) throws JafsException, IOException {
 		boolean flushInode = false;
 		for (int n = 0; n < ptrsPerInode && inode.ptrs[n] != 0; n++) {
 			long fPosStart = 0;

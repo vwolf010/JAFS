@@ -1,10 +1,7 @@
 package nl.v4you.jafs;
 
-import nl.v4you.jafs.internal.*;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedList;
 import java.util.regex.Pattern;
 
 public class JafsFile {
@@ -14,7 +11,7 @@ public class JafsFile {
     private final Jafs vfs;
 	private final String path;
 	private final String canonicalPath;
-    private final JafsDirEntryCache dc;
+    private final ZDirEntryCache dc;
 
     private static final Pattern SLASH = Pattern.compile(SEPARATOR);
     private static final Pattern MULTIPLE_SLASH = Pattern.compile("/+/");
@@ -44,9 +41,6 @@ public class JafsFile {
         this(vfs, parent+JafsFile.SEPARATOR +child);
     }
 
-	/*
-	 * public 
-	 */
 	public String getName() {
 		return getName(path);
 	}
@@ -72,57 +66,57 @@ public class JafsFile {
 	}
 
 	public boolean isFile() throws JafsException, IOException {
-		JafsDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath);
 		return (entry != null) && (entry.isFile());
 	}
 	
 	public boolean isDirectory() throws JafsException, IOException {
-		JafsDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath);
 		return (entry != null) && (entry.isDirectory());
 	}
 
 	public long length() throws IOException, JafsException {
-		JafsDirEntry entry = getEntry(canonicalPath);
-		if (entry == null || entry.getBpos() == 0) {
+		ZDirEntry entry = getEntry(canonicalPath);
+		if (entry == null || entry.getVpos() == 0) {
 			return 0;
 		}
-        JafsInode inode = vfs.getInodePool().claim();
+        ZFile zfile = vfs.getZFilePool().claim();
 		try {
-            inode.openInode(entry.getBpos());
-            return inode.getSize();
+            zfile.openInode(entry.getVpos());
+            return zfile.size;
         }
         finally {
-            vfs.getInodePool().release(inode);
+            vfs.getZFilePool().release(zfile);
         }
 	}
 
 	public boolean createNewFile() throws JafsException, IOException {
-		if (canonicalPath.equals("/")) {
+		if (canonicalPath.equals(SEPARATOR)) {
 			return false;
 		}
 		String parentPath = getParent(canonicalPath);
-		JafsDirEntry parent = getEntry(parentPath);
+		ZDirEntry parent = getEntry(parentPath);
 		if (parent != null) {
-			if (parent.getBpos() == 0) {
+			if (parent.getVpos() == 0) {
 				// Parent directory exists but has no inode yet, let's create it
-                JafsInode inode = vfs.getInodePool().claim();
-                JafsDir dir = vfs.getDirPool().claim();
+                ZFile zfile = vfs.getZFilePool().claim();
+                ZDir dir = vfs.getDirPool().claim();
                 try {
-                    inode.openInode(parent.getParentBpos());
-                    dir.setInode(inode);
-                    dir.mkinode(parent, JafsInode.INODE_DIR);
+                    zfile.openInode(parent.getParentBpos());
+                    dir.setInode(zfile);
+                    dir.mkinode(parent, ZFile.INODE_DIR);
                 }
                 finally {
-                    vfs.getInodePool().release(inode);
+                    vfs.getZFilePool().release(zfile);
                     vfs.getDirPool().release(dir);
                 }
 			}
-			JafsInode inode = vfs.getInodePool().claim();
-            JafsDir dir = vfs.getDirPool().claim();
+			ZFile inode = vfs.getZFilePool().claim();
+            ZDir dir = vfs.getDirPool().claim();
 			try {
-                inode.openInode(parent.getBpos());
+                inode.openInode(parent.getVpos());
                 dir.setInode(inode);
-                dir.createNewEntry(canonicalPath, getName().getBytes(StandardCharsets.UTF_8), JafsInode.INODE_FILE, 0);
+                dir.createNewEntry(canonicalPath, getName().getBytes(StandardCharsets.UTF_8), ZFile.INODE_FILE, 0);
                 return true;
             }
             catch (Throwable t) {
@@ -130,7 +124,7 @@ public class JafsFile {
             }
             finally {
 				vfs.flushBlockCache();
-                vfs.getInodePool().release(inode);
+                vfs.getZFilePool().release(inode);
                 vfs.getDirPool().release(dir);
             }
 		}
@@ -138,7 +132,7 @@ public class JafsFile {
 	}
 
 	public boolean mkdir() throws JafsException, IOException {
-        if (canonicalPath.equals("/")) {
+        if (canonicalPath.equals(SEPARATOR)) {
 			return false;
 		}
 		boolean b = mkdir(canonicalPath);
@@ -155,20 +149,20 @@ public class JafsFile {
 	}
 		
 	public String[] list() throws JafsException, IOException {
-		JafsDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath);
 		if (entry != null) {
-			if (entry.getBpos() == 0) {
+			if (entry.getVpos() == 0) {
 				return new String[0];
 			} else {
-			    JafsInode inode = vfs.getInodePool().claim();
-                JafsDir dir = vfs.getDirPool().claim();
+			    ZFile inode = vfs.getZFilePool().claim();
+                ZDir dir = vfs.getDirPool().claim();
 			    try {
-                    inode.openInode(entry.getBpos());
+                    inode.openInode(entry.getVpos());
                     dir.setInode(inode);
                     return dir.list();
                 }
                 finally {
-                    vfs.getInodePool().release(inode);
+                    vfs.getZFilePool().release(inode);
                     vfs.getDirPool().release(dir);
                 }
 			}
@@ -177,43 +171,43 @@ public class JafsFile {
 	}
 
 	public boolean delete() throws JafsException, IOException {
-		JafsDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath);
 		if (entry != null) {
-			if (entry.getBpos() != 0) {
+			if (entry.getVpos() != 0) {
 				if (entry.isDirectory()) {
-				    JafsInode inode = vfs.getInodePool().claim();
-                    JafsDir dir = vfs.getDirPool().claim();
+				    ZFile inode = vfs.getZFilePool().claim();
+                    ZDir dir = vfs.getDirPool().claim();
 				    try {
-                        inode.openInode(entry.getBpos());
+                        inode.openInode(entry.getVpos());
                         dir.setInode(inode);
                         if (dir.hasActiveEntries()) {
                             throw new JafsException("directory " + canonicalPath + " not empty");
                         }
                     }
                     finally {
-                        vfs.getInodePool().release(inode);
+                        vfs.getZFilePool().release(inode);
                         vfs.getDirPool().release(dir);
                     }
 				}
 			}
-			JafsInode inode = vfs.getInodePool().claim();
-            JafsDir parentDir = vfs.getDirPool().claim();
+			ZFile zfile = vfs.getZFilePool().claim();
+            ZDir parentDir = vfs.getDirPool().claim();
 			try {
 			    // first remove the entry from the directory
-                inode.openInode(entry.getParentBpos());
-                parentDir.setInode(inode);
+                zfile.openInode(entry.getParentBpos());
+                parentDir.setInode(zfile);
 				parentDir.deleteEntry(canonicalPath, entry);
 
                 // then free the inode, pointerblocks and datablocks
-				if (entry.getBpos() != 0) {
-					inode.openInode(entry.getBpos());
-					inode.resetSize();
-					inode.freeBlocksAndDeleteInode();
+				if (entry.getVpos() != 0) {
+					zfile.openInode(entry.getVpos());
+					zfile.resetSize();
+					zfile.freeBlocksAndDeleteInode();
 				}
             }
             finally {
 				vfs.flushBlockCache();
-                vfs.getInodePool().release(inode);
+                vfs.getZFilePool().release(zfile);
                 vfs.getDirPool().release(parentDir);
             }
 			return true;
@@ -226,15 +220,15 @@ public class JafsFile {
 		if (!parent.endsWith(SEPARATOR)) {
 		    parent += SEPARATOR;
         }
-		JafsDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath);
 		if (entry != null) {
-			if (entry.getBpos() == 0) {
+			if (entry.getVpos() == 0) {
 				return new JafsFile[0];
 			} else {
-			    JafsInode inode = vfs.getInodePool().claim();
-                JafsDir dir = vfs.getDirPool().claim();
+			    ZFile inode = vfs.getZFilePool().claim();
+                ZDir dir = vfs.getDirPool().claim();
 			    try {
-                    inode.openInode(entry.getBpos());
+                    inode.openInode(entry.getVpos());
                     String[] l;
                     dir.setInode(inode);
                     l = dir.list();
@@ -245,7 +239,7 @@ public class JafsFile {
                     return fl;
                 }
                 finally {
-                    vfs.getInodePool().release(inode);
+                    vfs.getZFilePool().release(inode);
                     vfs.getDirPool().release(dir);
                 }
 
@@ -258,14 +252,14 @@ public class JafsFile {
 		if (exists()) {
 			if (!target.exists()) {
 				if (exists(target.getParent())) {
-					JafsDirEntry entry = getEntry(canonicalPath);
-					JafsInode inodeSrc = vfs.getInodePool().claim();
-                    JafsInode inodeDst = vfs.getInodePool().claim();
-                    JafsDir srcDir = vfs.getDirPool().claim();
-                    JafsDir dstDir = vfs.getDirPool().claim();
+					ZDirEntry entry = getEntry(canonicalPath);
+					ZFile inodeSrc = vfs.getZFilePool().claim();
+                    ZFile inodeDst = vfs.getZFilePool().claim();
+                    ZDir srcDir = vfs.getDirPool().claim();
+                    ZDir dstDir = vfs.getDirPool().claim();
 					try {
                         inodeSrc.openInode(entry.getParentBpos());
-                        inodeDst.openInode(getEntry(target.getParent()).getBpos());
+                        inodeDst.openInode(getEntry(target.getParent()).getVpos());
                         srcDir.setInode(inodeSrc);
                         dstDir.setInode(inodeDst);
                         srcDir.deleteEntry(canonicalPath, entry);
@@ -273,13 +267,13 @@ public class JafsFile {
                         dstDir.createNewEntry(
                                 target.canonicalPath,
                                 target.getName().getBytes(StandardCharsets.UTF_8),
-								entry.getType(),
-								entry.getBpos());
+								entry.type,
+								entry.getVpos());
                     }
                     finally {
 						vfs.flushBlockCache();
-					    vfs.getInodePool().release(inodeSrc);
-					    vfs.getInodePool().release(inodeDst);
+					    vfs.getZFilePool().release(inodeSrc);
+					    vfs.getZFilePool().release(inodeDst);
                         vfs.getDirPool().release(srcDir);
                         vfs.getDirPool().release(dstDir);
                     }
@@ -288,7 +282,7 @@ public class JafsFile {
 		}
 	}
 
-	JafsDirEntry getEntry(String path) throws JafsException, IOException {
+	ZDirEntry getEntry(String path) throws JafsException, IOException {
 	    String normPath = getCanonicalPath(normalizePath(path));
 
         if (normPath.equals(SEPARATOR)) {
@@ -298,7 +292,7 @@ public class JafsFile {
         String[] parts = SLASH.split(normPath); // first entry is always empty
         int n = parts.length;
 
-        JafsDirEntry entry = null;
+        ZDirEntry entry = null;
 
         String curPath = normPath;
         while (n > 0) {
@@ -320,15 +314,15 @@ public class JafsFile {
             n = 1;
         }
 
-        if (entry.getBpos() == 0) {
+        if (entry.getVpos() == 0) {
             return null;
         }
 
-        JafsInode inode = vfs.getInodePool().claim();
-        JafsDir dir = vfs.getDirPool().claim();
+        ZFile zfile = vfs.getZFilePool().claim();
+        ZDir dir = vfs.getDirPool().claim();
         try {
-            inode.openInode(entry.getBpos());
-            dir.setInode(inode);
+            zfile.openInode(entry.getVpos());
+            dir.setInode(zfile);
             for (; n < parts.length; n++) {
                 String part = parts[n];
                 if (!part.isEmpty()) {
@@ -347,9 +341,9 @@ public class JafsFile {
                             break;
                         } else {
                             dc.add(curPath, entry);
-                            if (entry.getBpos() != 0) {
-                                inode.openInode(entry.getBpos());
-                                dir.setInode(inode);
+                            if (entry.getVpos() != 0) {
+                                zfile.openInode(entry.getVpos());
+                                dir.setInode(zfile);
                             } else {
                                 entry = null;
                                 break;
@@ -360,7 +354,7 @@ public class JafsFile {
             }
         }
         finally {
-            vfs.getInodePool().release(inode);
+            vfs.getZFilePool().release(zfile);
             vfs.getDirPool().release(dir);
         }
 		return entry;
@@ -452,31 +446,31 @@ public class JafsFile {
 	
 	private boolean mkdir(String path) throws JafsException, IOException {
 		String parent = getParent(path);
-		JafsDirEntry entry = getEntry(parent);
+		ZDirEntry entry = getEntry(parent);
 		if (entry != null) {
-			if (entry.getBpos() == 0) {
+			if (entry.getVpos() == 0) {
 				// Parent exists but has no inode yet
-                JafsInode inode = vfs.getInodePool().claim();
-                JafsDir dir = vfs.getDirPool().claim();
+                ZFile zfile = vfs.getZFilePool().claim();
+                ZDir dir = vfs.getDirPool().claim();
                 try {
-                    inode.openInode(entry.getParentBpos());
-                    dir.setInode(inode);
-                    dir.mkinode(entry, JafsInode.INODE_DIR);
+                    zfile.openInode(entry.getParentBpos());
+                    dir.setInode(zfile);
+                    dir.mkinode(entry, ZFile.INODE_DIR);
                 }
                 finally {
-                    vfs.getInodePool().release(inode);
+                    vfs.getZFilePool().release(zfile);
                     vfs.getDirPool().release(dir);
                 }
 			}
-			JafsInode inode = vfs.getInodePool().claim();
-            JafsDir dir = vfs.getDirPool().claim();
+			ZFile zfile = vfs.getZFilePool().claim();
+            ZDir dir = vfs.getDirPool().claim();
 			try {
-                inode.openInode(entry.getBpos());
-                dir.setInode(inode);
+                zfile.openInode(entry.getVpos());
+                dir.setInode(zfile);
                 dir.createNewEntry(
                         getCanonicalPath(normalizePath(path)),
                         getName(path).getBytes(StandardCharsets.UTF_8),
-                        JafsInode.INODE_DIR,
+                        ZFile.INODE_DIR,
                         0);
                 return true;
 			}
@@ -484,7 +478,7 @@ public class JafsFile {
 				return false;
 			}
 			finally {
-			    vfs.getInodePool().release(inode);
+			    vfs.getZFilePool().release(zfile);
                 vfs.getDirPool().release(dir);
             }
 		}
@@ -492,7 +486,7 @@ public class JafsFile {
 	}
 		
 	private void mkParentDirs(String path) throws JafsException, IOException {
-		if (path==null) {
+		if (path == null) {
 			return;
 		}
 		if (!exists(path)) {
@@ -504,13 +498,13 @@ public class JafsFile {
 		}
 	}
 
-	public String dirTestString() throws JafsException, IOException {
-		JafsDirEntry entry = getEntry(path);
-		JafsDir dir = vfs.getDirPool().claim();
-		JafsInode inode = vfs.getInodePool().claim();
-		inode.openInode(entry.getBpos());
+	String dirTestString() throws JafsException, IOException {
+		ZDirEntry entry = getEntry(path);
+		ZDir dir = vfs.getDirPool().claim();
+		ZFile inode = vfs.getZFilePool().claim();
+		inode.openInode(entry.getVpos());
 		String result = dir.testString();
-		vfs.getInodePool().release(inode);
+		vfs.getZFilePool().release(inode);
 		vfs.getDirPool().release(dir);
 		return result;
 	}

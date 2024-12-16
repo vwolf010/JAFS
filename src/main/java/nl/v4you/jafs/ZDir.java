@@ -1,7 +1,6 @@
-package nl.v4you.jafs.internal;
+package nl.v4you.jafs;
 
 import nl.v4you.hash.OneAtATimeHash;
-import nl.v4you.jafs.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,14 +15,14 @@ import java.util.LinkedList;
  * <string: filename>
  *
  */
-public class JafsDir {
+class ZDir {
 	static final int ENTRY_SIZE_LENGTH = 2;
     static final int ENTRY_OVERHEAD = 1 + 1 + 1 + 4; // length + checksum + type + bpos
 	static final int POS_BPOS = 1 + 1 + 1; // length + checksum + type
     static final byte[] SLASH = {'/'};
 
 	final Jafs vfs;
-	JafsInode inode;
+	ZFile inode;
 
 	private static final int BB_LEN = 512;
 	private static final int MAX_FILE_NAME_LENGTH = 0x7FFF;
@@ -32,29 +31,29 @@ public class JafsDir {
 	private long prevStartPos;
 	private long foundStartPos;
 
-	public static void createRootDir(Jafs vfs) throws JafsException, IOException {
-        JafsInode rootInode = vfs.getInodePool().claim();
-        JafsDir dir = vfs.getDirPool().claim();
+	static void createRootDir(Jafs vfs) throws JafsException, IOException {
+        ZFile rootZFile = vfs.getZFilePool().claim();
+        ZDir dir = vfs.getDirPool().claim();
         try {
-            rootInode.createInode(JafsInode.INODE_DIR);
-            rootInode.flushInode();
-            dir.setInode(rootInode);
+            rootZFile.createInode(ZFile.INODE_DIR);
+            rootZFile.flushInode();
+            dir.setInode(rootZFile);
             dir.initDir();
         }
         finally {
-            vfs.getInodePool().release(rootInode);
+            vfs.getZFilePool().release(rootZFile);
             vfs.getDirPool().release(dir);
         }
 	}
 	
-	JafsDir(Jafs vfs) {
+	ZDir(Jafs vfs) {
 		this.vfs = vfs;
 	}
 
-	public void setInode(JafsInode inode) throws JafsException {
+	void setInode(ZFile inode) throws JafsException {
         this.inode = inode;
         if (inode != null) {
-            if ((inode.type & JafsInode.INODE_DIR) == 0) {
+            if ((inode.getType() & ZFile.INODE_DIR) == 0) {
                 throw new JafsException("supplied inode is not of type directory");
             }
         }
@@ -94,7 +93,7 @@ public class JafsDir {
 		}
 	}
 	
-	public JafsDirEntry getEntry(byte[] name) throws JafsException, IOException {
+	ZDirEntry getEntry(byte[] name) throws JafsException, IOException {
 		if (name == null || name.length == 0) {
 			throw new JafsException("name parameter is mandatory");
 		}
@@ -105,7 +104,7 @@ public class JafsDir {
 			if (foundStartPos == 0) {
 				return null;
 			}
-			JafsDirEntry entry = new JafsDirEntry();
+			ZDirEntry entry = new ZDirEntry();
 			entry.prevStartPos = prevStartPos;
 			entry.startPos = foundStartPos;
 			entry.name = name;
@@ -119,7 +118,7 @@ public class JafsDir {
             }
 			// then read data
 			entry.type = inode.readByte();
-			entry.bpos = inode.readInt();
+			entry.vpos = inode.readInt();
 			return entry;
 		}
 	}
@@ -143,7 +142,7 @@ public class JafsDir {
 		}
 	}
 
-	public void deleteEntry(String canonicalPath, JafsDirEntry entry) throws JafsException, IOException {
+	void deleteEntry(String canonicalPath, ZDirEntry entry) throws JafsException, IOException {
 		// the entry parameter may have been found in cache, we have to locate
 		// the entry again to get a proper prevStartPos
 		entry = getEntry(entry.name);
@@ -162,17 +161,17 @@ public class JafsDir {
 		}
 	}
 
-	public void entryClearInodePtr(JafsDirEntry entry) throws JafsException, IOException {
+	void entryClearInodePtr(ZDirEntry entry) throws JafsException, IOException {
 		if (entry.name.length < 0x80) {
 			inode.seekSet(entry.startPos + POS_BPOS);
 		} else {
 			inode.seekSet(entry.startPos + POS_BPOS + 1);
 		}
-		entry.bpos = 0;
-		inode.writeInt(entry.bpos);
+		entry.vpos = 0;
+		inode.writeInt(entry.vpos);
 	}
 
-	public boolean hasActiveEntries() throws JafsException, IOException {
+	boolean hasActiveEntries() throws JafsException, IOException {
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
 		while (entrySize != 0) {
@@ -187,8 +186,8 @@ public class JafsDir {
 		return false;
 	}
 
-	private void createEntry(JafsDirEntry entry) throws JafsException, IOException {
-		if (Util.contains(entry.name, SLASH)) {
+	private void createEntry(ZDirEntry entry) throws JafsException, IOException {
+		if (ZUtil.contains(entry.name, SLASH)) {
 			if (entry.isDirectory()) {
 				throw new JafsException("Directory name [" + new String(entry.name, StandardCharsets.UTF_8) + "] should not contain a slash (/)");
 			} else {
@@ -275,7 +274,7 @@ public class JafsDir {
         }
         bb[tLen++] = (byte)nameChecksum;
 		bb[tLen++] = (byte)entry.type;
-        Util.intToArray(bb, tLen, (int)entry.bpos);
+        ZUtil.intToArray(bb, tLen, (int)entry.vpos);
 		tLen += 4;
         if (nameLen < 256) {
             System.arraycopy(nameBuf, 0, bb, tLen, nameLen);
@@ -300,7 +299,7 @@ public class JafsDir {
 		inode.writeShort(0);
 	}
 	
-	public void createNewEntry(String canonicalPath, byte[] name, int type, long bpos) throws JafsException, IOException {
+	void createNewEntry(String canonicalPath, byte[] name, int type, long bpos) throws JafsException, IOException {
 	    if (name == null || name.length == 0) {
 	        throw new JafsException("Name not suppied");
         }
@@ -314,35 +313,35 @@ public class JafsDir {
                 throw new JafsException("Name '..' not allowed");
             }
         }
-		if (Util.contains(name, SLASH)) {
-			throw new JafsException(((type & JafsInode.INODE_FILE)!=0 ? "File" : "Dir") + " name [" + new String(name, StandardCharsets.UTF_8) + "] should not contain a slash (/)");
+		if (ZUtil.contains(name, SLASH)) {
+			throw new JafsException(((type & ZFile.INODE_FILE)!=0 ? "File" : "Dir") + " name [" + new String(name, StandardCharsets.UTF_8) + "] should not contain a slash (/)");
 		}
 
-		JafsDirEntry entry = new JafsDirEntry();
+		ZDirEntry entry = new ZDirEntry();
 	    entry.parentBpos = inode.getVpos();
-		entry.bpos = bpos;
+		entry.vpos = bpos;
 		entry.type = type;
 		entry.name = name;
 		createEntry(entry);
 		vfs.getDirCache().add(canonicalPath, entry);
 	}
 
-    public void mkinode(JafsDirEntry entry, int type) throws JafsException, IOException {
+    void mkinode(ZDirEntry entry, int type) throws JafsException, IOException {
         if (entry == null) {
             throw new JafsException("entry cannot be null");
         } else {
-            JafsInode newInode = vfs.getInodePool().claim();
-            JafsDir dir = vfs.getDirPool().claim();
+            ZFile newInode = vfs.getZFilePool().claim();
+            ZDir dir = vfs.getDirPool().claim();
             try {
                 newInode.createInode(type);
-                if ((type & JafsInode.INODE_DIR) != 0) {
+                if ((type & ZFile.INODE_DIR) != 0) {
                     dir.setInode(newInode);
                     dir.initDir();
                 }
-                entry.bpos = newInode.getVpos();
+                entry.vpos = newInode.getVpos();
             }
             finally {
-                vfs.getInodePool().release(newInode);
+                vfs.getZFilePool().release(newInode);
                 vfs.getDirPool().release(dir);
             }
 
@@ -352,11 +351,11 @@ public class JafsDir {
                 inode.seekSet(entry.startPos + 2 + 1 + 1); // skip len + checksum + type
             }
 
-			inode.writeInt((int)entry.bpos); // this is where the bpos is added to the directory entry
+			inode.writeInt((int)entry.vpos); // this is where the bpos is added to the directory entry
         }
     }
 
-	public String[] list() throws JafsException, IOException {
+	String[] list() throws JafsException, IOException {
 		LinkedList<String> l = new LinkedList<>();
 		inode.seekSet(0);
 		int entrySize = inode.readShort();
@@ -380,7 +379,7 @@ public class JafsDir {
 		return l.toArray(new String[0]);
 	}
 
-	public String testString() throws JafsException, IOException {
+	String testString() throws JafsException, IOException {
 		LinkedList<String> results = new LinkedList<>();
 		inode.seekSet(0);
 		int entrySize = inode.readShort();

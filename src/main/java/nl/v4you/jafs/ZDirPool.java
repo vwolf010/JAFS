@@ -1,23 +1,21 @@
-package nl.v4you.jafs.internal;
-
-import nl.v4you.jafs.Jafs;
+package nl.v4you.jafs;
 
 import java.util.LinkedList;
 
-public class JafsDirPool {
-    private final LinkedList<JafsDir> free = new LinkedList<>();
-    private final LinkedList<JafsDir> busy = new LinkedList<>();
+class ZDirPool {
+    private final LinkedList<ZDir> free = new LinkedList<>();
+    private final LinkedList<ZDir> busy = new LinkedList<>();
 
     private final Jafs vfs;
 
-    public JafsDirPool(Jafs vfs) {
+    ZDirPool(Jafs vfs) {
         this.vfs = vfs;
     }
 
-    public JafsDir claim() {
-        JafsDir dir;
+    ZDir claim() {
+        ZDir dir;
         if (free.isEmpty()) {
-            dir = new JafsDir(vfs);
+            dir = new ZDir(vfs);
             busy.add(dir);
         } else {
             dir = free.removeFirst();
@@ -26,12 +24,12 @@ public class JafsDirPool {
         return dir;
     }
 
-    public void release(JafsDir dir) {
+    void release(ZDir dir) {
         busy.remove(dir);
         free.add(dir);
     }
 
-    public String stats() {
+    String stats() {
         return "   free    : " + free.size()+"\n   busy    : " + busy.size()+"\n";
     }
 }

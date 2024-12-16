@@ -1,23 +1,20 @@
-package nl.v4you.jafs.internal;
-
-import nl.v4you.jafs.Jafs;
-import nl.v4you.jafs.JafsException;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 
-public class JafsBlock {
+class ZBlock {
 	private final int blockSize = 4096;
 	private final byte[] buf;
 	private final RandomAccessFile raf;
-	private final JafsBlockCache blockCache;
+	private final ZBlockCache blockCache;
 
 	private long bpos;
 	private int byteIdx;
 	private boolean blockNeedsFlush = false;
 
-	JafsBlock(Jafs vfs, long bpos) {
+	ZBlock(Jafs vfs, long bpos) {
 		this.blockCache = vfs.getBlockCache();
 		raf = vfs.getRaf();
 		buf = new byte[blockSize];

@@ -1,9 +1,9 @@
-package nl.v4you.jafs.internal;
+package nl.v4you.jafs;
 
 import java.util.HashMap;
 import java.util.Map;
 
-class LRUCache<K, V> {
+class ZLRUCache<K, V> {
 
     private class GenericCacheEntry {
         K key;
@@ -24,7 +24,7 @@ class LRUCache<K, V> {
     private long cntMiss = 0;
     private long cntRemoved = 0;
 
-    LRUCache(int size) {
+    ZLRUCache(int size) {
         mostLeft = null;
         mostRight = null;
         if (size < 3) {

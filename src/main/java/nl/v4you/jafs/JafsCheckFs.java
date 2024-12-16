@@ -4,9 +4,6 @@ package nl.v4you.jafs;
 // for each file, check all blocks
 // for each unnused block, check if all used blocks are really used
 
-import nl.v4you.jafs.internal.JafsDirEntry;
-import nl.v4you.jafs.internal.JafsInode;
-
 import java.io.IOException;
 
 public class JafsCheckFs {
@@ -22,9 +19,9 @@ public class JafsCheckFs {
         this.jafs = jafs;
     }
 
-    private void checkEntry(JafsDirEntry de) throws JafsException, IOException {
-        JafsInode inode = new JafsInode(jafs);
-        inode.openInode(de.getBpos());
+    private void checkEntry(ZDirEntry de) throws JafsException, IOException {
+        ZFile inode = new ZFile(jafs);
+        inode.openInode(de.getVpos());
 //        if ((inode.getType() & JafsInode.INODE_INLINED)==0) {
 //            jafs.getINodeContext().checkDataAndPtrBlocks(inode);
 //        }
@@ -37,7 +34,7 @@ public class JafsCheckFs {
         try {
             JafsFile[] lst = base.listFiles();
             for (JafsFile f : lst) {
-                JafsDirEntry entry = f.getEntry(f.getName());
+                ZDirEntry entry = f.getEntry(f.getName());
                 if (f.isDirectory()) {
                     walkTree(f);
                 } else {

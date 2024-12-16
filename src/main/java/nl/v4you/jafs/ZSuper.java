@@ -1,12 +1,9 @@
-package nl.v4you.jafs.internal;
-
-import nl.v4you.jafs.Jafs;
-import nl.v4you.jafs.JafsException;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-public class JafsSuper {
+class ZSuper {
 	private static final int VERSION = 1;
 	private static final int POS_BLOCK_SIZE = 6;
 	private static final int POS_BLOCKS_USED = 10;
@@ -23,7 +20,7 @@ public class JafsSuper {
 
 	private final Jafs vfs;
 
-	public JafsSuper(Jafs vfs, int blockSize) throws JafsException, IOException {
+	ZSuper(Jafs vfs, int blockSize) throws JafsException, IOException {
 		this.vfs = vfs;
 		this.raf = vfs.getRaf();
 		if (raf.length() == 0) {
@@ -45,41 +42,41 @@ public class JafsSuper {
 		}
 	}
 
-	public long getBlocksTotal() {
+	long getBlocksTotal() {
 		return blocksTotal;
 	}
 
-	public long getBlocksUsed() {
+	long getBlocksUsed() {
 		return blocksUsed;
 	}
 
-	public void setUnusedStackEnd(long unusedStack) throws IOException {
+	void setAvailableStackEnd(long unusedStack) {
 		this.unusedStackEnd = unusedStack;
 	}
 
-	public long getUnusedStackEnd() {
+	long getAvailableStackEnd() {
 		return unusedStackEnd;
 	}
 
-	public void incBlocksTotal() {
+	void incBlocksTotal() {
 		blocksTotal++;
 	}
 
-	public void incBlocksUsed() {
+	void incBlocksUsed() {
 		blocksUsed++;
 		if (blocksUsed > blocksTotal) {
-			throw new RuntimeException("blocksUsed ("+blocksUsed+") > blocksTotal ("+blocksTotal+")");
+			throw new IllegalStateException("blocksUsed (" + blocksUsed + ") > blocksTotal (" + blocksTotal + ")");
 		}
 	}
 
 	void decBlocksUsed() {
 		blocksUsed--;
 		if (blocksUsed < 0) {
-			throw new RuntimeException("blocksUsed < 0!!!");
+			throw new IllegalStateException("blocksUsed < 0!!!");
 		}
 	}
 
-	public int getBlockSize() {
+	int getBlockSize() {
 		return blockSize;
 	}
 
@@ -99,10 +96,10 @@ public class JafsSuper {
 		if (version != VERSION) {
 			throw new JafsException("Version is incorrect, should be " + VERSION + " but got " + version);
 		}
-		blockSize = (int)Util.arrayToInt(header, POS_BLOCK_SIZE);
-		blocksUsed =  Util.arrayToInt(header, POS_BLOCKS_USED);
-		blocksTotal = Util.arrayToInt(header, POS_BLOCKS_TOTAL);
-		unusedStackEnd = Util.arrayToInt(header, POS_UNUSED_STACK_START);
+		blockSize = (int) ZUtil.arrayToInt(header, POS_BLOCK_SIZE);
+		blocksUsed =  ZUtil.arrayToInt(header, POS_BLOCKS_USED);
+		blocksTotal = ZUtil.arrayToInt(header, POS_BLOCKS_TOTAL);
+		unusedStackEnd = ZUtil.arrayToInt(header, POS_UNUSED_STACK_START);
 	}
 
 	private void flush() throws IOException {
@@ -113,28 +110,29 @@ public class JafsSuper {
 		buf[3] = 'S';
 		buf[4] = 0;
 		buf[5] = VERSION;
-		Util.intToArray(buf, POS_BLOCK_SIZE, blockSize);
-		Util.intToArray(buf, POS_BLOCKS_USED, blocksUsed);
-		Util.intToArray(buf, POS_BLOCKS_TOTAL, blocksTotal);
-		Util.intToArray(buf, POS_UNUSED_STACK_START, unusedStackEnd);
+		ZUtil.intToArray(buf, POS_BLOCK_SIZE, blockSize);
+		ZUtil.intToArray(buf, POS_BLOCKS_USED, blocksUsed);
+		ZUtil.intToArray(buf, POS_BLOCKS_TOTAL, blocksTotal);
+		ZUtil.intToArray(buf, POS_UNUSED_STACK_START, unusedStackEnd);
 		raf.seek(0);
 		raf.write(buf, 0, blockSize);
 	}
 
-	public void setUnavailable(long bpos) throws JafsException, IOException {
-		JafsBlockView block = new JafsBlockView(vfs, bpos);
+	void popAvailable(long bpos) throws JafsException, IOException {
+		ZBlockView block = new ZBlockView(vfs, bpos);
 		block.seekSet(0);
-		setUnusedStackEnd(block.readInt());
+		long previousStackEnd = block.readInt();
+		setAvailableStackEnd(previousStackEnd);
 	}
 
-	public void setAvailable(long bpos) throws JafsException, IOException {
-		JafsBlockView block = new JafsBlockView(vfs, bpos);
+	void pushAvailable(long bpos) throws JafsException, IOException {
+		ZBlockView block = new ZBlockView(vfs, bpos);
 		block.seekSet(0);
-		block.writeInt(getUnusedStackEnd());
-		setUnusedStackEnd(bpos);
+		block.writeInt(getAvailableStackEnd());
+		setAvailableStackEnd(bpos);
 	}
 
-	public void close() throws IOException {
+	void close() throws IOException {
 		flush();
 	}
 }

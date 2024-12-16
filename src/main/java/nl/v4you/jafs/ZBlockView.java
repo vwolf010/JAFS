@@ -1,27 +1,22 @@
-package nl.v4you.jafs.internal;
-
-import nl.v4you.jafs.Jafs;
-import nl.v4you.jafs.JafsException;
+package nl.v4you.jafs;
 
 import java.io.IOException;
 
-public class JafsBlockView {
-    private static final int SUPERBLOCK_SIZE = 1;
-
+class ZBlockView {
     private final long blockId;
     private final int viewSize;
-    private final JafsBlockCache blockCache;
+    private final ZBlockCache blockCache;
     private final int byteOffset;
 
-    private JafsBlock diskBlock;
+    private ZBlock diskBlock;
     private int byteIdx;
 
-    JafsBlockView(Jafs vfs, long vpos) {
+    ZBlockView(Jafs vfs, long vpos) {
         blockCache = vfs.getBlockCache();
         viewSize = vfs.getSuper().getBlockSize();
         int viewsPerBlock = 4096 / viewSize;
-        blockId = ((SUPERBLOCK_SIZE + vpos) * viewSize) / 4096;
-        byteOffset = (int)(((SUPERBLOCK_SIZE + vpos) % viewsPerBlock) * viewSize);
+        blockId = (vpos * viewSize) / 4096;
+        byteOffset = (int)((vpos % viewsPerBlock) * viewSize);
         byteIdx = 0;
     }
 

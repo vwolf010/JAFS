@@ -1,23 +1,20 @@
 package nl.v4you.jafs;
 
-import nl.v4you.jafs.internal.JafsDirEntry;
-import nl.v4you.jafs.internal.JafsInode;
-
 import java.io.IOException;
 import java.io.InputStream;
 
 public class JafsInputStream extends InputStream {
 	Jafs vfs;
 	String path;
-	JafsInode inode;
+	ZFile zfile;
 	
 	JafsInputStream(Jafs vfs, JafsFile f) throws JafsException, IOException {
 		this.vfs = vfs;
 		path = f.getPath();
-		JafsDirEntry entry = f.getEntry(path);
-		if (entry.getBpos() != 0) {
-			inode = new JafsInode(vfs);
-			inode.openInode(entry.getBpos());
+		ZDirEntry entry = f.getEntry(path);
+		if (entry.getVpos() != 0) {
+			zfile = new ZFile(vfs);
+			zfile.openInode(entry.getVpos());
 		}
 	}
 
@@ -25,16 +22,16 @@ public class JafsInputStream extends InputStream {
 	public int read(byte[] b, int off, int len) throws IOException {
 		int bread = 0;
 		try {
-			if (inode==null) {
+			if (zfile == null) {
 				JafsFile f = new JafsFile(vfs, path);
-				JafsDirEntry entry = f.getEntry(f.getPath());
-				if (entry.getBpos() != 0) {
-					inode = new JafsInode(vfs);
-					inode.openInode(entry.getBpos());
+				ZDirEntry entry = f.getEntry(f.getPath());
+				if (entry.getVpos() != 0) {
+					zfile = new ZFile(vfs);
+					zfile.openInode(entry.getVpos());
 				}
 			}
-			if (inode!=null) {
-				bread = inode.readBytes(b, off, len);
+			if (zfile !=null) {
+				bread = zfile.readBytes(b, off, len);
 			}
 		} catch (JafsException e) {
 			throw new IOException("VFSException wrapper: "+e.getMessage());
@@ -46,16 +43,16 @@ public class JafsInputStream extends InputStream {
 	public int read() throws IOException {
 		int b = -1;
 		try {
-			if (inode==null) {
+			if (zfile ==null) {
 				JafsFile f = new JafsFile(vfs, path);
-				JafsDirEntry entry = f.getEntry(f.getPath());
-				if (entry.getBpos() != 0) {
-					inode = new JafsInode(vfs);
-					inode.openInode(entry.getBpos());
+				ZDirEntry entry = f.getEntry(f.getPath());
+				if (entry.getVpos() != 0) {
+					zfile = new ZFile(vfs);
+					zfile.openInode(entry.getVpos());
 				}			
 			}
-			if (inode!=null) {
-				return inode.readByte();
+			if (zfile != null) {
+				return zfile.readByte();
 			}
 		} catch (JafsException e) {
 			throw new IOException("VFSException wrapper: "+e.getMessage());

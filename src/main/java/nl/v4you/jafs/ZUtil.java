@@ -1,6 +1,6 @@
-package nl.v4you.jafs.internal;
+package nl.v4you.jafs;
 
-public class Util {
+class ZUtil {
 
     static void shortToArray(byte[] b, int off, int i) {
         b[off] = (byte)((i >>> 8) & 0xff);
