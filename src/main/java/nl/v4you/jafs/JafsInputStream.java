@@ -11,7 +11,7 @@ public class JafsInputStream extends InputStream {
 	JafsInputStream(Jafs vfs, JafsFile f) throws JafsException, IOException {
 		this.vfs = vfs;
 		path = f.getPath();
-		ZDirEntry entry = f.getEntry(path);
+		ZDirEntry entry = f.getEntry(path, true);
 		if (entry.getVpos() != 0) {
 			zfile = new ZFile(vfs);
 			zfile.openInode(entry.getVpos());
@@ -24,7 +24,7 @@ public class JafsInputStream extends InputStream {
 		try {
 			if (zfile == null) {
 				JafsFile f = new JafsFile(vfs, path);
-				ZDirEntry entry = f.getEntry(f.getPath());
+				ZDirEntry entry = f.getEntry(f.getPath(), true);
 				if (entry.getVpos() != 0) {
 					zfile = new ZFile(vfs);
 					zfile.openInode(entry.getVpos());
@@ -45,7 +45,7 @@ public class JafsInputStream extends InputStream {
 		try {
 			if (zfile ==null) {
 				JafsFile f = new JafsFile(vfs, path);
-				ZDirEntry entry = f.getEntry(f.getPath());
+				ZDirEntry entry = f.getEntry(f.getPath(), true);
 				if (entry.getVpos() != 0) {
 					zfile = new ZFile(vfs);
 					zfile.openInode(entry.getVpos());

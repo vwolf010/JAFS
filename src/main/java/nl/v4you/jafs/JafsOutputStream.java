@@ -15,7 +15,7 @@ public class JafsOutputStream extends OutputStream {
 			throw new JafsException("Could not create new file: " + f.getCanonicalPath());
 		}
 		this.path = f.getCanonicalPath();
-		ZDirEntry entry = f.getEntry(f.getCanonicalPath());
+		ZDirEntry entry = f.getEntry(f.getCanonicalPath(), true);
 		if (entry != null && entry.getVpos() != 0) {
 			zfile = new ZFile(vfs);
 			zfile.openInode(entry.getVpos());
@@ -42,9 +42,9 @@ public class JafsOutputStream extends OutputStream {
 			ZFile inodeDirectory = vfs.getZFilePool().claim();
 			ZDir dir = vfs.getDirPool().claim();
 			try {
-				inodeDirectory.openInode(f.getEntry(f.getParent()).getVpos());
+				inodeDirectory.openInode(f.getEntry(f.getParent(), true).getVpos());
 				dir.setInode(inodeDirectory);
-				ZDirEntry entry = f.getEntry(path);
+				ZDirEntry entry = f.getEntry(path, true);
 				if (entry == null) {
 					throw new JafsException("No entry found for [" + path + "]");
 				}
@@ -113,9 +113,9 @@ public class JafsOutputStream extends OutputStream {
 			ZFile inodeDirectory = vfs.getZFilePool().claim();
 			ZDir dir = vfs.getDirPool().claim();
 			try {
-				inodeDirectory.openInode(f.getEntry(f.getParent()).getVpos());
+				inodeDirectory.openInode(f.getEntry(f.getParent(), true).getVpos());
 				dir.setInode(inodeDirectory);
-				ZDirEntry entry = f.getEntry(path);
+				ZDirEntry entry = f.getEntry(path, true);
 				if (entry == null) {
 					throw new JafsException("No entry found for [" + path + "]");
 				}

@@ -142,13 +142,8 @@ class ZDir {
 		}
 	}
 
-	void deleteEntry(String canonicalPath, ZDirEntry entry) throws JafsException, IOException {
-		// the entry parameter may have been found in cache, we have to locate
-		// the entry again to get a proper prevStartPos
-		entry = getEntry(entry.name);
-
+	void deleteEntry(ZDirEntry entry) throws JafsException, IOException {
 		// Update the deleted entry
-		vfs.getDirCache().remove(canonicalPath);
 		inode.seekSet(entry.startPos);
 		inode.writeByte(0); // name length
 

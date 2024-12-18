@@ -34,7 +34,7 @@ public class JafsCheckFs {
         try {
             JafsFile[] lst = base.listFiles();
             for (JafsFile f : lst) {
-                ZDirEntry entry = f.getEntry(f.getName());
+                ZDirEntry entry = f.getEntry(f.getName(), true);
                 if (f.isDirectory()) {
                     walkTree(f);
                 } else {

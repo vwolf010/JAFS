@@ -66,17 +66,17 @@ public class JafsFile {
 	}
 
 	public boolean isFile() throws JafsException, IOException {
-		ZDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath, true);
 		return (entry != null) && (entry.isFile());
 	}
 	
 	public boolean isDirectory() throws JafsException, IOException {
-		ZDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath, true);
 		return (entry != null) && (entry.isDirectory());
 	}
 
 	public long length() throws IOException, JafsException {
-		ZDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath, true);
 		if (entry == null || entry.getVpos() == 0) {
 			return 0;
 		}
@@ -95,7 +95,7 @@ public class JafsFile {
 			return false;
 		}
 		String parentPath = getParent(canonicalPath);
-		ZDirEntry parent = getEntry(parentPath);
+		ZDirEntry parent = getEntry(parentPath, true);
 		if (parent != null) {
 			if (parent.getVpos() == 0) {
 				// Parent directory exists but has no inode yet, let's create it
@@ -149,7 +149,7 @@ public class JafsFile {
 	}
 		
 	public String[] list() throws JafsException, IOException {
-		ZDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath, true);
 		if (entry != null) {
 			if (entry.getVpos() == 0) {
 				return new String[0];
@@ -171,7 +171,9 @@ public class JafsFile {
 	}
 
 	public boolean delete() throws JafsException, IOException {
-		ZDirEntry entry = getEntry(canonicalPath);
+		// cache removal first to force getEntry to use disk to set prevStartPos properly
+		vfs.getDirCache().remove(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath, false);
 		if (entry != null) {
 			if (entry.getVpos() != 0) {
 				if (entry.isDirectory()) {
@@ -196,7 +198,7 @@ public class JafsFile {
 			    // first remove the entry from the directory
                 zfile.openInode(entry.getParentBpos());
                 parentDir.setInode(zfile);
-				parentDir.deleteEntry(canonicalPath, entry);
+				parentDir.deleteEntry(entry);
 
                 // then free the inode, pointerblocks and datablocks
 				if (entry.getVpos() != 0) {
@@ -220,7 +222,7 @@ public class JafsFile {
 		if (!parent.endsWith(SEPARATOR)) {
 		    parent += SEPARATOR;
         }
-		ZDirEntry entry = getEntry(canonicalPath);
+		ZDirEntry entry = getEntry(canonicalPath, true);
 		if (entry != null) {
 			if (entry.getVpos() == 0) {
 				return new JafsFile[0];
@@ -252,17 +254,19 @@ public class JafsFile {
 		if (exists()) {
 			if (!target.exists()) {
 				if (exists(target.getParent())) {
-					ZDirEntry entry = getEntry(canonicalPath);
 					ZFile inodeSrc = vfs.getZFilePool().claim();
                     ZFile inodeDst = vfs.getZFilePool().claim();
                     ZDir srcDir = vfs.getDirPool().claim();
                     ZDir dstDir = vfs.getDirPool().claim();
+					// cache removal first to force getEntry to use disk to set prevStartPos properly
+					vfs.getDirCache().remove(canonicalPath);
+					ZDirEntry entry = getEntry(canonicalPath, false);
 					try {
                         inodeSrc.openInode(entry.getParentBpos());
-                        inodeDst.openInode(getEntry(target.getParent()).getVpos());
+                        inodeDst.openInode(getEntry(target.getParent(), true).getVpos());
                         srcDir.setInode(inodeSrc);
                         dstDir.setInode(inodeDst);
-                        srcDir.deleteEntry(canonicalPath, entry);
+                        srcDir.deleteEntry(entry);
                         entry.setName(target.getName().getBytes(StandardCharsets.UTF_8));
                         dstDir.createNewEntry(
                                 target.canonicalPath,
@@ -282,7 +286,7 @@ public class JafsFile {
 		}
 	}
 
-	ZDirEntry getEntry(String path) throws JafsException, IOException {
+	ZDirEntry getEntry(String path, boolean addToCache) throws JafsException, IOException {
 	    String normPath = getCanonicalPath(normalizePath(path));
 
         if (normPath.equals(SEPARATOR)) {
@@ -333,14 +337,14 @@ public class JafsFile {
                     } else {
                         if (n == (parts.length - 1)) {
                             // The last part of the path? Then it exists.
-                            dc.add(curPath, entry);
+                            if (addToCache) dc.add(curPath, entry);
                             break;
                         } else if (entry.isFile()) {
                             // Files should always be last part of the path.
                             entry = null;
                             break;
                         } else {
-                            dc.add(curPath, entry);
+                            if (addToCache) dc.add(curPath, entry);
                             if (entry.getVpos() != 0) {
                                 zfile.openInode(entry.getVpos());
                                 dir.setInode(zfile);
@@ -418,7 +422,7 @@ public class JafsFile {
 	private static String getCanonicalPath(String path) throws JafsException {
 	    // only call this method with a normalized path!
 	    if (path.charAt(path.length() - 1) != SEPARATOR_CHAR) {
-	        path = path + SEPARATOR;
+	        path += SEPARATOR;
         }
 		int len = 0;
 		while (len != path.length()) {
@@ -441,12 +445,12 @@ public class JafsFile {
 	}
 		
 	private boolean exists(String path) throws JafsException, IOException {
-		return getEntry(path) != null;
+		return getEntry(path, true) != null;
 	}
 	
 	private boolean mkdir(String path) throws JafsException, IOException {
 		String parent = getParent(path);
-		ZDirEntry entry = getEntry(parent);
+		ZDirEntry entry = getEntry(parent, true);
 		if (entry != null) {
 			if (entry.getVpos() == 0) {
 				// Parent exists but has no inode yet
@@ -499,7 +503,7 @@ public class JafsFile {
 	}
 
 	String dirTestString() throws JafsException, IOException {
-		ZDirEntry entry = getEntry(path);
+		ZDirEntry entry = getEntry(path, true);
 		ZDir dir = vfs.getDirPool().claim();
 		ZFile inode = vfs.getZFilePool().claim();
 		inode.openInode(entry.getVpos());
