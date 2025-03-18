@@ -30,11 +30,11 @@ public class JafsInputStream extends InputStream {
 					zfile.openInode(entry.getVpos());
 				}
 			}
-			if (zfile !=null) {
+			if (zfile != null) {
 				bread = zfile.readBytes(b, off, len);
 			}
 		} catch (JafsException e) {
-			throw new IOException("VFSException wrapper: "+e.getMessage());
+			throw new IOException("VFSException wrapper: " + e.getMessage());
 		}
 		return bread;
 	}
@@ -43,7 +43,7 @@ public class JafsInputStream extends InputStream {
 	public int read() throws IOException {
 		int b = -1;
 		try {
-			if (zfile ==null) {
+			if (zfile == null) {
 				JafsFile f = new JafsFile(vfs, path);
 				ZDirEntry entry = f.getEntry(f.getPath(), true);
 				if (entry.getVpos() != 0) {
@@ -55,7 +55,7 @@ public class JafsInputStream extends InputStream {
 				return zfile.readByte();
 			}
 		} catch (JafsException e) {
-			throw new IOException("VFSException wrapper: "+e.getMessage());
+			throw new IOException("VFSException wrapper: " + e.getMessage());
 		}
 		return b;
 	}

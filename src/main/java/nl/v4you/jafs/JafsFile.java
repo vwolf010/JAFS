@@ -195,13 +195,13 @@ public class JafsFile {
 			ZFile zfile = vfs.getZFilePool().claim();
             ZDir parentDir = vfs.getDirPool().claim();
 			try {
-			    // first remove the entry from the directory
+			    // remove the entry from the directory
                 zfile.openInode(entry.getParentBpos());
                 parentDir.setInode(zfile);
 				parentDir.deleteEntry(entry);
 
-                // then free the inode, pointerblocks and datablocks
 				if (entry.getVpos() != 0) {
+					// free the inode, pointerblocks and datablocks
 					zfile.openInode(entry.getVpos());
 					zfile.resetSize();
 					zfile.freeBlocksAndDeleteInode();
@@ -293,12 +293,12 @@ public class JafsFile {
             return vfs.getRootEntry();
         }
 
-        String[] parts = SLASH.split(normPath); // first entry is always empty
-        int n = parts.length;
+		ZDirEntry entry = null;
 
-        ZDirEntry entry = null;
-
+		// try to get the path, or any parent of it, from cache
         String curPath = normPath;
+		String[] parts = SLASH.split(normPath); // first entry is always empty
+		int n = parts.length;
         while (n > 0) {
             entry = dc.get(curPath);
             if (entry != null) {
@@ -340,7 +340,7 @@ public class JafsFile {
                             if (addToCache) dc.add(curPath, entry);
                             break;
                         } else if (entry.isFile()) {
-                            // Files should always be last part of the path.
+                            // Files should only be last part of the path, so we do not expect one here
                             entry = null;
                             break;
                         } else {

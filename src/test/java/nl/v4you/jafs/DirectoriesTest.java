@@ -283,7 +283,6 @@ public class DirectoriesTest {
         assertTrue(f.exists());
         assertEquals("13;2;6;245;1;0;aa.txt;13;17;0;13;32;6;254;1;0;ee.txt;14;47;7;96;1;0;fff.txt;", d.dirTestString());
 
-
         assertEquals(3, d.list().length);
         assertEquals("aa.txt", d.list()[0]);
         assertEquals("ee.txt", d.list()[1]);
